@@ -4,8 +4,9 @@ import { useTranslation } from 'react-i18next';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Loader2, Mail, Lock, User, ArrowLeft } from 'lucide-react';
+import { Loader2, Mail, Lock, User, ArrowLeft, Building2 } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -23,9 +24,10 @@ const signupSchema = z.object({
   email: z.string().email(),
   password: z.string().min(6),
   confirmPassword: z.string().min(6),
-  displayName: z.string().optional(),
+  displayName: z.string().min(1, 'Navn er påkrevd'),
+  companyName: z.string().min(2, 'Firmanavn må være minst 2 tegn'),
 }).refine(data => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
+  message: "Passordene er ikke like",
   path: ['confirmPassword'],
 });
 
@@ -63,7 +65,7 @@ export default function Auth() {
   
   const signupForm = useForm<SignupFormData>({
     resolver: zodResolver(signupSchema),
-    defaultValues: { email: '', password: '', confirmPassword: '', displayName: '' },
+    defaultValues: { email: '', password: '', confirmPassword: '', displayName: '', companyName: '' },
   });
   
   const resetForm = useForm<ResetFormData>({
@@ -87,21 +89,49 @@ export default function Auth() {
   
   const handleSignup = async (data: SignupFormData) => {
     setIsSubmitting(true);
-    const { error } = await signUp(data.email, data.password, data.displayName);
-    setIsSubmitting(false);
     
-    if (error) {
-      toast({
-        variant: 'destructive',
-        title: t('common.error'),
-        description: error.message || t('auth.signupError'),
+    try {
+      // First, create the user account
+      const { error: signUpError, data: authData } = await supabase.auth.signUp({
+        email: data.email,
+        password: data.password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/`,
+          data: { display_name: data.displayName },
+        },
       });
-    } else {
+      
+      if (signUpError) throw signUpError;
+      
+      // If we have a user, set up the bakery
+      if (authData.user) {
+        const { error: bakeryError } = await supabase.rpc('setup_bakery_for_new_user', {
+          _user_id: authData.user.id,
+          _bakery_name: data.companyName,
+          _display_name: data.displayName,
+        });
+        
+        if (bakeryError) {
+          console.error('Bakery setup error:', bakeryError);
+          // Don't throw - user is created, bakery setup can be retried
+        }
+      }
+      
       toast({
         title: t('common.success'),
         description: t('auth.signupSuccess'),
       });
-      setMode('login');
+      
+      // With auto-confirm, user should be logged in automatically
+      // The auth state listener will handle redirect
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: t('common.error'),
+        description: error instanceof Error ? error.message : t('auth.signupError'),
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
   
@@ -211,6 +241,26 @@ export default function Auth() {
           {mode === 'signup' && (
             <Form {...signupForm}>
               <form onSubmit={signupForm.handleSubmit(handleSignup)} className="space-y-4">
+                <FormField
+                  control={signupForm.control}
+                  name="companyName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t('auth.companyName')}</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Building2 className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            placeholder={t('auth.companyNamePlaceholder')}
+                            className="pl-9"
+                            {...field}
+                          />
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 <FormField
                   control={signupForm.control}
                   name="displayName"
