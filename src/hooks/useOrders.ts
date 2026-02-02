@@ -101,10 +101,17 @@ export function useOrdersByProduct(deliveryDate: string, productIds: string[]) {
 
 export function useMarkAsPacked() {
   const queryClient = useQueryClient();
-  const { user } = useAuthStore();
+  const { user, getCurrentBakeryId } = useAuthStore();
   
   return useMutation({
-    mutationFn: async ({ orderId, packingStatusId }: { orderId: string; packingStatusId: string | undefined }) => {
+    mutationFn: async ({ orderId, packingStatusId, customerId, productId }: { 
+      orderId: string; 
+      packingStatusId: string | undefined;
+      customerId?: string;
+      productId?: string;
+    }) => {
+      const bakeryId = getCurrentBakeryId();
+      
       if (packingStatusId) {
         const { error } = await supabase
           .from('packing_status')
@@ -128,10 +135,27 @@ export function useMarkAsPacked() {
         
         if (error) throw error;
       }
+      
+      // Send broadcast for realtime updates
+      if (bakeryId) {
+        const channel = supabase.channel(`packing:${bakeryId}`);
+        await channel.send({
+          type: 'broadcast',
+          event: 'packing_update',
+          payload: {
+            order_id: orderId,
+            status: 'packed',
+            packed_at: new Date().toISOString(),
+            customer_id: customerId,
+            product_id: productId,
+          },
+        });
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['orders'] });
       queryClient.invalidateQueries({ queryKey: ['orders-by-product'] });
+      queryClient.invalidateQueries({ queryKey: ['display-orders'] });
     },
   });
 }

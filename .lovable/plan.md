@@ -1,123 +1,82 @@
 
-# Loaf and Load – Fase 1 Implementasjonsplan
+# Loaf and Load – Implementasjonsplan
 
 ## Oversikt
-Et digitalt pakkesystem for bakerier som erstatter papirark. Fase 1 fokuserer på kjernefunksjonalitet: autentisering, multi-tenant struktur, filimport og produktbasert pakking.
+Et digitalt pakkesystem for bakerier som erstatter papirark. Systemet støtter flere bakerier (multi-tenant), autentisering, filimport og pakking med sanntidsoppdateringer.
 
 ---
 
-## 1. Autentisering og Brukerroller
+## ✅ Fase 1: Grunnleggende (FERDIG)
 
-**Innlogging og registrering:**
-- Innloggingsside med e-post/passord
-- "Glemt passord" funksjonalitet
-- Beskyttede ruter for dashboard
-
-**Tre brukerroller:**
-- **Super Admin** – Tilgang til alle bakerier og systeminnstillinger
-- **Bakery Admin** – Administrerer eget bakeri (kategorier, brukere, import)
-- **Bakery User** – Kun pakking av varer
-
-**Sikkerhet:**
-- Row Level Security (RLS) for dataisolering mellom bakerier
-- Rollehåndtering i egen tabell (ikke på profil)
+- [x] Autentisering med e-post/passord
+- [x] Tre brukerroller: Super Admin, Bakery Admin, Bakery User
+- [x] Row Level Security (RLS) for dataisolering
+- [x] Multi-tenant bakeristruktur
+- [x] Kategorisystem med pakkemodus
+- [x] Filimport (.PRD, .CUS, .OD0) med drag-and-drop
+- [x] Produktbasert pakking med markering og avviksrapportering
+- [x] Admin dashboard med CRUD for produkter, kunder, kategorier
+- [x] Internasjonalisering (norsk/engelsk)
+- [x] Responsivt design
 
 ---
 
-## 2. Multi-Tenant Bakeristruktur
+## ✅ Fase 2: Display-system (FERDIG)
 
-**Bakeri-administrasjon:**
-- Opprett, rediger og deaktiver bakerier
-- Unik kort-ID for hver bakeri (for enkle URL-er)
-- Bakeri-spesifikke innstillinger
-
-**Kategorisystem:**
-- Hver bakeri kan ha flere kategorier (Brød, Småvarer, Konditori)
-- Velg pakkemodus per kategori (produktbasert/kundebasert)
-- Sorteringsrekkefølge for kategorier
-
----
-
-## 3. Filimport (Manuell)
-
-**Støttede filformater:**
-- **.PRD** – Produkter (varenummer, navn)
-- **.CUS** – Kunder (kundenummer, navn, adresse)
-- **.OD0** – Ordrer (produkt, kunde, antall, dato)
-
-**Importprosess:**
-- Drag & drop opplastingsområde
-- Last opp alle tre filer samtidig
-- Validering og feilmeldinger
-- Duplikatsjekk (samme dato avvises)
-- Filnavn-parsing for datoekstraksjon (DD-MM-YYYY.EXT)
+- [x] Felles Display (`/display/shared/:bakeryShortId/:categoryId`)
+  - Viser alle kunder med pakkestatus
+  - Sanntidsoppdatering via Supabase Realtime
+  - Progresjonsbar og klokke
+- [x] Kunde Display (`/display/customer/:displayToken`)
+  - Dedikert visning for enkeltkunders produkter
+  - Animert statusvisning
+- [x] Display-innstillinger (/display-settings)
+  - Fargepalett (bakgrunn, kort, tekst, statusfarger)
+  - Layout (kolonner, fontstørrelser)
+  - Visning (klokke, dato, progresjonsbar, animasjoner)
+  - Live forhåndsvisning
+- [x] Realtime hooks
+  - `useRealtimeDisplay` for lytting
+  - `usePackingBroadcast` for sending
+  - Fallback-synkronisering hvert 60. sekund
 
 ---
 
-## 4. Produktbasert Pakking
+## 🔲 Fase 3: Kundebasert pakking
 
-**Pakkeflyt:**
-1. Velg leveringsdato
-2. Velg 1-3 produkter å pakke
-3. Se liste over alle kunder som trenger produktet
-4. Marker hver kunde som "pakket" med ett klikk
-5. Registrer avvik hvis nødvendig (manko, skadet osv.)
-
-**Visning:**
-- Kundeoversikt med antall og status
-- Progresjonsindikator (X av Y pakket)
-- Plate/stk-visning for produkter med brett (f.eks. "2 plater + 3 stk")
+- [ ] Kundebasert pakkemodus (alternativ til produktbasert)
+- [ ] Kundelåsing når pakker velger kunde
+- [ ] Auto-frigjøring etter X minutter
+- [ ] Pakker-nettbrett interface
+- [ ] Låsevisning på display
 
 ---
 
-## 5. Admin Dashboard
+## 🔲 Fase 4: Avansert
 
-**Hovedoversikt:**
-- Statistikk for dagens pakking
-- Rask tilgang til aktive kategorier
-- Status per kategori
-
-**Administrasjonssider:**
-- **Produkter** – Se og administrer produktliste
-- **Kunder** – Se og administrer kundeliste
-- **Kategorier** – Opprett og konfigurer kategorier
-- **Brukere** – Administrer bakeriets brukere (kun admin)
-- **Import** – Filopplasting for ordredata
-- **Innstillinger** – Bakeri-innstillinger
+- [ ] Avviksrapporter med statistikk
+- [ ] Daglig e-postrapport
+- [ ] OneDrive auto-import
+- [ ] Drag-and-drop sortering av kunder
+- [ ] Brukeradministrasjon (invitere til bakeri)
 
 ---
 
-## 6. Internasjonalisering (i18n)
+## 🔲 Fase 5: Polering
 
-**Språkstøtte fra start:**
-- Norsk (standard)
-- Engelsk
-- Språkvelger i innstillinger
-- Alle tekster i oversettelsesfiler
-
----
-
-## 7. Responsivt Design
-
-**Optimalisert for:**
-- **PC** – Full dashboard med keyboard shortcuts
-- **Nettbrett** – Touch-optimalisert med store knapper (10-12 tommer)
-- **Mobil** – Grunnleggende navigasjon
+- [ ] Globale maler for super_admin
+- [ ] Offline-støtte (Service Worker + IndexedDB)
+- [ ] Keyboard shortcuts
+- [ ] Testing og optimalisering
 
 ---
 
 ## Teknisk Stack
 - **Frontend:** React 18 + TypeScript + Vite
 - **UI:** shadcn/ui + Tailwind CSS
-- **Backend:** Supabase (via Lovable Cloud)
-- **State:** TanStack React Query + Zustand for auth
+- **Backend:** Supabase (Lovable Cloud)
+- **State:** TanStack React Query + Zustand
+- **Realtime:** Supabase Broadcast + postgres_changes
 - **Forms:** React Hook Form + Zod
 - **i18n:** react-i18next
-
----
-
-## Dette legger grunnlaget for
-- **Fase 2:** Display-system med sanntidsoppdateringer til TV-er
-- **Fase 3:** Kundebasert pakking med låsing
-- **Fase 4:** Avviksrapporter, e-post, OneDrive-import
-- **Fase 5:** Offline-støtte og polering
+- **Animasjoner:** Framer Motion
