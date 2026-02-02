@@ -402,6 +402,10 @@ export type Database = {
         Returns: boolean
       }
       is_super_admin: { Args: never; Returns: boolean }
+      setup_bakery_for_new_user: {
+        Args: { _bakery_name: string; _display_name?: string; _user_id: string }
+        Returns: string
+      }
     }
     Enums: {
       app_role: "super_admin" | "bakery_admin" | "bakery_user"
