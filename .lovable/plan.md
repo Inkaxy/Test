@@ -42,13 +42,14 @@ Et digitalt pakkesystem for bakerier som erstatter papirark. Systemet støtter f
 
 ---
 
-## 🔲 Fase 3: Kundebasert pakking
+## ✅ Fase 3: Kundebasert pakking (FERDIG)
 
-- [ ] Kundebasert pakkemodus (alternativ til produktbasert)
-- [ ] Kundelåsing når pakker velger kunde
-- [ ] Auto-frigjøring etter X minutter
-- [ ] Pakker-nettbrett interface
-- [ ] Låsevisning på display
+- [x] Kundebasert pakkemodus (alternativ til produktbasert)
+- [x] Kundelåsing når pakker velger kunde
+- [x] Auto-frigjøring etter 15 minutter (konfigurerbart)
+- [x] Pakker-nettbrett interface (/packing/customer)
+- [x] Realtime låsevisning med postgres_changes
+- [x] Database-funksjoner for acquire/release/extend lock
 
 ---
 
