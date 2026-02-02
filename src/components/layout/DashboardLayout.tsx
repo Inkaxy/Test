@@ -13,7 +13,8 @@ import {
   Menu, 
   X,
   Building2,
-  ChevronDown
+  ChevronDown,
+  Monitor
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/authStore';
@@ -47,6 +48,7 @@ const navItems: NavItem[] = [
   { key: 'categories', icon: FolderOpen, href: '/categories', requiresAdmin: true },
   { key: 'users', icon: Users, href: '/users', requiresAdmin: true },
   { key: 'import', icon: Upload, href: '/import', requiresAdmin: true },
+  { key: 'displaySettings', icon: Monitor, href: '/display-settings', requiresAdmin: true },
   { key: 'bakeries', icon: Building2, href: '/bakeries', requiresSuperAdmin: true },
   { key: 'settings', icon: Settings, href: '/settings' },
 ];

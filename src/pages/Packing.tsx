@@ -63,6 +63,8 @@ export default function Packing() {
       await markAsPacked.mutateAsync({
         orderId: order.id,
         packingStatusId: order.packing_status?.id,
+        customerId: order.customer?.id,
+        productId: order.product?.id,
       });
     } catch (error) {
       toast({

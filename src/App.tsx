@@ -17,8 +17,13 @@ import Categories from './pages/Categories';
 import Users from './pages/Users';
 import Import from './pages/Import';
 import Settings from './pages/Settings';
+import DisplaySettings from './pages/DisplaySettings';
 import Bakeries from './pages/Bakeries';
 import NotFound from './pages/NotFound';
+
+// Display pages (public)
+import SharedDisplay from './pages/display/SharedDisplay';
+import CustomerDisplay from './pages/display/CustomerDisplay';
 
 // Components
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
@@ -35,6 +40,11 @@ function AppRoutes() {
       {/* Public routes */}
       <Route path="/" element={<Index />} />
       <Route path="/auth" element={<Auth />} />
+      
+      {/* Public display routes (no auth required) */}
+      <Route path="/display/shared/:bakeryShortId/:categoryId" element={<SharedDisplay />} />
+      <Route path="/display/shared/:bakeryShortId" element={<SharedDisplay />} />
+      <Route path="/display/customer/:displayToken" element={<CustomerDisplay />} />
       
       {/* Protected dashboard routes */}
       <Route
@@ -88,8 +98,15 @@ function AppRoutes() {
               <Import />
             </ProtectedRoute>
           }
+          />
+        <Route
+          path="/display-settings"
+          element={
+            <ProtectedRoute requireRole="bakery_admin">
+              <DisplaySettings />
+            </ProtectedRoute>
+          }
         />
-        
         {/* Super admin routes */}
         <Route
           path="/bakeries"

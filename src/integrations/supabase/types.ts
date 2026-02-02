@@ -91,6 +91,8 @@ export type Database = {
           bakery_id: string
           created_at: string | null
           customer_number: string
+          display_token: string | null
+          has_dedicated_display: boolean | null
           id: string
           is_active: boolean | null
           name: string
@@ -101,6 +103,8 @@ export type Database = {
           bakery_id: string
           created_at?: string | null
           customer_number: string
+          display_token?: string | null
+          has_dedicated_display?: boolean | null
           id?: string
           is_active?: boolean | null
           name: string
@@ -111,6 +115,8 @@ export type Database = {
           bakery_id?: string
           created_at?: string | null
           customer_number?: string
+          display_token?: string | null
+          has_dedicated_display?: boolean | null
           id?: string
           is_active?: boolean | null
           name?: string
@@ -122,6 +128,51 @@ export type Database = {
             columns: ["bakery_id"]
             isOneToOne: false
             referencedRelation: "bakeries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      display_settings: {
+        Row: {
+          bakery_id: string
+          category_id: string | null
+          created_at: string
+          display_type: string
+          id: string
+          settings: Json
+          updated_at: string
+        }
+        Insert: {
+          bakery_id: string
+          category_id?: string | null
+          created_at?: string
+          display_type?: string
+          id?: string
+          settings?: Json
+          updated_at?: string
+        }
+        Update: {
+          bakery_id?: string
+          category_id?: string | null
+          created_at?: string
+          display_type?: string
+          id?: string
+          settings?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "display_settings_bakery_id_fkey"
+            columns: ["bakery_id"]
+            isOneToOne: false
+            referencedRelation: "bakeries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "display_settings_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
             referencedColumns: ["id"]
           },
         ]
