@@ -14,7 +14,9 @@ import {
   X,
   Building2,
   ChevronDown,
-  Monitor
+  Monitor,
+  PackageCheck,
+  UserCheck
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/authStore';
@@ -29,6 +31,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 
@@ -38,11 +45,20 @@ interface NavItem {
   href: string;
   requiresAdmin?: boolean;
   requiresSuperAdmin?: boolean;
+  children?: { key: string; label: string; href: string; icon: React.ComponentType<{ className?: string }> }[];
 }
 
 const navItems: NavItem[] = [
   { key: 'dashboard', icon: LayoutDashboard, href: '/dashboard' },
-  { key: 'packing', icon: Package, href: '/packing' },
+  { 
+    key: 'packing', 
+    icon: Package, 
+    href: '/packing',
+    children: [
+      { key: 'productBased', label: 'packing.productBased', href: '/packing', icon: PackageCheck },
+      { key: 'customerBased', label: 'packing.customerBased', href: '/packing/customer', icon: UserCheck },
+    ]
+  },
   { key: 'products', icon: Tags, href: '/products', requiresAdmin: true },
   { key: 'customers', icon: Users, href: '/customers', requiresAdmin: true },
   { key: 'categories', icon: FolderOpen, href: '/categories', requiresAdmin: true },
@@ -95,7 +111,56 @@ export function DashboardLayout() {
         <nav className="space-y-1">
           {filteredNavItems.map((item) => {
             const Icon = item.icon;
-            const isActive = location.pathname === item.href;
+            const isActive = location.pathname === item.href || 
+              (item.children?.some(child => location.pathname === child.href));
+            
+            // If item has children, render as collapsible
+            if (item.children) {
+              return (
+                <Collapsible key={item.key} defaultOpen={isActive}>
+                  <CollapsibleTrigger asChild>
+                    <Button
+                      variant={isActive ? 'secondary' : 'ghost'}
+                      className={cn(
+                        'w-full justify-between gap-3',
+                        isActive && 'bg-primary/10 text-primary'
+                      )}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Icon className="h-5 w-5" />
+                        {t(`nav.${item.key}`)}
+                      </div>
+                      <ChevronDown className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                    </Button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="pl-4 pt-1 space-y-1">
+                    {item.children.map((child) => {
+                      const ChildIcon = child.icon;
+                      const isChildActive = location.pathname === child.href;
+                      
+                      return (
+                        <Button
+                          key={child.key}
+                          variant={isChildActive ? 'secondary' : 'ghost'}
+                          size="sm"
+                          className={cn(
+                            'w-full justify-start gap-2',
+                            isChildActive && 'bg-primary/10 text-primary'
+                          )}
+                          onClick={() => {
+                            navigate(child.href);
+                            if (isMobile) setSidebarOpen(false);
+                          }}
+                        >
+                          <ChildIcon className="h-4 w-4" />
+                          {t(child.label)}
+                        </Button>
+                      );
+                    })}
+                  </CollapsibleContent>
+                </Collapsible>
+              );
+            }
             
             return (
               <Button

@@ -11,6 +11,7 @@ import Index from './pages/Index';
 import Auth from './pages/Auth';
 import Dashboard from './pages/Dashboard';
 import Packing from './pages/Packing';
+import CustomerPacking from './pages/CustomerPacking';
 import Products from './pages/Products';
 import Customers from './pages/Customers';
 import Categories from './pages/Categories';
@@ -56,6 +57,7 @@ function AppRoutes() {
       >
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/packing" element={<Packing />} />
+        <Route path="/packing/customer" element={<CustomerPacking />} />
         <Route path="/settings" element={<Settings />} />
         
         {/* Admin routes */}
