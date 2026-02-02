@@ -8,37 +8,39 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { CalendarIcon, Check, AlertTriangle, Package } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { CalendarIcon, Check, AlertTriangle, Package, Loader2, Undo2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { nb, enUS } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import { useProductsForDate } from '@/hooks/useProducts';
+import { useOrdersByProduct, useMarkAsPacked, useReportDeviation, useUndoPacking, Order } from '@/hooks/useOrders';
+import { useToast } from '@/hooks/use-toast';
 
-// Mock data - will be replaced with real data
-const mockProducts = [
-  { id: '1', name: 'Grovbrød', productNumber: 'GB001', piecesPerTray: 12 },
-  { id: '2', name: 'Loff', productNumber: 'LO001', piecesPerTray: 8 },
-  { id: '3', name: 'Rundstykker', productNumber: 'RS001', piecesPerTray: 24 },
-  { id: '4', name: 'Croissant', productNumber: 'CR001', piecesPerTray: 10 },
-  { id: '5', name: 'Kanelboller', productNumber: 'KB001', piecesPerTray: 15 },
-];
-
-const mockOrders = [
-  { id: '1', customerId: 'c1', customerName: 'Rema 1000 Storgata', productId: '1', quantity: 25, status: 'pending' as const },
-  { id: '2', customerId: 'c2', customerName: 'Kiwi Sentrum', productId: '1', quantity: 18, status: 'packed' as const },
-  { id: '3', customerId: 'c3', customerName: 'Meny Byporten', productId: '1', quantity: 40, status: 'pending' as const },
-  { id: '4', customerId: 'c4', customerName: 'Extra Grünerløkka', productId: '1', quantity: 12, status: 'deviation' as const },
-  { id: '5', customerId: 'c5', customerName: 'Joker Tøyen', productId: '1', quantity: 8, status: 'pending' as const },
-];
-
-type PackingStatus = 'pending' | 'packed' | 'deviation';
+type DeviationType = 'shortage' | 'damaged' | 'wrong_product' | 'other';
 
 export default function Packing() {
   const { t, i18n } = useTranslation();
+  const { toast } = useToast();
   const locale = i18n.language === 'nb' ? nb : enUS;
   
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
-  const [orders, setOrders] = useState(mockOrders);
+  const [deviationOrder, setDeviationOrder] = useState<Order | null>(null);
+  const [deviationType, setDeviationType] = useState<DeviationType>('shortage');
+  const [deviationNote, setDeviationNote] = useState('');
+  
+  const dateStr = format(selectedDate, 'yyyy-MM-dd');
+  
+  const { data: products = [], isLoading: productsLoading } = useProductsForDate(dateStr);
+  const { data: orders = [], isLoading: ordersLoading } = useOrdersByProduct(dateStr, selectedProducts);
+  
+  const markAsPacked = useMarkAsPacked();
+  const reportDeviation = useReportDeviation();
+  const undoPacking = useUndoPacking();
   
   const toggleProduct = (productId: string) => {
     setSelectedProducts(prev => {
@@ -52,21 +54,62 @@ export default function Packing() {
     });
   };
   
-  const filteredOrders = orders.filter(order => 
-    selectedProducts.includes(order.productId)
-  );
-  
-  const packedCount = filteredOrders.filter(o => o.status === 'packed').length;
-  const totalCount = filteredOrders.length;
+  const packedCount = orders.filter(o => o.packing_status?.status === 'packed' || o.packing_status?.status === 'deviation').length;
+  const totalCount = orders.length;
   const progress = totalCount > 0 ? Math.round((packedCount / totalCount) * 100) : 0;
   
-  const handleMarkPacked = (orderId: string) => {
-    setOrders(prev => prev.map(order => 
-      order.id === orderId ? { ...order, status: 'packed' as const } : order
-    ));
+  const handleMarkPacked = async (order: Order) => {
+    try {
+      await markAsPacked.mutateAsync({
+        orderId: order.id,
+        packingStatusId: order.packing_status?.id,
+      });
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: t('common.error'),
+        description: 'Kunne ikke markere som pakket',
+      });
+    }
   };
   
-  const getQuantityDisplay = (quantity: number, piecesPerTray?: number) => {
+  const handleUndo = async (order: Order) => {
+    if (!order.packing_status?.id) return;
+    
+    try {
+      await undoPacking.mutateAsync({ packingStatusId: order.packing_status.id });
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: t('common.error'),
+        description: 'Kunne ikke angre',
+      });
+    }
+  };
+  
+  const handleReportDeviation = async () => {
+    if (!deviationOrder) return;
+    
+    try {
+      await reportDeviation.mutateAsync({
+        orderId: deviationOrder.id,
+        packingStatusId: deviationOrder.packing_status?.id,
+        deviationType,
+        deviationNote: deviationNote || undefined,
+      });
+      setDeviationOrder(null);
+      setDeviationType('shortage');
+      setDeviationNote('');
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: t('common.error'),
+        description: 'Kunne ikke rapportere avvik',
+      });
+    }
+  };
+  
+  const getQuantityDisplay = (quantity: number, piecesPerTray?: number | null) => {
     if (!piecesPerTray) return t('packing.pieces', { count: quantity });
     
     const trays = Math.floor(quantity / piecesPerTray);
@@ -77,7 +120,7 @@ export default function Packing() {
     return t('packing.traysAndPieces', { trays: t('packing.trays', { count: trays }), pieces });
   };
   
-  const getStatusBadge = (status: PackingStatus) => {
+  const getStatusBadge = (status?: string) => {
     switch (status) {
       case 'packed':
         return <Badge className="bg-success text-success-foreground">{t('packing.packed')}</Badge>;
@@ -87,6 +130,8 @@ export default function Packing() {
         return <Badge variant="secondary">{t('packing.pending')}</Badge>;
     }
   };
+  
+  const isLoading = productsLoading || ordersLoading;
   
   return (
     <div className="space-y-6">
@@ -111,7 +156,12 @@ export default function Packing() {
             <Calendar
               mode="single"
               selected={selectedDate}
-              onSelect={(date) => date && setSelectedDate(date)}
+              onSelect={(date) => {
+                if (date) {
+                  setSelectedDate(date);
+                  setSelectedProducts([]);
+                }
+              }}
               locale={locale}
             />
           </PopoverContent>
@@ -130,37 +180,48 @@ export default function Packing() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <ScrollArea className="h-[400px] pr-4">
-              <div className="space-y-2">
-                {mockProducts.map((product) => {
-                  const isSelected = selectedProducts.includes(product.id);
-                  const isDisabled = !isSelected && selectedProducts.length >= 3;
-                  
-                  return (
-                    <div
-                      key={product.id}
-                      className={cn(
-                        'flex items-center gap-3 rounded-lg border p-3 transition-colors cursor-pointer',
-                        isSelected && 'border-primary bg-primary/5',
-                        isDisabled && 'opacity-50 cursor-not-allowed'
-                      )}
-                      onClick={() => !isDisabled && toggleProduct(product.id)}
-                    >
-                      <Checkbox
-                        checked={isSelected}
-                        disabled={isDisabled}
-                        className="pointer-events-none"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate">{product.name}</p>
-                        <p className="text-sm text-muted-foreground">{product.productNumber}</p>
-                      </div>
-                      <Package className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                  );
-                })}
+            {productsLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
               </div>
-            </ScrollArea>
+            ) : products.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <Package className="h-12 w-12 text-muted-foreground mb-4" />
+                <p className="text-muted-foreground">{t('dashboard.noOrders')}</p>
+              </div>
+            ) : (
+              <ScrollArea className="h-[400px] pr-4">
+                <div className="space-y-2">
+                  {products.map((product) => {
+                    const isSelected = selectedProducts.includes(product.id);
+                    const isDisabled = !isSelected && selectedProducts.length >= 3;
+                    
+                    return (
+                      <div
+                        key={product.id}
+                        className={cn(
+                          'flex items-center gap-3 rounded-lg border p-3 transition-colors cursor-pointer',
+                          isSelected && 'border-primary bg-primary/5',
+                          isDisabled && 'opacity-50 cursor-not-allowed'
+                        )}
+                        onClick={() => !isDisabled && toggleProduct(product.id)}
+                      >
+                        <Checkbox
+                          checked={isSelected}
+                          disabled={isDisabled}
+                          className="pointer-events-none"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium truncate">{product.name}</p>
+                          <p className="text-sm text-muted-foreground">{product.product_number}</p>
+                        </div>
+                        <Package className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                    );
+                  })}
+                </div>
+              </ScrollArea>
+            )}
           </CardContent>
         </Card>
         
@@ -192,53 +253,75 @@ export default function Packing() {
                 <Package className="h-12 w-12 text-muted-foreground mb-4" />
                 <p className="text-muted-foreground">{t('packing.selectProduct')}</p>
               </div>
+            ) : isLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              </div>
+            ) : orders.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <Package className="h-12 w-12 text-muted-foreground mb-4" />
+                <p className="text-muted-foreground">{t('dashboard.noOrders')}</p>
+              </div>
             ) : (
               <ScrollArea className="h-[400px] pr-4">
                 <div className="space-y-2">
-                  {filteredOrders.map((order) => {
-                    const product = mockProducts.find(p => p.id === order.productId);
+                  {orders.map((order) => {
+                    const status = order.packing_status?.status || 'pending';
                     
                     return (
                       <div
                         key={order.id}
                         className={cn(
                           'flex items-center gap-4 rounded-lg border p-4 transition-all',
-                          order.status === 'packed' && 'bg-success/5 border-success/20',
-                          order.status === 'deviation' && 'bg-destructive/5 border-destructive/20'
+                          status === 'packed' && 'bg-success/5 border-success/20',
+                          status === 'deviation' && 'bg-destructive/5 border-destructive/20'
                         )}
                       >
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium">{order.customerName}</p>
+                          <p className="font-medium">{order.customer?.name}</p>
                           <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <span>{product?.name}</span>
+                            <span>{order.product?.name}</span>
                             <span>•</span>
                             <span className="font-mono">
-                              {getQuantityDisplay(order.quantity, product?.piecesPerTray)}
+                              {getQuantityDisplay(order.quantity, order.product?.pieces_per_tray)}
                             </span>
                           </div>
                         </div>
                         
                         <div className="flex items-center gap-2">
-                          {getStatusBadge(order.status)}
+                          {getStatusBadge(status)}
                           
-                          {order.status === 'pending' && (
-                            <Button
-                              size="sm"
-                              onClick={() => handleMarkPacked(order.id)}
-                              className="gap-1"
-                            >
-                              <Check className="h-4 w-4" />
-                              {t('packing.markAsPacked')}
-                            </Button>
+                          {status === 'pending' && (
+                            <>
+                              <Button
+                                size="sm"
+                                onClick={() => handleMarkPacked(order)}
+                                disabled={markAsPacked.isPending}
+                                className="gap-1"
+                              >
+                                <Check className="h-4 w-4" />
+                                {t('packing.markAsPacked')}
+                              </Button>
+                              
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setDeviationOrder(order)}
+                                className="gap-1"
+                              >
+                                <AlertTriangle className="h-4 w-4" />
+                              </Button>
+                            </>
                           )}
                           
-                          {order.status === 'pending' && (
+                          {(status === 'packed' || status === 'deviation') && (
                             <Button
                               size="sm"
-                              variant="outline"
-                              className="gap-1"
+                              variant="ghost"
+                              onClick={() => handleUndo(order)}
+                              disabled={undoPacking.isPending}
                             >
-                              <AlertTriangle className="h-4 w-4" />
+                              <Undo2 className="h-4 w-4" />
                             </Button>
                           )}
                         </div>
@@ -251,6 +334,54 @@ export default function Packing() {
           </CardContent>
         </Card>
       </div>
+      
+      {/* Deviation dialog */}
+      <Dialog open={!!deviationOrder} onOpenChange={() => setDeviationOrder(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('packing.reportDeviation')}</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>{t('packing.deviationType')}</Label>
+              <Select value={deviationType} onValueChange={(v) => setDeviationType(v as DeviationType)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="shortage">{t('packing.shortage')}</SelectItem>
+                  <SelectItem value="damaged">{t('packing.damaged')}</SelectItem>
+                  <SelectItem value="wrong_product">{t('packing.wrongProduct')}</SelectItem>
+                  <SelectItem value="other">{t('packing.other')}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label>{t('packing.deviationNote')}</Label>
+              <Textarea
+                value={deviationNote}
+                onChange={(e) => setDeviationNote(e.target.value)}
+                placeholder={t('common.optional')}
+              />
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeviationOrder(null)}>
+              {t('common.cancel')}
+            </Button>
+            <Button 
+              onClick={handleReportDeviation}
+              disabled={reportDeviation.isPending}
+            >
+              {reportDeviation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {t('common.confirm')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
