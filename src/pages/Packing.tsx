@@ -65,12 +65,14 @@ export default function Packing() {
         packingStatusId: order.packing_status?.id,
         customerId: order.customer?.id,
         productId: order.product?.id,
+        categoryId: order.product?.category_id,
+        deliveryDate: dateStr,
       });
     } catch (error) {
       toast({
         variant: 'destructive',
         title: t('common.error'),
-        description: 'Kunne ikke markere som pakket',
+        description: t('packing.couldNotPack'),
       });
     }
   };

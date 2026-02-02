@@ -15,6 +15,7 @@ export interface CustomerWithOrders {
       name: string;
       product_number: string;
       pieces_per_tray: number | null;
+      category_id: string | null;
     };
     packing_status: {
       id: string;
@@ -46,7 +47,7 @@ export function useCustomersForDate(deliveryDate: string) {
           quantity,
           customer_id,
           customer:customers(id, name, customer_number, address),
-          product:products(id, name, product_number, pieces_per_tray),
+          product:products(id, name, product_number, pieces_per_tray, category_id),
           packing_status(id, status, packed_at, deviation_type, deviation_note)
         `)
         .eq('bakery_id', bakeryId)

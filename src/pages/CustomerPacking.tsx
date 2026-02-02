@@ -105,7 +105,7 @@ export default function CustomerPacking() {
   };
   
   // Mark order as packed
-  const handleMarkPacked = async (orderId: string, packingStatusId?: string, productId?: string) => {
+  const handleMarkPacked = async (orderId: string, packingStatusId?: string, productId?: string, categoryId?: string | null) => {
     if (!selectedCustomer) return;
     
     try {
@@ -114,6 +114,8 @@ export default function CustomerPacking() {
         packingStatusId,
         customerId: selectedCustomer.id,
         productId,
+        categoryId,
+        deliveryDate: dateStr,
       });
     } catch (error) {
       toast({
@@ -278,7 +280,7 @@ export default function CustomerPacking() {
                           <>
                             <Button
                               size="sm"
-                              onClick={() => handleMarkPacked(order.id, order.packing_status?.id, order.product.id)}
+                              onClick={() => handleMarkPacked(order.id, order.packing_status?.id, order.product.id, order.product.category_id)}
                               disabled={markAsPacked.isPending}
                               className="gap-1"
                             >
