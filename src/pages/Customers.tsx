@@ -4,26 +4,101 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Search, Edit, Trash2 } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Plus, Search, Edit, Trash2, Loader2 } from 'lucide-react';
 import { useState } from 'react';
+import { useCustomers, useCreateCustomer, useUpdateCustomer, useDeleteCustomer, Customer } from '@/hooks/useCustomers';
+import { useToast } from '@/hooks/use-toast';
 
-// Mock data
-const mockCustomers = [
-  { id: '1', customerNumber: 'K001', name: 'Rema 1000 Storgata', address: 'Storgata 15, 0184 Oslo', isActive: true },
-  { id: '2', customerNumber: 'K002', name: 'Kiwi Sentrum', address: 'Karl Johans gate 22, 0160 Oslo', isActive: true },
-  { id: '3', customerNumber: 'K003', name: 'Meny Byporten', address: 'Jernbanetorget 1, 0154 Oslo', isActive: true },
-  { id: '4', customerNumber: 'K004', name: 'Extra Grünerløkka', address: 'Thorvald Meyers gate 56, 0555 Oslo', isActive: true },
-  { id: '5', customerNumber: 'K005', name: 'Joker Tøyen', address: 'Tøyengata 2, 0578 Oslo', isActive: false },
-];
+interface CustomerFormData {
+  customer_number: string;
+  name: string;
+  address: string | null;
+  is_active: boolean;
+}
+
+const emptyForm: CustomerFormData = {
+  customer_number: '',
+  name: '',
+  address: null,
+  is_active: true,
+};
 
 export default function Customers() {
   const { t } = useTranslation();
-  const [searchQuery, setSearchQuery] = useState('');
+  const { toast } = useToast();
   
-  const filteredCustomers = mockCustomers.filter(customer =>
+  const [searchQuery, setSearchQuery] = useState('');
+  const [editCustomer, setEditCustomer] = useState<Customer | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [deleteCustomer, setDeleteCustomer] = useState<Customer | null>(null);
+  const [formData, setFormData] = useState<CustomerFormData>(emptyForm);
+  
+  const { data: customers = [], isLoading } = useCustomers();
+  const createCustomer = useCreateCustomer();
+  const updateCustomer = useUpdateCustomer();
+  const deleteCustomerMutation = useDeleteCustomer();
+  
+  const filteredCustomers = customers.filter(customer =>
     customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    customer.customerNumber.toLowerCase().includes(searchQuery.toLowerCase())
+    customer.customer_number.toLowerCase().includes(searchQuery.toLowerCase())
   );
+  
+  const handleOpenDialog = (customer?: Customer) => {
+    if (customer) {
+      setEditCustomer(customer);
+      setFormData({
+        customer_number: customer.customer_number,
+        name: customer.name,
+        address: customer.address,
+        is_active: customer.is_active ?? true,
+      });
+    } else {
+      setEditCustomer(null);
+      setFormData(emptyForm);
+    }
+    setIsDialogOpen(true);
+  };
+  
+  const handleSave = async () => {
+    try {
+      if (editCustomer) {
+        await updateCustomer.mutateAsync({ id: editCustomer.id, ...formData });
+        toast({ title: t('common.success'), description: 'Kunde oppdatert' });
+      } else {
+        await createCustomer.mutateAsync(formData);
+        toast({ title: t('common.success'), description: 'Kunde opprettet' });
+      }
+      setIsDialogOpen(false);
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: t('common.error'),
+        description: error instanceof Error ? error.message : 'Noe gikk galt',
+      });
+    }
+  };
+  
+  const handleDelete = async () => {
+    if (!deleteCustomer) return;
+    
+    try {
+      await deleteCustomerMutation.mutateAsync(deleteCustomer.id);
+      toast({ title: t('common.success'), description: 'Kunde slettet' });
+      setDeleteCustomer(null);
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: t('common.error'),
+        description: 'Kunne ikke slette kunde. Det kan ha tilknyttede ordrer.',
+      });
+    }
+  };
+  
+  const isSaving = createCustomer.isPending || updateCustomer.isPending;
   
   return (
     <div className="space-y-6">
@@ -34,7 +109,7 @@ export default function Customers() {
             {filteredCustomers.length} {t('customers.title').toLowerCase()}
           </p>
         </div>
-        <Button className="gap-2">
+        <Button className="gap-2" onClick={() => handleOpenDialog()}>
           <Plus className="h-4 w-4" />
           {t('customers.addCustomer')}
         </Button>
@@ -55,51 +130,133 @@ export default function Customers() {
           </div>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t('customers.customerNumber')}</TableHead>
-                <TableHead>{t('customers.customerName')}</TableHead>
-                <TableHead>{t('customers.address')}</TableHead>
-                <TableHead>{t('common.status')}</TableHead>
-                <TableHead className="text-right">{t('common.actions')}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredCustomers.length === 0 ? (
+          {isLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                    {t('customers.noCustomers')}
-                  </TableCell>
+                  <TableHead>{t('customers.customerNumber')}</TableHead>
+                  <TableHead>{t('customers.customerName')}</TableHead>
+                  <TableHead>{t('customers.address')}</TableHead>
+                  <TableHead>{t('common.status')}</TableHead>
+                  <TableHead className="text-right">{t('common.actions')}</TableHead>
                 </TableRow>
-              ) : (
-                filteredCustomers.map((customer) => (
-                  <TableRow key={customer.id}>
-                    <TableCell className="font-mono">{customer.customerNumber}</TableCell>
-                    <TableCell className="font-medium">{customer.name}</TableCell>
-                    <TableCell className="text-muted-foreground">{customer.address}</TableCell>
-                    <TableCell>
-                      <Badge variant={customer.isActive ? 'default' : 'secondary'}>
-                        {customer.isActive ? t('customers.active') : t('customers.inactive')}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button variant="ghost" size="icon">
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
+              </TableHeader>
+              <TableBody>
+                {filteredCustomers.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                      {t('customers.noCustomers')}
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                ) : (
+                  filteredCustomers.map((customer) => (
+                    <TableRow key={customer.id}>
+                      <TableCell className="font-mono">{customer.customer_number}</TableCell>
+                      <TableCell className="font-medium">{customer.name}</TableCell>
+                      <TableCell className="text-muted-foreground">{customer.address || '-'}</TableCell>
+                      <TableCell>
+                        <Badge variant={customer.is_active ? 'default' : 'secondary'}>
+                          {customer.is_active ? t('customers.active') : t('customers.inactive')}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(customer)}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => setDeleteCustomer(customer)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
+      
+      {/* Edit/Create dialog */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {editCustomer ? t('customers.editCustomer') : t('customers.addCustomer')}
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>{t('customers.customerNumber')}</Label>
+              <Input
+                value={formData.customer_number}
+                onChange={(e) => setFormData(prev => ({ ...prev, customer_number: e.target.value }))}
+                placeholder="f.eks. K001"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label>{t('customers.customerName')}</Label>
+              <Input
+                value={formData.name}
+                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                placeholder="f.eks. Rema 1000 Storgata"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label>{t('customers.address')}</Label>
+              <Input
+                value={formData.address || ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value || null }))}
+                placeholder={t('common.optional')}
+              />
+            </div>
+            
+            <div className="flex items-center justify-between">
+              <Label>{t('customers.active')}</Label>
+              <Switch
+                checked={formData.is_active}
+                onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_active: checked }))}
+              />
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+              {t('common.cancel')}
+            </Button>
+            <Button onClick={handleSave} disabled={isSaving || !formData.customer_number || !formData.name}>
+              {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {t('common.save')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Delete confirmation */}
+      <AlertDialog open={!!deleteCustomer} onOpenChange={() => setDeleteCustomer(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('common.confirm')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('customers.deleteConfirm')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete}>
+              {t('common.delete')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

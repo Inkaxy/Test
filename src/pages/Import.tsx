@@ -4,9 +4,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { Upload, File, CheckCircle2, AlertCircle, X } from 'lucide-react';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Upload, File, CheckCircle2, AlertCircle, X, CalendarIcon, Package, Users, ShoppingCart } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { useImport } from '@/hooks/useImport';
+import { format } from 'date-fns';
+import { nb } from 'date-fns/locale';
+import { ParsedProduct, ParsedCustomer, ParsedOrder } from '@/lib/fileParser';
 
 interface FileWithPreview {
   file: File;
@@ -15,13 +21,23 @@ interface FileWithPreview {
   error?: string;
 }
 
+interface ParsedData {
+  products: ParsedProduct[];
+  customers: ParsedCustomer[];
+  orders: ParsedOrder[];
+  deliveryDate: Date | null;
+}
+
 export default function Import() {
   const { t } = useTranslation();
   const { toast } = useToast();
+  const { parseFiles, importData, isImporting } = useImport();
   
   const [files, setFiles] = useState<FileWithPreview[]>([]);
   const [isDragging, setIsDragging] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
+  const [parsedData, setParsedData] = useState<ParsedData | null>(null);
+  const [parseErrors, setParseErrors] = useState<string[]>([]);
+  const [deliveryDate, setDeliveryDate] = useState<Date | undefined>();
   const [uploadProgress, setUploadProgress] = useState(0);
   
   const getFileType = (filename: string): FileWithPreview['type'] => {
@@ -32,7 +48,7 @@ export default function Import() {
     return 'unknown';
   };
   
-  const handleFiles = useCallback((fileList: FileList) => {
+  const handleFiles = useCallback(async (fileList: FileList) => {
     const newFiles: FileWithPreview[] = Array.from(fileList).map(file => {
       const type = getFileType(file.name);
       return {
@@ -43,8 +59,29 @@ export default function Import() {
       };
     });
     
-    setFiles(prev => [...prev, ...newFiles]);
-  }, [t]);
+    const allFiles = [...files, ...newFiles];
+    setFiles(allFiles);
+    
+    // Parse all valid files
+    const validFiles = allFiles
+      .filter(f => f.status === 'valid')
+      .map(f => f.file);
+    
+    if (validFiles.length > 0) {
+      try {
+        const { data, errors } = await parseFiles(validFiles);
+        setParsedData(data);
+        setParseErrors(errors);
+        
+        // Auto-set delivery date from filename if found
+        if (data.deliveryDate && !deliveryDate) {
+          setDeliveryDate(data.deliveryDate);
+        }
+      } catch (error) {
+        console.error('Parse error:', error);
+      }
+    }
+  }, [files, parseFiles, t, deliveryDate]);
   
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -68,37 +105,66 @@ export default function Import() {
     }
   }, [handleFiles]);
   
-  const removeFile = (index: number) => {
-    setFiles(prev => prev.filter((_, i) => i !== index));
+  const removeFile = async (index: number) => {
+    const newFiles = files.filter((_, i) => i !== index);
+    setFiles(newFiles);
+    
+    // Re-parse remaining files
+    const validFiles = newFiles
+      .filter(f => f.status === 'valid')
+      .map(f => f.file);
+    
+    if (validFiles.length > 0) {
+      const { data, errors } = await parseFiles(validFiles);
+      setParsedData(data);
+      setParseErrors(errors);
+    } else {
+      setParsedData(null);
+      setParseErrors([]);
+    }
   };
   
   const handleUpload = async () => {
-    const validFiles = files.filter(f => f.status === 'valid');
-    if (validFiles.length === 0) {
+    if (!parsedData || !deliveryDate) {
       toast({
         variant: 'destructive',
         title: t('common.error'),
-        description: t('import.invalidFormat'),
+        description: !deliveryDate ? 'Velg en leveringsdato' : t('import.invalidFormat'),
       });
       return;
     }
     
-    setIsUploading(true);
-    setUploadProgress(0);
+    setUploadProgress(10);
     
-    // Simulate upload progress
-    for (let i = 0; i <= 100; i += 10) {
-      await new Promise(resolve => setTimeout(resolve, 200));
-      setUploadProgress(i);
+    try {
+      const result = await importData({
+        products: parsedData.products,
+        customers: parsedData.customers,
+        orders: parsedData.orders,
+        deliveryDate,
+      });
+      
+      setUploadProgress(100);
+      
+      toast({
+        title: t('common.success'),
+        description: `Import fullført! ${result.productsCreated} nye produkter, ${result.customersCreated} nye kunder, ${result.ordersCreated} ordrer.`,
+      });
+      
+      // Reset state
+      setFiles([]);
+      setParsedData(null);
+      setParseErrors([]);
+      setDeliveryDate(undefined);
+      setUploadProgress(0);
+    } catch (error) {
+      setUploadProgress(0);
+      toast({
+        variant: 'destructive',
+        title: t('common.error'),
+        description: error instanceof Error ? error.message : t('import.error'),
+      });
     }
-    
-    setIsUploading(false);
-    setFiles([]);
-    
-    toast({
-      title: t('common.success'),
-      description: t('import.success'),
-    });
   };
   
   const getFileIcon = (type: FileWithPreview['type']) => {
@@ -117,6 +183,12 @@ export default function Import() {
   const hasPrd = files.some(f => f.type === 'prd' && f.status === 'valid');
   const hasCus = files.some(f => f.type === 'cus' && f.status === 'valid');
   const hasOd0 = files.some(f => f.type === 'od0' && f.status === 'valid');
+  
+  const canImport = parsedData && deliveryDate && (
+    parsedData.products.length > 0 ||
+    parsedData.customers.length > 0 ||
+    parsedData.orders.length > 0
+  );
   
   return (
     <div className="space-y-6">
@@ -145,7 +217,7 @@ export default function Import() {
             <input
               type="file"
               multiple
-              accept=".prd,.cus,.od0"
+              accept=".prd,.cus,.od0,.PRD,.CUS,.OD0"
               onChange={handleInputChange}
               className="absolute inset-0 cursor-pointer opacity-0"
             />
@@ -157,7 +229,7 @@ export default function Import() {
         </CardContent>
       </Card>
       
-      {/* File list */}
+      {/* File list and parsed summary */}
       {files.length > 0 && (
         <Card>
           <CardHeader>
@@ -177,6 +249,76 @@ export default function Import() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Parsed data summary */}
+            {parsedData && (
+              <div className="grid grid-cols-3 gap-4 p-4 bg-muted/50 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <Package className="h-5 w-5 text-primary" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">{t('nav.products')}</p>
+                    <p className="text-lg font-semibold">{parsedData.products.length}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Users className="h-5 w-5 text-primary" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">{t('nav.customers')}</p>
+                    <p className="text-lg font-semibold">{parsedData.customers.length}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <ShoppingCart className="h-5 w-5 text-primary" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">Ordrer</p>
+                    <p className="text-lg font-semibold">{parsedData.orders.length}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {/* Delivery date picker */}
+            <div className="flex items-center gap-4">
+              <span className="text-sm font-medium">{t('import.deliveryDate')}:</span>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      'justify-start text-left font-normal',
+                      !deliveryDate && 'text-muted-foreground'
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {deliveryDate ? format(deliveryDate, 'PPP', { locale: nb }) : 'Velg dato'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={deliveryDate}
+                    onSelect={setDeliveryDate}
+                    locale={nb}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+            
+            {/* Parse errors */}
+            {parseErrors.length > 0 && (
+              <div className="p-4 bg-destructive/10 rounded-lg">
+                <p className="font-medium text-destructive mb-2">Advarsler under parsing:</p>
+                <ul className="text-sm text-destructive space-y-1">
+                  {parseErrors.slice(0, 5).map((error, i) => (
+                    <li key={i}>{error}</li>
+                  ))}
+                  {parseErrors.length > 5 && (
+                    <li>...og {parseErrors.length - 5} flere</li>
+                  )}
+                </ul>
+              </div>
+            )}
+            
+            {/* File list */}
             {files.map((fileItem, index) => (
               <div
                 key={index}
@@ -205,14 +347,14 @@ export default function Import() {
                   variant="ghost"
                   size="icon"
                   onClick={() => removeFile(index)}
-                  disabled={isUploading}
+                  disabled={isImporting}
                 >
                   <X className="h-4 w-4" />
                 </Button>
               </div>
             ))}
             
-            {isUploading && (
+            {isImporting && (
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span>{t('import.processing')}</span>
@@ -224,10 +366,10 @@ export default function Import() {
             
             <Button
               onClick={handleUpload}
-              disabled={isUploading || files.every(f => f.status === 'invalid')}
+              disabled={isImporting || !canImport}
               className="w-full"
             >
-              {isUploading ? t('import.uploading') : t('import.uploadFiles')}
+              {isImporting ? t('import.uploading') : t('import.uploadFiles')}
             </Button>
           </CardContent>
         </Card>
