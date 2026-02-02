@@ -161,18 +161,14 @@ export function useActiveCustomerLock(customerId: string | null, deliveryDate: s
   const extendLock = useExtendCustomerLock();
   const releaseLock = useReleaseCustomerLock();
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const customerIdRef = useRef<string | null>(customerId);
+  const deliveryDateRef = useRef<string>(deliveryDate);
   
-  const startAutoExtend = useCallback(() => {
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-    }
-    
-    if (customerId && deliveryDate) {
-      intervalRef.current = setInterval(() => {
-        extendLock.mutate({ customerId, deliveryDate });
-      }, LOCK_EXTEND_INTERVAL_MS);
-    }
-  }, [customerId, deliveryDate, extendLock]);
+  // Keep refs in sync
+  useEffect(() => {
+    customerIdRef.current = customerId;
+    deliveryDateRef.current = deliveryDate;
+  }, [customerId, deliveryDate]);
   
   const stopAutoExtend = useCallback(() => {
     if (intervalRef.current) {
@@ -181,26 +177,51 @@ export function useActiveCustomerLock(customerId: string | null, deliveryDate: s
     }
   }, []);
   
+  const startAutoExtend = useCallback(() => {
+    stopAutoExtend();
+    
+    if (customerIdRef.current && deliveryDateRef.current) {
+      intervalRef.current = setInterval(() => {
+        if (customerIdRef.current && deliveryDateRef.current) {
+          extendLock.mutate({ 
+            customerId: customerIdRef.current, 
+            deliveryDate: deliveryDateRef.current 
+          });
+        }
+      }, LOCK_EXTEND_INTERVAL_MS);
+    }
+  }, [stopAutoExtend, extendLock.mutate]);
+  
   const release = useCallback(async () => {
     stopAutoExtend();
-    if (customerId && deliveryDate) {
-      await releaseLock.mutateAsync({ customerId, deliveryDate });
+    if (customerIdRef.current && deliveryDateRef.current) {
+      try {
+        await releaseLock.mutateAsync({ 
+          customerId: customerIdRef.current, 
+          deliveryDate: deliveryDateRef.current 
+        });
+      } catch (error) {
+        // Ignore release errors on unmount
+        console.warn('Failed to release lock:', error);
+      }
     }
-  }, [customerId, deliveryDate, releaseLock, stopAutoExtend]);
+  }, [stopAutoExtend, releaseLock.mutateAsync]);
   
   // Clean up on unmount
   useEffect(() => {
     return () => {
       stopAutoExtend();
-      if (customerId && deliveryDate) {
-        // Fire and forget release on unmount
-        supabase.rpc('release_customer_lock', {
-          _customer_id: customerId,
-          _delivery_date: deliveryDate,
-        });
+      // Fire and forget release on unmount using refs
+      if (customerIdRef.current && deliveryDateRef.current) {
+        Promise.resolve(
+          supabase.rpc('release_customer_lock', {
+            _customer_id: customerIdRef.current,
+            _delivery_date: deliveryDateRef.current,
+          })
+        ).catch(() => {});
       }
     };
-  }, [customerId, deliveryDate, stopAutoExtend]);
+  }, [stopAutoExtend]);
   
   return {
     startAutoExtend,

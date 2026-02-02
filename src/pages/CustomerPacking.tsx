@@ -191,14 +191,7 @@ export default function CustomerPacking() {
     }
   };
   
-  // Clean up lock on unmount
-  useEffect(() => {
-    return () => {
-      if (selectedCustomer) {
-        release();
-      }
-    };
-  }, [selectedCustomer, release]);
+  // Note: Lock cleanup is handled by useActiveCustomerLock's own cleanup effect
   
   // If a customer is selected, show the packing view
   if (selectedCustomer) {
