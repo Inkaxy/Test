@@ -25,7 +25,7 @@ Et digitalt pakkesystem for bakerier som erstatter papirark. Systemet støtter f
 
 - [x] Felles Display (`/display/shared/:bakeryShortId/:categoryId`)
   - Viser alle kunder med pakkestatus
-  - Sanntidsoppdatering via Supabase Realtime
+  - Sanntidsoppdatering via Supabase Realtime (broadcast + postgres_changes)
   - Progresjonsbar og klokke
 - [x] Kunde Display (`/display/customer/:displayToken`)
   - Dedikert visning for enkeltkunders produkter
@@ -36,9 +36,10 @@ Et digitalt pakkesystem for bakerier som erstatter papirark. Systemet støtter f
   - Visning (klokke, dato, progresjonsbar, animasjoner)
   - Live forhåndsvisning
 - [x] Realtime hooks
-  - `useRealtimeDisplay` for lytting
-  - `usePackingBroadcast` for sending
+  - `useRealtimeDisplay` for lytting på broadcast + postgres_changes
+  - Broadcast sendes til både generell kanal og kategori-spesifikk kanal
   - Fallback-synkronisering hvert 60. sekund
+- [x] Oversettelser (nb.json, en.json) for display-innstillinger
 
 ---
 

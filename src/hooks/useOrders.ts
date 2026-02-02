@@ -104,20 +104,23 @@ export function useMarkAsPacked() {
   const { user, getCurrentBakeryId } = useAuthStore();
   
   return useMutation({
-    mutationFn: async ({ orderId, packingStatusId, customerId, productId }: { 
+    mutationFn: async ({ orderId, packingStatusId, customerId, productId, categoryId, deliveryDate }: { 
       orderId: string; 
       packingStatusId: string | undefined;
       customerId?: string;
       productId?: string;
+      categoryId?: string | null;
+      deliveryDate?: string;
     }) => {
       const bakeryId = getCurrentBakeryId();
+      const packedAt = new Date().toISOString();
       
       if (packingStatusId) {
         const { error } = await supabase
           .from('packing_status')
           .update({
             status: 'packed',
-            packed_at: new Date().toISOString(),
+            packed_at: packedAt,
             packed_by: user?.id,
           })
           .eq('id', packingStatusId);
@@ -129,33 +132,47 @@ export function useMarkAsPacked() {
           .insert({
             order_id: orderId,
             status: 'packed',
-            packed_at: new Date().toISOString(),
+            packed_at: packedAt,
             packed_by: user?.id,
           });
         
         if (error) throw error;
       }
       
-      // Send broadcast for realtime updates
-      if (bakeryId) {
-        const channel = supabase.channel(`packing:${bakeryId}`);
-        await channel.send({
+      // Send broadcast for realtime updates - to all relevant channels
+      if (bakeryId && deliveryDate) {
+        const updatePayload = {
+          order_id: orderId,
+          status: 'packed' as const,
+          packed_at: packedAt,
+          customer_id: customerId,
+          product_id: productId,
+        };
+        
+        // Broadcast to general channel (bakery + date)
+        const generalChannel = supabase.channel(`packing:${bakeryId}:${deliveryDate}`);
+        await generalChannel.send({
           type: 'broadcast',
           event: 'packing_update',
-          payload: {
-            order_id: orderId,
-            status: 'packed',
-            packed_at: new Date().toISOString(),
-            customer_id: customerId,
-            product_id: productId,
-          },
+          payload: updatePayload,
         });
+        
+        // Also broadcast to category-specific channel if provided
+        if (categoryId) {
+          const categoryChannel = supabase.channel(`packing:${bakeryId}:${categoryId}:${deliveryDate}`);
+          await categoryChannel.send({
+            type: 'broadcast',
+            event: 'packing_update',
+            payload: updatePayload,
+          });
+        }
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['orders'] });
       queryClient.invalidateQueries({ queryKey: ['orders-by-product'] });
       queryClient.invalidateQueries({ queryKey: ['display-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['customers-for-date'] });
     },
   });
 }
