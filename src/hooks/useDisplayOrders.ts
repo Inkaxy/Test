@@ -213,6 +213,9 @@ export interface DisplaySettings {
   header_show_clock: boolean;
   header_show_date: boolean;
   header_bakery_font_size: string;
+  header_category_font_size: string;
+  header_clock_font_size: string;
+  header_date_font_size: string;
   header_clock_format: '12h' | '24h';
   
   // Statistikk-kort (Stats card)
@@ -221,6 +224,8 @@ export interface DisplaySettings {
   stats_show_remaining_count: boolean;
   stats_progress_bar_style: 'bar' | 'circle' | 'none';
   stats_progress_bar_height: string;
+  stats_label_font_size: string;
+  stats_value_font_size: string;
   
   // Kundekort (Customer cards)
   card_show_customer_number: boolean;
@@ -229,6 +234,10 @@ export interface DisplaySettings {
   card_show_quantity_as_trays: boolean;
   card_show_individual_progress: boolean;
   card_compact_mode: boolean;
+  card_customer_name_font_size: string;
+  card_product_font_size: string;
+  card_quantity_font_size: string;
+  card_progress_font_size: string;
   
   // Utseende (Appearance)
   background_color: string;
@@ -263,6 +272,7 @@ export interface DisplaySettings {
   realtime_auto_refresh_interval: number;
   realtime_sound_on_complete: boolean;
   realtime_flash_on_update: boolean;
+  realtime_status_font_size: string;
   
   // Legacy support
   show_progress_bar: boolean;
@@ -279,6 +289,9 @@ export function getDefaultDisplaySettings(): DisplaySettings {
     header_show_clock: true,
     header_show_date: true,
     header_bakery_font_size: '1.875rem',
+    header_category_font_size: '1.25rem',
+    header_clock_font_size: '1.5rem',
+    header_date_font_size: '1.25rem',
     header_clock_format: '24h',
     
     // Statistikk-kort
@@ -287,6 +300,8 @@ export function getDefaultDisplaySettings(): DisplaySettings {
     stats_show_remaining_count: true,
     stats_progress_bar_style: 'bar',
     stats_progress_bar_height: '1rem',
+    stats_label_font_size: '1rem',
+    stats_value_font_size: '1.5rem',
     
     // Kundekort
     card_show_customer_number: false,
@@ -295,6 +310,10 @@ export function getDefaultDisplaySettings(): DisplaySettings {
     card_show_quantity_as_trays: true,
     card_show_individual_progress: true,
     card_compact_mode: false,
+    card_customer_name_font_size: '1.5rem',
+    card_product_font_size: '1rem',
+    card_quantity_font_size: '1rem',
+    card_progress_font_size: '0.875rem',
     
     // Utseende
     background_color: '#1a1a2e',
@@ -329,6 +348,7 @@ export function getDefaultDisplaySettings(): DisplaySettings {
     realtime_auto_refresh_interval: 60,
     realtime_sound_on_complete: false,
     realtime_flash_on_update: true,
+    realtime_status_font_size: '0.875rem',
     
     // Legacy
     show_progress_bar: true,
