@@ -92,7 +92,9 @@ export function CustomerScreenSettingsDialog({
 
         <div className="space-y-6 py-4">
           {/* Toggle for dedicated display */}
-          <Card>
+          <Card className="border-2 transition-colors duration-300" style={{
+            borderColor: hasDedicatedDisplay ? 'hsl(var(--primary))' : 'hsl(var(--border))'
+          }}>
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div className="space-y-1">
@@ -101,14 +103,17 @@ export function CustomerScreenSettingsDialog({
                     Aktiver individuell skjerm for denne kunden
                   </p>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">
+                <div className="flex items-center gap-3">
+                  <span className={`text-sm font-medium transition-colors duration-200 ${
+                    hasDedicatedDisplay ? 'text-primary' : 'text-muted-foreground'
+                  }`}>
                     {hasDedicatedDisplay ? 'Aktiv' : 'Inaktiv'}
                   </span>
                   <Switch
                     checked={hasDedicatedDisplay}
                     onCheckedChange={handleToggleDedicatedDisplay}
                     disabled={updateCustomer.isPending}
+                    className="scale-125 data-[state=checked]:bg-primary transition-all duration-200 data-[state=checked]:shadow-lg data-[state=checked]:shadow-primary/30"
                   />
                 </div>
               </div>
