@@ -141,7 +141,10 @@
     "yourLock": "Din lås",
     "locked": "Låst",
     "complete": "Fullført",
-    "packAllProducts": "Pakk alle produkter for denne kunden"
+    "packAllProducts": "Pakk alle produkter for denne kunden",
+    "selectProductToPack": "Velg et produkt for å pakke alle kundeordrer",
+    "orders": "ordrer",
+    "traysCalculated": "Brett/stk"
   },
   "products": {
     "title": "Produkter",
