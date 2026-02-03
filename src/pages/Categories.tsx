@@ -9,11 +9,12 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Plus, Edit, Trash2, GripVertical, Loader2 } from 'lucide-react';
+import { Plus, Edit, Trash2, GripVertical, Loader2, Cloud, CloudOff } from 'lucide-react';
 import { useState } from 'react';
 import { useCategories, useCreateCategory, useUpdateCategory, useDeleteCategory, Category } from '@/hooks/useCategories';
+import { useOneDriveConfigs } from '@/hooks/useOneDriveConfig';
 import { useToast } from '@/hooks/use-toast';
-
+import { OneDriveConfigDialog } from '@/components/categories/OneDriveConfigDialog';
 interface CategoryFormData {
   name: string;
   packing_mode: 'product_based' | 'customer_based';
@@ -36,11 +37,18 @@ export default function Categories() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [deleteCategory, setDeleteCategory] = useState<Category | null>(null);
   const [formData, setFormData] = useState<CategoryFormData>(emptyForm);
+  const [oneDriveCategory, setOneDriveCategory] = useState<Category | null>(null);
   
   const { data: categories = [], isLoading } = useCategories();
+  const { data: oneDriveConfigs = [] } = useOneDriveConfigs();
   const createCategory = useCreateCategory();
   const updateCategory = useUpdateCategory();
   const deleteCategoryMutation = useDeleteCategory();
+  
+  const getOneDriveStatus = (categoryId: string) => {
+    const config = oneDriveConfigs.find(c => c.category_id === categoryId);
+    return config?.sync_status || 'not_configured';
+  };
   
   const handleOpenDialog = (category?: Category) => {
     if (category) {
@@ -131,6 +139,7 @@ export default function Categories() {
                   <TableHead className="w-12"></TableHead>
                   <TableHead>{t('categories.categoryName')}</TableHead>
                   <TableHead>{t('categories.packingMode')}</TableHead>
+                  <TableHead>OneDrive</TableHead>
                   <TableHead>{t('common.status')}</TableHead>
                   <TableHead className="text-right">{t('common.actions')}</TableHead>
                 </TableRow>
@@ -138,43 +147,67 @@ export default function Categories() {
               <TableBody>
                 {categories.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                       {t('categories.noCategories')}
                     </TableCell>
                   </TableRow>
                 ) : (
-                  categories.map((category) => (
-                    <TableRow key={category.id}>
-                      <TableCell>
-                        <Button variant="ghost" size="icon" className="cursor-grab">
-                          <GripVertical className="h-4 w-4 text-muted-foreground" />
-                        </Button>
-                      </TableCell>
-                      <TableCell className="font-medium">{category.name}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline">
-                          {category.packing_mode === 'product_based' 
-                            ? t('categories.productBased') 
-                            : t('categories.customerBased')}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={category.is_active ? 'default' : 'secondary'}>
-                          {category.is_active ? t('products.active') : t('products.inactive')}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(category)}>
-                            <Edit className="h-4 w-4" />
+                  categories.map((category) => {
+                    const oneDriveStatus = getOneDriveStatus(category.id);
+                    
+                    return (
+                      <TableRow key={category.id}>
+                        <TableCell>
+                          <Button variant="ghost" size="icon" className="cursor-grab">
+                            <GripVertical className="h-4 w-4 text-muted-foreground" />
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={() => setDeleteCategory(category)}>
-                            <Trash2 className="h-4 w-4" />
+                        </TableCell>
+                        <TableCell className="font-medium">{category.name}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline">
+                            {category.packing_mode === 'product_based' 
+                              ? t('categories.productBased') 
+                              : t('categories.customerBased')}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setOneDriveCategory(category)}
+                            className="gap-1"
+                          >
+                            {oneDriveStatus === 'configured' ? (
+                              <>
+                                <Cloud className="h-4 w-4 text-success" />
+                                <span className="text-xs text-success">Koblet</span>
+                              </>
+                            ) : (
+                              <>
+                                <CloudOff className="h-4 w-4 text-muted-foreground" />
+                                <span className="text-xs text-muted-foreground">Koble</span>
+                              </>
+                            )}
                           </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={category.is_active ? 'default' : 'secondary'}>
+                            {category.is_active ? t('products.active') : t('products.inactive')}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(category)}>
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" onClick={() => setDeleteCategory(category)}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
                 )}
               </TableBody>
             </Table>
@@ -270,6 +303,13 @@ export default function Categories() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      
+      {/* OneDrive config dialog */}
+      <OneDriveConfigDialog
+        category={oneDriveCategory}
+        open={!!oneDriveCategory}
+        onOpenChange={(open) => !open && setOneDriveCategory(null)}
+      />
     </div>
   );
 }

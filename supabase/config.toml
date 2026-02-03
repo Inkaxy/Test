@@ -1,1 +1,4 @@
 project_id = "yivmfznclvbpbatritgf"
+
+[functions.sync-onedrive]
+verify_jwt = false

@@ -85,6 +85,60 @@ export type Database = {
           },
         ]
       }
+      category_onedrive_config: {
+        Row: {
+          bakery_id: string
+          category_id: string
+          created_at: string
+          id: string
+          last_sync_at: string | null
+          onedrive_folder_id: string | null
+          onedrive_folder_url: string | null
+          sync_error: string | null
+          sync_status: string | null
+          updated_at: string
+        }
+        Insert: {
+          bakery_id: string
+          category_id: string
+          created_at?: string
+          id?: string
+          last_sync_at?: string | null
+          onedrive_folder_id?: string | null
+          onedrive_folder_url?: string | null
+          sync_error?: string | null
+          sync_status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          bakery_id?: string
+          category_id?: string
+          created_at?: string
+          id?: string
+          last_sync_at?: string | null
+          onedrive_folder_id?: string | null
+          onedrive_folder_url?: string | null
+          sync_error?: string | null
+          sync_status?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "category_onedrive_config_bakery_id_fkey"
+            columns: ["bakery_id"]
+            isOneToOne: false
+            referencedRelation: "bakeries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "category_onedrive_config_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: true
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customer_locks: {
         Row: {
           bakery_id: string
@@ -272,6 +326,7 @@ export type Database = {
       orders: {
         Row: {
           bakery_id: string
+          category_id: string | null
           created_at: string | null
           customer_id: string
           delivery_date: string
@@ -283,6 +338,7 @@ export type Database = {
         }
         Insert: {
           bakery_id: string
+          category_id?: string | null
           created_at?: string | null
           customer_id: string
           delivery_date: string
@@ -294,6 +350,7 @@ export type Database = {
         }
         Update: {
           bakery_id?: string
+          category_id?: string | null
           created_at?: string | null
           customer_id?: string
           delivery_date?: string
@@ -309,6 +366,13 @@ export type Database = {
             columns: ["bakery_id"]
             isOneToOne: false
             referencedRelation: "bakeries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
             referencedColumns: ["id"]
           },
           {
