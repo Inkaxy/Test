@@ -73,9 +73,7 @@ export function PackingCategoryCard({
   const [editPackingMode, setEditPackingMode] = useState(category.packing_mode);
   const [editColor, setEditColor] = useState(category.card_color || 'primary');
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  const [deliveryDate, setDeliveryDate] = useState<string>(
-    new Date().toISOString().split('T')[0]
-  );
+  const [detectedDate, setDetectedDate] = useState<Date | null>(null);
   
   const updateCategory = useUpdateCategory();
   const deleteCategory = useDeleteCategory();
@@ -123,9 +121,16 @@ export function PackingCategoryCard({
     }
   };
   
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      setSelectedFiles(Array.from(e.target.files));
+      const files = Array.from(e.target.files);
+      setSelectedFiles(files);
+      
+      // Parse files to detect date
+      const { data } = await parseFiles(files);
+      if (data.deliveryDate) {
+        setDetectedDate(data.deliveryDate);
+      }
     }
   };
   
@@ -143,11 +148,20 @@ export function PackingCategoryCard({
         });
       }
       
+      if (!data.deliveryDate) {
+        toast({
+          variant: 'destructive',
+          title: 'Mangler leveringsdato',
+          description: 'Kunne ikke finne leveringsdato i filnavnene. Sørg for at filene har datoformat i navnet (f.eks. 02-02-2026.OD0)',
+        });
+        return;
+      }
+      
       const result = await importData({
         products: data.products,
         customers: data.customers,
         orders: data.orders,
-        deliveryDate: data.deliveryDate || new Date(deliveryDate),
+        deliveryDate: data.deliveryDate,
         categoryId: category.id,
       });
       
@@ -158,6 +172,7 @@ export function PackingCategoryCard({
       
       setIsImportOpen(false);
       setSelectedFiles([]);
+      setDetectedDate(null);
     } catch (error) {
       toast({
         variant: 'destructive',
@@ -419,15 +434,6 @@ export function PackingCategoryCard({
           
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label>Leveringsdato</Label>
-              <Input
-                type="date"
-                value={deliveryDate}
-                onChange={(e) => setDeliveryDate(e.target.value)}
-              />
-            </div>
-            
-            <div className="space-y-2">
               <Label>Velg filer (.CUS, .PRD, .OD0)</Label>
               <div 
                 className="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer hover:border-primary transition-colors"
@@ -446,6 +452,9 @@ export function PackingCategoryCard({
                   onChange={handleFileSelect}
                 />
               </div>
+              <p className="text-xs text-muted-foreground">
+                Leveringsdato hentes automatisk fra filnavnene
+              </p>
             </div>
             
             {selectedFiles.length > 0 && (
@@ -458,6 +467,11 @@ export function PackingCategoryCard({
                     </Badge>
                   ))}
                 </div>
+                {detectedDate && (
+                  <p className="text-sm text-muted-foreground">
+                    Detektert leveringsdato: <span className="font-medium text-foreground">{detectedDate.toLocaleDateString('nb-NO')}</span>
+                  </p>
+                )}
               </div>
             )}
           </div>
