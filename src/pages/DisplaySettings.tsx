@@ -17,8 +17,16 @@ import { useCategories } from '@/hooks/useCategories';
 import { DisplaySettings, getDefaultDisplaySettings, DisplayType, DISPLAY_TYPES } from '@/hooks/useDisplayOrders';
 import { 
   Monitor, Smartphone, ExternalLink, Loader2, Users, Package, 
-  Type, BarChart3, LayoutGrid, Sparkles, Layout, Zap, Bell 
+  Type, BarChart3, LayoutGrid, Sparkles, Layout, Zap, Bell, Copy, RotateCcw
 } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+} from '@/components/ui/dropdown-menu';
 
 export default function DisplaySettingsPage() {
   const { t } = useTranslation();
@@ -135,6 +143,53 @@ export default function DisplaySettingsPage() {
   const updateSetting = <K extends keyof DisplaySettings>(key: K, value: DisplaySettings[K]) => {
     setSettings(prev => ({ ...prev, [key]: value }));
   };
+
+  // Copy settings from another display type
+  const copyFromDisplayType = async (sourceType: DisplayType) => {
+    if (!bakeryId || sourceType === selectedDisplayType) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('display_settings')
+        .select('settings')
+        .eq('bakery_id', bakeryId)
+        .eq('display_type', sourceType)
+        .is('category_id', null)
+        .maybeSingle();
+      
+      if (error) throw error;
+      
+      if (data?.settings && typeof data.settings === 'object') {
+        const sourceSettings = { ...getDefaultDisplaySettings(), ...data.settings } as DisplaySettings;
+        setSettings(sourceSettings);
+        toast({
+          title: 'Innstillinger kopiert',
+          description: `Kopierte innstillinger fra ${DISPLAY_TYPES[sourceType].label}. Husk å lagre!`,
+        });
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Ingen innstillinger funnet',
+          description: `${DISPLAY_TYPES[sourceType].label} har ingen lagrede innstillinger`,
+        });
+      }
+    } catch (err) {
+      toast({
+        variant: 'destructive',
+        title: 'Feil',
+        description: 'Kunne ikke kopiere innstillinger',
+      });
+    }
+  };
+
+  // Reset to default settings
+  const resetToDefaults = () => {
+    setSettings(getDefaultDisplaySettings());
+    toast({
+      title: 'Tilbakestilt',
+      description: 'Innstillinger er tilbakestilt til standard. Husk å lagre!',
+    });
+  };
   
   const getPreviewUrl = () => {
     if (!bakery?.short_id) return null;
@@ -189,6 +244,39 @@ export default function DisplaySettingsPage() {
         </div>
         
         <div className="flex items-center gap-2">
+          {/* Copy/Reset dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline">
+                <Copy className="h-4 w-4 mr-2" />
+                Kopier / Tilbakestill
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Kopier innstillinger fra</DropdownMenuLabel>
+              {(Object.entries(DISPLAY_TYPES) as [DisplayType, typeof DISPLAY_TYPES[DisplayType]][])
+                .filter(([type]) => type !== selectedDisplayType)
+                .map(([type, info]) => (
+                  <DropdownMenuItem 
+                    key={type} 
+                    onClick={() => copyFromDisplayType(type)}
+                    className="flex items-center gap-2"
+                  >
+                    {getDisplayTypeIcon(type)}
+                    {info.label}
+                  </DropdownMenuItem>
+                ))}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem 
+                onClick={resetToDefaults}
+                className="flex items-center gap-2 text-destructive"
+              >
+                <RotateCcw className="h-4 w-4" />
+                Tilbakestill til standard
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
           {getPreviewUrl() && (
             <Button variant="outline" asChild>
               <a href={getPreviewUrl()!} target="_blank" rel="noopener noreferrer">
