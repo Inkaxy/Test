@@ -18,6 +18,8 @@ import {
   PackageCheck,
   UserCheck
 } from 'lucide-react';
+import logoIcon from '@/assets/logo-icon.png';
+import logo from '@/assets/logo.png';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/authStore';
 import { Button } from '@/components/ui/button';
@@ -94,10 +96,8 @@ export function DashboardLayout() {
       {/* Logo */}
       <div className="flex h-16 items-center justify-between border-b px-4">
         <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold">
-            L
-          </div>
-          <span className="text-lg font-semibold">Loaf & Load</span>
+          <img src={logoIcon} alt="Loaf & Load" className="h-10 w-10 object-contain" />
+          <span className="text-lg font-semibold text-bakery-700">Loaf & Load</span>
         </div>
         {isMobile && (
           <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(false)}>
@@ -248,7 +248,8 @@ export function DashboardLayout() {
             <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(true)}>
               <Menu className="h-5 w-5" />
             </Button>
-            <span className="text-lg font-semibold">Loaf & Load</span>
+            <img src={logoIcon} alt="Loaf & Load" className="h-8 w-8 object-contain" />
+            <span className="text-lg font-semibold text-bakery-700">Loaf & Load</span>
           </header>
         )}
         
