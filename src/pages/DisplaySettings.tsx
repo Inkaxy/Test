@@ -1361,82 +1361,218 @@ export default function DisplaySettingsPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Smartphone className="h-5 w-5" />
-                Forhåndsvisning - {DISPLAY_TYPES[selectedDisplayType].label}
+                Live Forhåndsvisning - {DISPLAY_TYPES[selectedDisplayType].label}
               </CardTitle>
               <CardDescription>
-                Slik vil displayet se ut
+                Slik vil displayet se ut med nåværende innstillinger
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div
-                className="rounded-lg overflow-hidden min-h-[450px]"
-                style={{
-                  backgroundColor: settings.background_color,
-                  color: settings.text_color,
-                  padding: settings.padding,
-                }}
-              >
-                {/* Preview header */}
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    {settings.header_show_bakery_name && (
-                      <h3 className="font-bold" style={{ fontSize: settings.header_bakery_font_size }}>
-                        {selectedDisplayType === 'customer' ? 'Meny Heimdal' : bakery?.name || 'Bakeri'}
-                      </h3>
-                    )}
-                    {settings.header_show_category_name && selectedDisplayType === 'shared' && (
-                      <p className="text-sm opacity-70">Alle produkter</p>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-4 text-sm">
-                    {settings.realtime_show_connection_status && (
-                      <span className="flex items-center gap-1">
-                        <span className="w-2 h-2 rounded-full bg-green-500"></span>
-                      </span>
-                    )}
-                    {settings.header_show_clock && (
-                      <span className="font-mono">
-                        {settings.header_clock_format === '24h' ? '14:32:45' : '2:32 PM'}
-                      </span>
-                    )}
-                    {settings.header_show_date && (
-                      <span>Tirsdag 3. feb</span>
-                    )}
-                  </div>
-                </div>
-                
-                {/* Stats preview */}
-                {settings.stats_show_total_progress && (
-                  <div className="mb-4">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm">Total fremdrift</span>
-                      <span className="font-bold">
-                        {settings.stats_show_packed_count && '8 / 15 '}
-                        (53%)
+              {/* Customer Display Preview */}
+              {selectedDisplayType === 'customer' && (
+                <div
+                  className="rounded-lg overflow-hidden min-h-[500px]"
+                  style={{
+                    backgroundColor: 'hsl(var(--background))',
+                    padding: '1rem',
+                  }}
+                >
+                  {/* Customer name header */}
+                  {settings.header_show_bakery_name && (
+                    <h2 
+                      className="font-bold text-center mb-4"
+                      style={{ 
+                        fontSize: settings.header_bakery_font_size,
+                        color: 'hsl(var(--primary))',
+                      }}
+                    >
+                      Borgheim
+                    </h2>
+                  )}
+                  
+                  {/* Date bar */}
+                  {settings.header_show_date && (
+                    <div className="bg-card border rounded-lg px-3 py-2 flex items-center justify-center gap-2 mb-4">
+                      <span className="text-primary font-medium text-sm">
+                        ⏱ PAKKING FOR: Mandag 03.02.26 (Ikke I Dag)
                       </span>
                     </div>
-                    {settings.stats_progress_bar_style !== 'none' && (
-                      <div
-                        className="rounded"
-                        style={{ 
-                          backgroundColor: `${settings.pending_color}40`,
-                          height: settings.stats_progress_bar_height,
-                        }}
-                      >
+                  )}
+                  
+                  {/* Product lines with colors */}
+                  <div className="space-y-3 mb-4">
+                    {[
+                      { name: 'Horten', qty: 10, packed: false },
+                      { name: 'Loff', qty: 4, packed: false },
+                      { name: 'Formloff', qty: 2, packed: true },
+                    ].map((product, i) => {
+                      const bgColor = settings.product_line_colors_enabled && settings.product_line_colors_palette?.length
+                        ? settings.product_line_colors_palette[i % settings.product_line_colors_palette.length]
+                        : product.packed ? 'hsl(var(--complete) / 0.2)' : '#FEF3C7';
+                      
+                      return (
                         <div
-                          className="h-full rounded"
-                          style={{ 
-                            width: '53%',
-                            backgroundColor: settings.packing_color,
+                          key={product.name}
+                          className="rounded-xl p-4 border-2"
+                          style={{
+                            backgroundColor: bgColor,
+                            borderColor: product.packed ? 'hsl(var(--complete))' : `${bgColor}CC`,
+                            opacity: product.packed ? 0.7 : 1,
                           }}
-                        />
-                      </div>
-                    )}
+                        >
+                          <div className="flex items-start justify-between">
+                            <h3 
+                              className="text-xl font-semibold"
+                              style={{ 
+                                textDecoration: product.packed ? 'line-through' : 'none',
+                                opacity: product.packed ? 0.7 : 1,
+                                color: 'hsl(var(--foreground))',
+                              }}
+                            >
+                              {product.name}
+                            </h3>
+                            <div className="text-right flex flex-col items-end gap-1">
+                              <div className="flex items-baseline gap-1">
+                                <span 
+                                  className="text-3xl font-bold"
+                                  style={{ color: product.packed ? 'hsl(var(--complete))' : 'hsl(var(--primary))' }}
+                                >
+                                  {product.qty}
+                                </span>
+                                <span className="text-sm text-muted-foreground">stk</span>
+                              </div>
+                              <span className="text-xs text-muted-foreground">
+                                {product.packed ? '1/1' : '0/1'}
+                              </span>
+                              <span 
+                                className="px-2 py-0.5 rounded text-xs font-medium"
+                                style={{
+                                  backgroundColor: product.packed ? 'hsl(var(--complete))' : '#FCD34D',
+                                  color: product.packed ? 'hsl(var(--complete-foreground))' : '#92400E',
+                                }}
+                              >
+                                {product.packed ? 'Ferdig' : 'Venter'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
-                )}
-                
-                {/* Cards preview */}
-                {selectedDisplayType === 'shared' && (
+                  
+                  {/* Status bar */}
+                  <div 
+                    className="rounded-xl py-3 px-4 text-center font-bold mb-4"
+                    style={{
+                      backgroundColor: 'hsl(var(--packing))',
+                      color: 'hsl(var(--packing-foreground))',
+                    }}
+                  >
+                    STATUS: Pågående
+                  </div>
+                  
+                  {/* Progress bar */}
+                  {settings.stats_show_total_progress && (
+                    <div className="bg-card border rounded-xl p-4">
+                      <div className="relative mb-2">
+                        <div 
+                          className="h-4 rounded-full overflow-hidden"
+                          style={{ backgroundColor: 'hsl(var(--muted))' }}
+                        >
+                          <div
+                            className="h-full rounded-full"
+                            style={{ 
+                              width: '33%',
+                              backgroundColor: 'hsl(var(--primary))',
+                            }}
+                          />
+                        </div>
+                      </div>
+                      <p className="text-center text-lg font-bold">33%</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Shared Display Preview */}
+              {selectedDisplayType === 'shared' && (
+                <div
+                  className="rounded-lg overflow-hidden min-h-[500px]"
+                  style={{
+                    backgroundColor: settings.background_color,
+                    color: settings.text_color,
+                    padding: settings.padding,
+                  }}
+                >
+                  {/* Header */}
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      {settings.header_show_bakery_name && (
+                        <h3 className="font-bold" style={{ fontSize: settings.header_bakery_font_size }}>
+                          {bakery?.name || 'Bakeri'}
+                        </h3>
+                      )}
+                      {settings.header_show_category_name && (
+                        <p className="text-sm opacity-70">Alle produkter</p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-4 text-sm">
+                      {settings.realtime_show_connection_status && (
+                        <span className="flex items-center gap-1">
+                          <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                          Live
+                        </span>
+                      )}
+                      {settings.header_show_clock && (
+                        <span className="font-mono" style={{ fontSize: settings.header_clock_font_size }}>
+                          {settings.header_clock_format === '24h' ? '14:32' : '2:32 PM'}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* Date bar */}
+                  {settings.header_show_date && (
+                    <div 
+                      className="rounded-lg px-3 py-2 flex items-center justify-center gap-2 mb-4"
+                      style={{ backgroundColor: `${settings.card_background_color}` }}
+                    >
+                      <span style={{ fontSize: settings.header_date_font_size }}>
+                        ⏱ PAKKING FOR: Tirsdag 03.02.26
+                      </span>
+                    </div>
+                  )}
+                  
+                  {/* Stats */}
+                  {settings.stats_show_total_progress && (
+                    <div className="mb-4">
+                      <div className="flex items-center justify-between mb-1">
+                        <span style={{ fontSize: settings.stats_label_font_size }}>Total fremdrift</span>
+                        <span className="font-bold" style={{ fontSize: settings.stats_value_font_size }}>
+                          {settings.stats_show_packed_count && '8 / 15'} (53%)
+                        </span>
+                      </div>
+                      {settings.stats_progress_bar_style !== 'none' && (
+                        <div
+                          className="rounded-full"
+                          style={{ 
+                            backgroundColor: `${settings.pending_color}40`,
+                            height: settings.stats_progress_bar_height,
+                          }}
+                        >
+                          <div
+                            className="h-full rounded-full"
+                            style={{ 
+                              width: '53%',
+                              backgroundColor: settings.packing_color,
+                            }}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
+                  {/* Customer cards grid */}
                   <div
                     className="grid"
                     style={{
@@ -1444,157 +1580,204 @@ export default function DisplaySettingsPage() {
                       gap: settings.gap_size,
                     }}
                   >
-                    {['Meny Heimdal', 'Kiwi Foyn', 'Spar'].map((name, i) => (
+                    {[
+                      { name: 'Meny Heimdal', progress: 100, status: 'complete', products: ['Grovbrød', 'Rundstykker'] },
+                      { name: 'Kiwi Foyn', progress: 60, status: 'packing', products: ['Loff', 'Croissant'] },
+                      { name: 'Spar Sentrum', progress: 0, status: 'pending', products: ['Baguette', 'Ciabatta'] },
+                    ].map((customer, i) => (
                       <div
-                        key={name}
+                        key={customer.name}
                         className="p-3"
                         style={{
                           backgroundColor: settings.card_background_color,
                           borderRadius: settings.border_radius,
                           borderLeft: `${settings.card_border_width} solid ${
-                            i === 0 ? settings.completed_color : 
-                            i === 1 ? settings.packing_color : 
+                            customer.status === 'complete' ? settings.completed_color : 
+                            customer.status === 'packing' ? settings.packing_color : 
                             settings.pending_color
                           }`,
                         }}
                       >
-                        <h4 
-                          className="font-bold truncate"
-                          style={{ fontSize: `calc(${settings.customer_name_font_size} * 0.5)` }}
-                        >
-                          {name}
-                        </h4>
+                        <div className="flex items-start justify-between mb-2">
+                          <h4 
+                            className="font-bold truncate"
+                            style={{ fontSize: settings.card_customer_name_font_size }}
+                          >
+                            {customer.name}
+                          </h4>
+                          <span 
+                            className="px-2 py-0.5 rounded text-xs font-medium shrink-0"
+                            style={{
+                              backgroundColor: customer.status === 'complete' ? settings.completed_color : 
+                                              customer.status === 'packing' ? settings.packing_color : 
+                                              settings.pending_color,
+                              color: '#fff',
+                            }}
+                          >
+                            {customer.status === 'complete' ? 'Ferdig' : 
+                             customer.status === 'packing' ? 'Pågår' : 'Venter'}
+                          </span>
+                        </div>
                         {settings.card_show_customer_number && (
                           <p className="text-xs opacity-50">#{1000 + i}</p>
                         )}
                         {settings.card_show_individual_progress && (
                           <>
                             <div
-                              className="h-1 rounded mt-2"
+                              className="h-2 rounded-full mt-2"
                               style={{ backgroundColor: `${settings.pending_color}40` }}
                             >
                               <div
-                                className="h-full rounded"
+                                className="h-full rounded-full transition-all"
                                 style={{
-                                  width: i === 0 ? '100%' : i === 1 ? '60%' : '0%',
-                                  backgroundColor: i === 0 ? settings.completed_color : settings.packing_color,
+                                  width: `${customer.progress}%`,
+                                  backgroundColor: customer.status === 'complete' ? settings.completed_color : settings.packing_color,
                                 }}
                               />
                             </div>
-                            <p className="text-xs mt-1 opacity-70">
-                              {i === 0 ? '5/5' : i === 1 ? '3/5' : '0/5'}
+                            <p className="text-xs mt-1 opacity-70" style={{ fontSize: settings.card_progress_font_size }}>
+                              {customer.status === 'complete' ? '5/5' : customer.status === 'packing' ? '3/5' : '0/5'}
                             </p>
                           </>
                         )}
                         {settings.card_show_product_list && !settings.card_compact_mode && (
-                          <div className="mt-2 space-y-1">
-                            {['Grovbrød', 'Rundstykker'].slice(0, i === 2 ? 2 : 1).map((p, j) => (
-                              <div 
-                                key={p} 
-                                className="flex justify-between"
-                                style={{ 
-                                  fontSize: `calc(${settings.product_font_size} * 0.85)`,
-                                  opacity: i === 0 || (i === 1 && j === 0) ? 0.5 : 1,
-                                  textDecoration: i === 0 || (i === 1 && j === 0) ? 'line-through' : 'none',
-                                }}
-                              >
-                                <span className="truncate">{p}</span>
-                                <span className="font-mono ml-1">5</span>
-                              </div>
-                            ))}
+                          <div className="mt-2 space-y-1 border-t pt-2 opacity-80">
+                            {customer.products.map((p, j) => {
+                              const isPacked = customer.status === 'complete' || (customer.status === 'packing' && j === 0);
+                              return (
+                                <div 
+                                  key={p} 
+                                  className="flex justify-between"
+                                  style={{ 
+                                    fontSize: settings.card_product_font_size,
+                                    opacity: isPacked ? 0.5 : 1,
+                                    textDecoration: isPacked ? 'line-through' : 'none',
+                                  }}
+                                >
+                                  <span className="truncate">{p}</span>
+                                  <span className="font-mono ml-1" style={{ fontSize: settings.card_quantity_font_size }}>
+                                    {5 + j * 3}
+                                  </span>
+                                </div>
+                              );
+                            })}
                           </div>
                         )}
                       </div>
                     ))}
                   </div>
-                )}
-                
-                {selectedDisplayType === 'customer' && (
-                  <div className="space-y-2">
-                    {['Grovbrød', 'Rundstykker', 'Croissant'].map((name, i) => (
-                      <div
+                </div>
+              )}
+
+              {/* Packing Display Preview */}
+              {selectedDisplayType === 'packing' && (
+                <div
+                  className="rounded-lg overflow-hidden min-h-[500px]"
+                  style={{
+                    backgroundColor: 'hsl(var(--background))',
+                    padding: '1rem',
+                  }}
+                >
+                  {/* Header */}
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h3 className="font-bold text-lg">Produktpakking</h3>
+                      <p className="text-sm text-muted-foreground">3 produkter valgt</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="px-2 py-1 rounded bg-muted text-xs">Tirsdag 03.02</span>
+                    </div>
+                  </div>
+                  
+                  {/* Product tabs */}
+                  <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
+                    {['Grovbrød', 'Loff', 'Rundstykker'].map((name, i) => (
+                      <button
                         key={name}
-                        className="flex items-center gap-3 p-3"
+                        className="px-3 py-2 rounded-full border whitespace-nowrap flex items-center gap-2"
                         style={{
-                          backgroundColor: settings.card_background_color,
-                          borderRadius: settings.border_radius,
-                          borderLeft: `${settings.card_border_width} solid ${i === 0 ? settings.completed_color : settings.pending_color}`,
-                          opacity: i === 0 ? 0.6 : 1,
+                          backgroundColor: i === 0 ? 'hsl(var(--primary))' : 'hsl(var(--card))',
+                          color: i === 0 ? 'hsl(var(--primary-foreground))' : 'hsl(var(--foreground))',
+                          borderColor: i === 0 ? 'hsl(var(--primary))' : 'hsl(var(--border))',
                         }}
                       >
-                        <div
-                          className="w-8 h-8 rounded-full flex items-center justify-center text-sm"
+                        <span className="text-xs px-1.5 py-0.5 rounded bg-black/10">
+                          {i === 0 ? '100%' : i === 1 ? '50%' : '0%'}
+                        </span>
+                        <span className="text-sm font-medium">{name}</span>
+                      </button>
+                    ))}
+                  </div>
+                  
+                  {/* Customer orders table */}
+                  <div className="border rounded-lg bg-card overflow-hidden">
+                    <div className="grid grid-cols-4 gap-2 p-2 bg-muted/50 text-xs font-medium">
+                      <span>Kunde</span>
+                      <span>Antall</span>
+                      <span>Status</span>
+                      <span className="text-right">Handling</span>
+                    </div>
+                    {[
+                      { customer: 'Meny Heimdal', qty: 10, status: 'packed' },
+                      { customer: 'Kiwi Foyn', qty: 5, status: 'packed' },
+                      { customer: 'Spar Sentrum', qty: 8, status: 'pending' },
+                    ].map((order, i) => (
+                      <div 
+                        key={order.customer}
+                        className="grid grid-cols-4 gap-2 p-2 border-t items-center"
+                        style={{
+                          backgroundColor: order.status === 'packed' ? 'hsl(var(--complete) / 0.1)' : 'transparent',
+                        }}
+                      >
+                        <span className="text-sm font-medium truncate">{order.customer}</span>
+                        <span className="text-sm font-mono">{order.qty} stk</span>
+                        <span 
+                          className="px-2 py-0.5 rounded text-xs font-medium w-fit"
                           style={{
-                            backgroundColor: i === 0 
-                              ? `${settings.completed_color}33` 
-                              : `${settings.pending_color}33`
+                            backgroundColor: order.status === 'packed' ? 'hsl(var(--complete))' : 'hsl(var(--muted))',
+                            color: order.status === 'packed' ? 'hsl(var(--complete-foreground))' : 'hsl(var(--muted-foreground))',
                           }}
                         >
-                          {i === 0 ? '✓' : '○'}
-                        </div>
-                        <div className="flex-1">
-                          <span 
-                            className="font-bold"
-                            style={{ 
-                              fontSize: settings.product_font_size,
-                              textDecoration: i === 0 ? 'line-through' : 'none'
-                            }}
-                          >
-                            {name}
-                          </span>
-                          {settings.card_show_product_numbers && (
-                            <span className="text-xs opacity-50 ml-2">PRD-00{i+1}</span>
+                          {order.status === 'packed' ? 'Pakket' : 'Venter'}
+                        </span>
+                        <div className="flex justify-end">
+                          {order.status === 'pending' ? (
+                            <button 
+                              className="px-2 py-1 rounded text-xs font-medium"
+                              style={{
+                                backgroundColor: 'hsl(var(--primary))',
+                                color: 'hsl(var(--primary-foreground))',
+                              }}
+                            >
+                              Pakk
+                            </button>
+                          ) : (
+                            <button className="px-2 py-1 rounded text-xs text-muted-foreground hover:bg-muted">
+                              Angre
+                            </button>
                           )}
                         </div>
-                        <span className="font-mono font-bold">
-                          {settings.card_show_quantity_as_trays 
-                            ? (i === 1 ? '2 pl' : `${(i+1)*5} stk`)
-                            : `${(i+1)*5} stk`
-                          }
-                        </span>
                       </div>
                     ))}
                   </div>
-                )}
-                
-                {selectedDisplayType === 'packing' && (
-                  <div className="space-y-2">
-                    {['Grovbrød', 'Rundstykker', 'Croissant', 'Baguette'].map((name, i) => (
-                      <div
-                        key={name}
-                        className="flex items-center justify-between p-2"
-                        style={{
-                          backgroundColor: settings.card_background_color,
-                          borderRadius: settings.border_radius,
-                        }}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div
-                            className="w-6 h-6 rounded flex items-center justify-center text-xs"
-                            style={{
-                              backgroundColor: i < 2 
-                                ? `${settings.completed_color}33` 
-                                : `${settings.pending_color}33`
-                            }}
-                          >
-                            {i < 2 ? '✓' : ''}
-                          </div>
-                          <span 
-                            style={{ 
-                              fontSize: settings.product_font_size,
-                              textDecoration: i < 2 ? 'line-through' : 'none',
-                              opacity: i < 2 ? 0.6 : 1
-                            }}
-                          >
-                            {name}
-                          </span>
-                        </div>
-                        <span className="font-mono text-sm">{(i+1)*5} stk</span>
-                      </div>
-                    ))}
+                  
+                  {/* Footer actions */}
+                  <div className="flex items-center justify-between mt-4 pt-4 border-t">
+                    <button className="flex items-center gap-2 px-3 py-2 rounded border text-sm">
+                      ← Forrige produkt
+                    </button>
+                    <button 
+                      className="flex items-center gap-2 px-4 py-2 rounded text-sm font-medium"
+                      style={{
+                        backgroundColor: 'hsl(var(--primary))',
+                        color: 'hsl(var(--primary-foreground))',
+                      }}
+                    >
+                      Neste produkt →
+                    </button>
                   </div>
-                )}
-              </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
