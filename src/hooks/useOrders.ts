@@ -149,21 +149,29 @@ export function useMarkAsPacked() {
           product_id: productId,
         };
         
-        // Broadcast to general channel (bakery + date)
+        // Broadcast to general channel (bakery + date) - used by displays
         const generalChannel = supabase.channel(`packing:${bakeryId}:${deliveryDate}`);
-        await generalChannel.send({
-          type: 'broadcast',
-          event: 'packing_update',
-          payload: updatePayload,
+        generalChannel.subscribe((status) => {
+          if (status === 'SUBSCRIBED') {
+            generalChannel.send({
+              type: 'broadcast',
+              event: 'packing_update',
+              payload: updatePayload,
+            });
+          }
         });
         
         // Also broadcast to category-specific channel if provided
         if (categoryId) {
           const categoryChannel = supabase.channel(`packing:${bakeryId}:${categoryId}:${deliveryDate}`);
-          await categoryChannel.send({
-            type: 'broadcast',
-            event: 'packing_update',
-            payload: updatePayload,
+          categoryChannel.subscribe((status) => {
+            if (status === 'SUBSCRIBED') {
+              categoryChannel.send({
+                type: 'broadcast',
+                event: 'packing_update',
+                payload: updatePayload,
+              });
+            }
           });
         }
       }
@@ -246,21 +254,29 @@ export function useBatchMarkAsPacked() {
           count: orders.length,
         };
         
-        // Broadcast to general channel
+        // Broadcast to general channel - used by displays
         const generalChannel = supabase.channel(`packing:${bakeryId}:${deliveryDate}`);
-        await generalChannel.send({
-          type: 'broadcast',
-          event: 'packing_update',
-          payload: updatePayload,
+        generalChannel.subscribe((status) => {
+          if (status === 'SUBSCRIBED') {
+            generalChannel.send({
+              type: 'broadcast',
+              event: 'packing_update',
+              payload: updatePayload,
+            });
+          }
         });
         
         // Also broadcast to category-specific channel if provided
         if (categoryId) {
           const categoryChannel = supabase.channel(`packing:${bakeryId}:${categoryId}:${deliveryDate}`);
-          await categoryChannel.send({
-            type: 'broadcast',
-            event: 'packing_update',
-            payload: updatePayload,
+          categoryChannel.subscribe((status) => {
+            if (status === 'SUBSCRIBED') {
+              categoryChannel.send({
+                type: 'broadcast',
+                event: 'packing_update',
+                payload: updatePayload,
+              });
+            }
           });
         }
       }
