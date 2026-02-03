@@ -233,6 +233,10 @@ export const DISPLAY_TYPES: Record<DisplayType, { label: string; description: st
   },
 };
 
+export type CustomerSortMode = 'name' | 'progress' | 'customer_number';
+export type CustomerSortDirection = 'asc' | 'desc';
+export type ThemePreset = 'dark' | 'light' | 'high-contrast' | 'custom';
+
 export interface DisplaySettings {
   // Topptekst (Header)
   header_show_bakery_name: boolean;
@@ -275,6 +279,7 @@ export interface DisplaySettings {
   completed_color: string;
   border_radius: string;
   card_border_width: string;
+  theme_preset: ThemePreset;
   
   // Layout & Scroll
   columns: number;
@@ -285,6 +290,11 @@ export interface DisplaySettings {
   auto_scroll_enabled: boolean;
   auto_scroll_speed: 'slow' | 'medium' | 'fast';
   auto_scroll_pause_on_hover: boolean;
+  
+  // Sortering (Sorting)
+  customer_sort_mode: CustomerSortMode;
+  customer_sort_direction: CustomerSortDirection;
+  customer_sort_completed_last: boolean;
   
   // Animasjoner (Animations)
   animation_enabled: boolean;
@@ -304,6 +314,10 @@ export interface DisplaySettings {
   // Produktbasert pakking (Product-based packing)
   product_line_colors_enabled: boolean;
   product_line_colors_palette: string[];
+  
+  // Fullskjerm & Wake Lock
+  fullscreen_button_visible: boolean;
+  wake_lock_enabled: boolean;
   
   // Legacy support
   show_progress_bar: boolean;
@@ -355,6 +369,7 @@ export function getDefaultDisplaySettings(): DisplaySettings {
     completed_color: '#22c55e',
     border_radius: '0.75rem',
     card_border_width: '4px',
+    theme_preset: 'dark',
     
     // Layout & Scroll
     columns: 3,
@@ -365,6 +380,11 @@ export function getDefaultDisplaySettings(): DisplaySettings {
     auto_scroll_enabled: false,
     auto_scroll_speed: 'medium',
     auto_scroll_pause_on_hover: true,
+    
+    // Sortering
+    customer_sort_mode: 'name',
+    customer_sort_direction: 'asc',
+    customer_sort_completed_last: true,
     
     // Animasjoner
     animation_enabled: true,
@@ -393,6 +413,10 @@ export function getDefaultDisplaySettings(): DisplaySettings {
       '#FED7AA', // Lys oransje
       '#DDD6FE', // Lys lilla
     ],
+    
+    // Fullskjerm & Wake Lock
+    fullscreen_button_visible: true,
+    wake_lock_enabled: true,
     
     // Legacy
     show_progress_bar: true,
