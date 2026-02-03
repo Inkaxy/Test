@@ -15,6 +15,7 @@ import { useCategories, useCreateCategory, useUpdateCategory, useDeleteCategory,
 import { useOneDriveConfigs } from '@/hooks/useOneDriveConfig';
 import { useToast } from '@/hooks/use-toast';
 import { OneDriveConfigDialog } from '@/components/categories/OneDriveConfigDialog';
+import { OrderManagementCard } from '@/components/categories/OrderManagementCard';
 interface CategoryFormData {
   name: string;
   packing_mode: 'product_based' | 'customer_based';
@@ -313,6 +314,9 @@ export default function Categories() {
         open={!!oneDriveCategory}
         onOpenChange={(open) => !open && setOneDriveCategory(null)}
       />
+      
+      {/* Order management */}
+      <OrderManagementCard />
     </div>
   );
 }
