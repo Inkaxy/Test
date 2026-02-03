@@ -144,7 +144,11 @@
     "packAllProducts": "Pakk alle produkter for denne kunden",
     "selectProductToPack": "Velg et produkt for å pakke alle kundeordrer",
     "orders": "ordrer",
-    "traysCalculated": "Brett/stk"
+    "traysCalculated": "Brett/stk",
+    "fullTrays": "hele brett",
+    "loosePieces": "løse stk",
+    "perTray": "per brett",
+    "piecesTotal": "stykker totalt"
   },
   "products": {
     "title": "Produkter",
