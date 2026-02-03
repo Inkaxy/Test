@@ -42,21 +42,22 @@ export function useMonthOrderSummary(year: number, month: number, categoryId?: s
       const startDate = startOfMonth(new Date(year, month));
       const endDate = endOfMonth(new Date(year, month));
       
-      // Build the query for orders with products (to filter by category)
+      // Use simpler query - filter by category_id directly on orders table when possible
       let query = supabase
         .from('orders')
         .select(`
           id,
           delivery_date,
-          product:products!inner(id, category_id),
+          category_id,
           packing_status(status)
         `)
         .eq('bakery_id', bakeryId)
         .gte('delivery_date', format(startDate, 'yyyy-MM-dd'))
         .lte('delivery_date', format(endDate, 'yyyy-MM-dd'));
       
+      // Filter by category_id directly on orders table
       if (categoryId) {
-        query = query.eq('product.category_id', categoryId);
+        query = query.eq('category_id', categoryId);
       }
       
       const { data: orders, error } = await query;
@@ -92,6 +93,8 @@ export function useMonthOrderSummary(year: number, month: number, categoryId?: s
       
       return dateMap;
     },
+    staleTime: 30000, // Cache for 30 seconds
+    placeholderData: (previousData) => previousData, // Keep previous data while loading
   });
 }
 
@@ -104,21 +107,23 @@ export function useDateOrderStats(date: string, categoryId?: string) {
       const bakeryId = getCurrentBakeryId();
       if (!bakeryId) return null;
       
-      // Get orders with products for the date
+      // Get orders with products for the date - filter by category_id on orders table
       let query = supabase
         .from('orders')
         .select(`
           id,
           quantity,
           customer_id,
-          product:products!inner(id, name, product_number, category_id),
+          category_id,
+          product:products(id, name, product_number),
           packing_status(status)
         `)
         .eq('bakery_id', bakeryId)
         .eq('delivery_date', date);
       
+      // Filter by category_id directly on orders table
       if (categoryId) {
-        query = query.eq('product.category_id', categoryId);
+        query = query.eq('category_id', categoryId);
       }
       
       const { data: orders, error } = await query;
@@ -128,7 +133,7 @@ export function useDateOrderStats(date: string, categoryId?: string) {
       
       // Calculate statistics
       const uniqueCustomers = new Set(orders.map(o => o.customer_id)).size;
-      const uniqueProducts = new Set(orders.map(o => o.product.id)).size;
+      const uniqueProducts = new Set(orders.filter(o => o.product).map(o => o.product!.id)).size;
       const totalItems = orders.reduce((sum, o) => sum + o.quantity, 0);
       
       let packedOrders = 0;
@@ -148,6 +153,7 @@ export function useDateOrderStats(date: string, categoryId?: string) {
       const productQuantities = new Map<string, { name: string; quantity: number; product_number: string }>();
       
       for (const order of orders) {
+        if (!order.product) continue;
         const key = order.product.id;
         const existing = productQuantities.get(key);
         
@@ -179,5 +185,7 @@ export function useDateOrderStats(date: string, categoryId?: string) {
       };
     },
     enabled: !!date,
+    staleTime: 30000, // Cache for 30 seconds
+    placeholderData: (previousData) => previousData, // Keep previous data while loading
   });
 }
