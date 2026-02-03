@@ -12,6 +12,7 @@ import Auth from './pages/Auth';
 import Dashboard from './pages/Dashboard';
 import Packing from './pages/Packing';
 import CustomerPacking from './pages/CustomerPacking';
+import CustomerPackingView from './pages/packing/CustomerPackingView';
 import Products from './pages/Products';
 import Customers from './pages/Customers';
 import Categories from './pages/Categories';
@@ -69,6 +70,8 @@ function AppRoutes() {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/packing" element={<Packing />} />
         <Route path="/packing/customer" element={<CustomerPacking />} />
+        <Route path="/packing/customer/:categoryId/:date" element={<CustomerPackingView />} />
+        <Route path="/packing/product/:categoryId/:date" element={<Packing />} />
         <Route path="/settings" element={<Settings />} />
         
         {/* Admin routes */}
