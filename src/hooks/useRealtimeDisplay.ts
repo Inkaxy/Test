@@ -47,14 +47,15 @@ export function useRealtimeDisplay({
 
       // Listen for broadcast messages (fastest - ~10-30ms)
       channel.on('broadcast', { event: 'packing_update' }, (payload) => {
-        const update = payload.payload as PackingUpdate;
         setLastUpdate(new Date());
 
-        // Optimistically update the cache
+        // Invalidate all relevant queries to refetch fresh data
         queryClient.invalidateQueries({ queryKey: ['display-orders'] });
+        queryClient.invalidateQueries({ queryKey: ['customer-display-orders'] });
       });
 
       // Listen for postgres_changes (backup - ~100-300ms)
+      // Note: This requires RLS to allow read access
       channel.on(
         'postgres_changes',
         {
@@ -66,6 +67,7 @@ export function useRealtimeDisplay({
           setLastUpdate(new Date());
           // Invalidate queries to refetch with new data
           queryClient.invalidateQueries({ queryKey: ['display-orders'] });
+          queryClient.invalidateQueries({ queryKey: ['customer-display-orders'] });
         }
       );
 

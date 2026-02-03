@@ -18,6 +18,7 @@ import { useRealtimeDisplay } from '@/hooks/useRealtimeDisplay';
 import { useReceivePackingSelection } from '@/hooks/usePackingSelection';
 import { cn } from '@/lib/utils';
 import logoIcon from '@/assets/logo-icon.png';
+import { useQueryClient } from '@tanstack/react-query';
 
 export default function CustomerDisplay() {
   const { displayToken } = useParams();
@@ -27,6 +28,7 @@ export default function CustomerDisplay() {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [wakeLockActive, setWakeLockActive] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const queryClient = useQueryClient();
 
   // Fetch customer info by token
   const { data: customer, isLoading: customerLoading } = useCustomerByToken(displayToken || null);
@@ -58,11 +60,19 @@ export default function CustomerDisplay() {
   );
 
   // Subscribe to realtime packing status updates
-  const { isConnected } = useRealtimeDisplay({
+  const { isConnected, lastUpdate } = useRealtimeDisplay({
     bakeryId: customer?.bakery_id || null,
     deliveryDate,
     enabled: !!customer?.bakery_id,
   });
+
+  // Refetch orders when packing status changes via broadcast
+  useEffect(() => {
+    if (lastUpdate) {
+      // Force refetch of customer display orders on any packing update
+      queryClient.invalidateQueries({ queryKey: ['customer-display-orders'] });
+    }
+  }, [lastUpdate, queryClient]);
 
   // Filter orders to only show products that are selected for packing
   const orders = selection?.productIds?.length
