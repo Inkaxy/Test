@@ -18,6 +18,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuthStore } from '@/stores/authStore';
 import { useMarkAsPacked, useReportDeviation, useUndoPacking } from '@/hooks/useOrders';
 import { useToast } from '@/hooks/use-toast';
+import { ProductTableView, ProductWithOrders } from '@/components/packing/ProductTableView';
+import { PackingHeader } from '@/components/packing/PackingHeader';
 
 type DeviationType = 'shortage' | 'damaged' | 'wrong_product' | 'other';
 
@@ -35,18 +37,6 @@ interface ProductOrder {
   } | null;
 }
 
-interface ProductWithOrders {
-  id: string;
-  name: string;
-  product_number: string;
-  pieces_per_tray: number | null;
-  orders: ProductOrder[];
-  totalOrders: number;
-  packedOrders: number;
-  totalQuantity: number;
-  progress: number;
-}
-
 function useProductsForDate(date: string, categoryId?: string) {
   const { getCurrentBakeryId } = useAuthStore();
   
@@ -62,7 +52,7 @@ function useProductsForDate(date: string, categoryId?: string) {
           id,
           quantity,
           customer:customers!inner(id, name, customer_number),
-          product:products!inner(id, name, product_number, pieces_per_tray, category_id),
+          product:products!inner(id, name, product_number, pieces_per_tray, category_id, category:categories(name)),
           packing_status(id, status)
         `)
         .eq('bakery_id', bakeryId)
@@ -89,6 +79,7 @@ function useProductsForDate(date: string, categoryId?: string) {
             name: order.product.name,
             product_number: order.product.product_number,
             pieces_per_tray: order.product.pieces_per_tray,
+            category_name: order.product.category?.name,
             orders: [],
             totalOrders: 0,
             packedOrders: 0,
@@ -148,8 +139,6 @@ export default function ProductPackingView() {
   useEffect(() => {
     if (!bakeryId) return;
     
-    console.log('Setting up realtime subscription for packing_status');
-    
     const channel = supabase
       .channel('packing-status-changes')
       .on(
@@ -159,20 +148,15 @@ export default function ProductPackingView() {
           schema: 'public',
           table: 'packing_status',
         },
-        (payload) => {
-          console.log('Packing status change received:', payload);
-          // Invalidate the products query to refetch with new packing status
+        () => {
           queryClient.invalidateQueries({ 
             queryKey: ['products-for-date', bakeryId, dateStr, categoryId] 
           });
         }
       )
-      .subscribe((status) => {
-        console.log('Realtime subscription status:', status);
-      });
+      .subscribe();
     
     return () => {
-      console.log('Cleaning up realtime subscription');
       supabase.removeChannel(channel);
     };
   }, [bakeryId, dateStr, categoryId, queryClient]);
@@ -186,6 +170,22 @@ export default function ProductPackingView() {
       setSelectedProduct(null);
     } else {
       navigate('/packing');
+    }
+  };
+  
+  const handleStartPacking = (productIds: string[]) => {
+    if (productIds.length === 1) {
+      const product = products.find(p => p.id === productIds[0]);
+      if (product) {
+        setSelectedProduct(product);
+      }
+    } else {
+      // For multiple products, select the first one for now
+      // TODO: Could implement a batch packing view
+      const product = products.find(p => p.id === productIds[0]);
+      if (product) {
+        setSelectedProduct(product);
+      }
     }
   };
   
@@ -244,7 +244,7 @@ export default function ProductPackingView() {
   
   const totalOrders = products.reduce((sum, p) => sum + p.totalOrders, 0);
   const packedOrders = products.reduce((sum, p) => sum + p.packedOrders, 0);
-  const overallProgress = totalOrders > 0 ? Math.round((packedOrders / totalOrders) * 100) : 0;
+  const totalQuantity = products.reduce((sum, p) => sum + p.totalQuantity, 0);
   
   const getQuantityDisplay = (quantity: number, piecesPerTray?: number | null) => {
     if (!piecesPerTray) return t('packing.pieces', { count: quantity });
@@ -257,15 +257,6 @@ export default function ProductPackingView() {
     return t('packing.traysAndPieces', { trays: t('packing.trays', { count: trays }), pieces });
   };
   
-  const getTrayCalculation = (quantity: number, piecesPerTray?: number | null) => {
-    if (!piecesPerTray) return null;
-    
-    const trays = Math.floor(quantity / piecesPerTray);
-    const pieces = quantity % piecesPerTray;
-    
-    return { trays, pieces, piecesPerTray };
-  };
-  
   const getStatusBadge = (status?: string) => {
     switch (status) {
       case 'packed':
@@ -276,6 +267,15 @@ export default function ProductPackingView() {
         return <Badge variant="secondary">{t('packing.pending')}</Badge>;
     }
   };
+
+  // Loading state
+  if (productsLoading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="h-10 w-10 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
   
   // Product detail view - shows all customer orders for this product
   if (selectedProduct) {
@@ -460,136 +460,32 @@ export default function ProductPackingView() {
     );
   }
   
-  // Product selection view - touch optimized
+  // Product selection view - table layout
   return (
-    <div className="min-h-screen bg-background p-4 space-y-4">
+    <div className="min-h-screen bg-background p-4 space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-4">
-        <Button 
-          variant="ghost" 
-          size="lg" 
-          onClick={handleBack}
-          className="h-14 w-14"
-        >
-          <ArrowLeft className="h-6 w-6" />
-        </Button>
-        <div className="flex-1">
-          <h1 className="text-2xl font-bold">{t('packing.productBased')}</h1>
-          <p className="text-muted-foreground">
-            {format(new Date(dateStr), 'PPP', { locale })} • {t('packing.selectProductToPack')}
-          </p>
-        </div>
-      </div>
+      <PackingHeader
+        date={dateStr}
+        totalProducts={products.length}
+        totalQuantity={totalQuantity}
+        packedCount={packedOrders}
+        totalCount={totalOrders}
+        onBack={handleBack}
+      />
       
-      {/* Overall progress */}
-      {products.length > 0 && (
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <Package className="h-6 w-6 text-muted-foreground" />
-                <span className="text-lg">
-                  {t('packing.overallProgress', { packed: packedOrders, total: totalOrders })}
-                </span>
-              </div>
-              <span className="text-3xl font-bold">{overallProgress}%</span>
-            </div>
-            <Progress value={overallProgress} className="h-4" />
-          </CardContent>
-        </Card>
-      )}
-      
-      {/* Product grid - touch optimized */}
-      {productsLoading ? (
-        <div className="flex items-center justify-center py-20">
-          <Loader2 className="h-10 w-10 animate-spin text-muted-foreground" />
-        </div>
-      ) : products.length === 0 ? (
+      {/* No products state */}
+      {products.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center">
           <Package className="h-16 w-16 text-muted-foreground mb-4" />
           <p className="text-xl text-muted-foreground">{t('dashboard.noOrders')}</p>
         </div>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {products.map((product) => {
-            const isComplete = product.progress === 100;
-            
-            return (
-              <Card
-                key={product.id}
-                className={cn(
-                  'cursor-pointer transition-all active:scale-[0.98]',
-                  isComplete && 'bg-success/5 border-success/20',
-                  !isComplete && 'hover:border-primary/50'
-                )}
-                onClick={() => setSelectedProduct(product)}
-              >
-                <CardContent className="p-5">
-                  <div className="flex items-start justify-between mb-3">
-                    <div>
-                      <h3 className="text-xl font-semibold">{product.name}</h3>
-                      <p className="text-muted-foreground">{product.product_number}</p>
-                    </div>
-                    
-                    {isComplete && (
-                      <Badge className="bg-success text-success-foreground gap-1">
-                        <Check className="h-3 w-3" />
-                        {t('packing.complete')}
-                      </Badge>
-                    )}
-                  </div>
-                  
-                  {/* Tray Calculator */}
-                  {(() => {
-                    const calc = getTrayCalculation(product.totalQuantity, product.pieces_per_tray);
-                    if (calc) {
-                      return (
-                        <div className="flex items-center gap-3 mb-3 p-3 rounded-lg bg-primary/10 border border-primary/20">
-                          <Package className="h-5 w-5 text-primary" />
-                          <div className="flex items-center gap-4 text-sm">
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-2xl font-bold text-primary">{calc.trays}</span>
-                              <span className="text-muted-foreground">{t('packing.fullTrays')}</span>
-                            </div>
-                            {calc.pieces > 0 && (
-                              <>
-                                <span className="text-muted-foreground">+</span>
-                                <div className="flex items-center gap-1.5">
-                                  <span className="text-2xl font-bold text-primary">{calc.pieces}</span>
-                                  <span className="text-muted-foreground">{t('packing.loosePieces')}</span>
-                                </div>
-                              </>
-                            )}
-                          </div>
-                          <span className="ml-auto text-xs text-muted-foreground">
-                            ({calc.piecesPerTray} {t('packing.perTray')})
-                          </span>
-                        </div>
-                      );
-                    }
-                    return (
-                      <div className="flex items-center gap-2 mb-3 text-sm text-muted-foreground">
-                        <span>{product.totalQuantity} {t('packing.piecesTotal')}</span>
-                      </div>
-                    );
-                  })()}
-                  
-                  <div className="flex items-center gap-4 mb-3 text-sm text-muted-foreground">
-                    <span>{product.totalOrders} {t('packing.orders')}</span>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between text-sm">
-                      <span>{product.packedOrders} / {product.totalOrders} {t('display.products')}</span>
-                      <span className="font-medium">{product.progress}%</span>
-                    </div>
-                    <Progress value={product.progress} className="h-2" />
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
+        <ProductTableView
+          products={products}
+          categoryId={categoryId}
+          dateStr={dateStr}
+          onStartPacking={handleStartPacking}
+        />
       )}
     </div>
   );
