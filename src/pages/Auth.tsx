@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
+import logo from '@/assets/logo.png';
 
 type AuthMode = 'login' | 'signup' | 'reset';
 
@@ -167,8 +168,8 @@ export default function Auth() {
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-primary/5 via-background to-secondary/5 p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1 text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-            <span className="text-2xl font-bold text-primary">L</span>
+          <div className="mx-auto mb-2">
+            <img src={logo} alt="Loaf & Load" className="h-24 w-auto object-contain" />
           </div>
           <CardTitle className="text-2xl font-bold">
             {mode === 'login' && t('auth.loginTitle')}
