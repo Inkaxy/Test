@@ -52,15 +52,7 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { key: 'dashboard', icon: LayoutDashboard, href: '/dashboard' },
-  { 
-    key: 'packing', 
-    icon: Package, 
-    href: '/packing',
-    children: [
-      { key: 'productBased', label: 'packing.productBased', href: '/packing', icon: PackageCheck },
-      { key: 'customerBased', label: 'packing.customerBased', href: '/packing/customer', icon: UserCheck },
-    ]
-  },
+  { key: 'packing', icon: Package, href: '/packing' },
   { key: 'products', icon: Tags, href: '/products', requiresAdmin: true },
   { key: 'customers', icon: Users, href: '/customers', requiresAdmin: true },
   { key: 'categories', icon: FolderOpen, href: '/categories', requiresAdmin: true },
