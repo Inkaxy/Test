@@ -9,6 +9,8 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { nb, enUS } from 'date-fns/locale';
 import { ProductWithOrders } from './ProductTableView';
+import { useBroadcastPackingSelection } from '@/hooks/usePackingSelection';
+import { useAuthStore } from '@/stores/authStore';
 
 interface BatchPackingViewProps {
   products: ProductWithOrders[];
@@ -39,11 +41,61 @@ export function BatchPackingView({
 }: BatchPackingViewProps) {
   const { t, i18n } = useTranslation();
   const locale = i18n.language === 'nb' ? nb : enUS;
+  const { getCurrentBakeryId } = useAuthStore();
+  const bakeryId = getCurrentBakeryId();
   
   const [activeProductIndex, setActiveProductIndex] = useState(0);
   const [completedProducts, setCompletedProducts] = useState<Set<string>>(new Set());
   
   const activeProduct = products[activeProductIndex];
+  
+  // Broadcast packing selection to customer displays
+  const { broadcastSelection, clearSelection } = useBroadcastPackingSelection(bakeryId);
+  
+  // Broadcast selected products when they change
+  useEffect(() => {
+    if (!products.length || !activeProduct) return;
+    
+    // Get unique customer IDs from selected products
+    const customerIds = new Set<string>();
+    const customerNames = new Map<string, string>();
+    
+    for (const product of products) {
+      for (const order of product.orders) {
+        customerIds.add(order.customer.id);
+        customerNames.set(order.customer.id, order.customer.name);
+      }
+    }
+    
+    // Broadcast for each customer
+    customerIds.forEach((customerId) => {
+      broadcastSelection({
+        customerId,
+        customerName: customerNames.get(customerId) || '',
+        productIds: products.map(p => p.id),
+        productNames: products.map(p => p.name),
+        deliveryDate: dateStr,
+      });
+    });
+  }, [products, activeProduct, dateStr, broadcastSelection]);
+  
+  // Clear selection when leaving batch view
+  useEffect(() => {
+    return () => {
+      if (!products.length) return;
+      
+      const customerIds = new Set<string>();
+      for (const product of products) {
+        for (const order of product.orders) {
+          customerIds.add(order.customer.id);
+        }
+      }
+      
+      customerIds.forEach((customerId) => {
+        clearSelection(customerId, dateStr);
+      });
+    };
+  }, [products, dateStr, clearSelection]);
   
   // Check if all products are complete
   const allComplete = products.every(p => p.progress === 100 || completedProducts.has(p.id));
