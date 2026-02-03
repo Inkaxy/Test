@@ -269,7 +269,7 @@ export function useImport() {
             continue;
           }
           
-          // Check for existing order with same product/customer/date
+          // Check for existing order with same product/customer/date/category
           const { data: existingOrder } = await supabase
             .from('orders')
             .select('id')
@@ -277,10 +277,11 @@ export function useImport() {
             .eq('customer_id', customerId)
             .eq('product_id', productId)
             .eq('delivery_date', order.deliveryDate)
+            .eq('category_id', data.categoryId)
             .maybeSingle();
           
           if (existingOrder) {
-            console.log(`Duplikat ordre: kunde ${order.customerNumber}, produkt ${orderProduct.productNumber}, dato ${order.deliveryDate}`);
+            console.log(`Duplikat ordre: kunde ${order.customerNumber}, produkt ${orderProduct.productNumber}, dato ${order.deliveryDate}, kategori ${data.categoryId}`);
             continue;
           }
           
