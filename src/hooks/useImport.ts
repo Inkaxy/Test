@@ -121,6 +121,18 @@ export function useImport() {
       const productMap = new Map<string, string>();
       const customerMap = new Map<string, string>();
       
+      // Fetch default category for the bakery (first active category)
+      const { data: defaultCategory } = await supabase
+        .from('categories')
+        .select('id')
+        .eq('bakery_id', bakeryId)
+        .eq('is_active', true)
+        .order('sort_order', { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      
+      const defaultCategoryId = defaultCategory?.id || null;
+      
       // Upsert products
       for (const product of data.products) {
         const { data: existing } = await supabase
@@ -144,6 +156,7 @@ export function useImport() {
               bakery_id: bakeryId,
               product_number: product.productNumber,
               name: product.name,
+              category_id: defaultCategoryId,
             })
             .select('id')
             .single();
