@@ -13,6 +13,7 @@ import {
   useDisplaySettings,
   getDefaultDisplaySettings,
   DisplaySettings,
+  useLatestOrderDate,
 } from '@/hooks/useDisplayOrders';
 import { useRealtimeDisplay } from '@/hooks/useRealtimeDisplay';
 import { cn } from '@/lib/utils';
@@ -24,7 +25,6 @@ export default function CustomerDisplay() {
   const dateParam = searchParams.get('date');
   
   const [currentTime, setCurrentTime] = useState(new Date());
-  const deliveryDate = dateParam || format(new Date(), 'yyyy-MM-dd');
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Fetch customer info by token
@@ -32,6 +32,15 @@ export default function CustomerDisplay() {
   const { data: settings } = useDisplaySettings(customer?.bakery_id || null, null, 'customer');
   
   const displaySettings: DisplaySettings = settings || getDefaultDisplaySettings();
+
+  // Fetch the latest order date for this customer to use as default
+  const { data: latestOrderDate } = useLatestOrderDate(
+    customer?.id || null,
+    customer?.bakery_id || null
+  );
+
+  // Use date param if provided, otherwise use latest order date, or today as fallback
+  const deliveryDate = dateParam || latestOrderDate || format(new Date(), 'yyyy-MM-dd');
 
   // Fetch orders for this customer
   const { data: orders = [], isLoading: ordersLoading } = useCustomerDisplayOrders(

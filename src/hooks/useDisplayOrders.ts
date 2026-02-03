@@ -190,6 +190,32 @@ export function useCustomerDisplayOrders(
   });
 }
 
+// Fetch the latest order date for a specific customer
+export function useLatestOrderDate(
+  customerId: string | null,
+  bakeryId: string | null
+) {
+  return useQuery({
+    queryKey: ['latest-order-date', customerId, bakeryId],
+    queryFn: async () => {
+      if (!customerId || !bakeryId) return null;
+
+      const { data, error } = await supabase
+        .from('orders')
+        .select('delivery_date')
+        .eq('bakery_id', bakeryId)
+        .eq('customer_id', customerId)
+        .order('delivery_date', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) throw error;
+      return data?.delivery_date || null;
+    },
+    enabled: !!customerId && !!bakeryId,
+  });
+}
+
 export type DisplayType = 'shared' | 'customer' | 'packing';
 
 export const DISPLAY_TYPES: Record<DisplayType, { label: string; description: string }> = {
