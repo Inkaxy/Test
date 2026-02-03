@@ -9,6 +9,8 @@ export interface Customer {
   name: string;
   address: string | null;
   is_active: boolean;
+  has_dedicated_display: boolean | null;
+  display_token: string | null;
 }
 
 export function useCustomers() {
