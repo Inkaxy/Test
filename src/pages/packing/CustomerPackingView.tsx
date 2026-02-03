@@ -391,7 +391,7 @@ export default function CustomerPackingView() {
         </Card>
       )}
       
-      {/* Customer grid - touch optimized */}
+      {/* Customer table */}
       {customersLoading ? (
         <div className="flex items-center justify-center py-20">
           <Loader2 className="h-10 w-10 animate-spin text-muted-foreground" />
@@ -402,68 +402,82 @@ export default function CustomerPackingView() {
           <p className="text-xl text-muted-foreground">{t('dashboard.noOrders')}</p>
         </div>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {customers.map((customer) => {
-            const lock = getLock(customer.id);
-            const lockedByMe = isLockedByCurrentUser(lock, user?.id);
-            const lockedByOther = isLockedByOther(lock, user?.id);
-            const isComplete = customer.progress === 100;
-            
-            return (
-              <Card
-                key={customer.id}
-                className={cn(
-                  'cursor-pointer transition-all active:scale-[0.98]',
-                  lockedByMe && 'border-primary bg-primary/5',
-                  lockedByOther && 'opacity-50',
-                  isComplete && 'bg-success/5 border-success/20',
-                  !lockedByOther && !isComplete && 'hover:border-primary/50'
-                )}
-                onClick={() => !lockedByOther && handleSelectCustomer(customer)}
-              >
-                <CardContent className="p-5">
-                  <div className="flex items-start justify-between mb-3">
-                    <div>
-                      <h3 className="text-xl font-semibold">{customer.name}</h3>
-                      <p className="text-muted-foreground">{customer.customer_number}</p>
-                    </div>
-                    
-                    {lockedByOther && (
-                      <Badge variant="secondary" className="gap-1">
-                        <Lock className="h-3 w-3" />
-                        {t('packing.locked')}
-                      </Badge>
-                    )}
-                    
-                    {lockedByMe && (
-                      <Badge className="gap-1 bg-primary">
-                        <Lock className="h-3 w-3" />
-                        {t('packing.yourLock')}
-                      </Badge>
-                    )}
-                    
-                    {isComplete && !lockedByMe && !lockedByOther && (
-                      <Badge className="bg-success text-success-foreground">
-                        <Check className="h-3 w-3 mr-1" />
-                        {t('packing.complete')}
-                      </Badge>
-                    )}
-                  </div>
+        <Card>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b bg-muted/50">
+                  <th className="text-left p-4 font-medium text-muted-foreground">{t('customers.customerNumber')}</th>
+                  <th className="text-left p-4 font-medium text-muted-foreground">{t('common.name')}</th>
+                  <th className="text-center p-4 font-medium text-muted-foreground">{t('display.products')}</th>
+                  <th className="text-center p-4 font-medium text-muted-foreground">{t('packing.progress')}</th>
+                  <th className="text-center p-4 font-medium text-muted-foreground">{t('common.status')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {customers.map((customer) => {
+                  const lock = getLock(customer.id);
+                  const lockedByMe = isLockedByCurrentUser(lock, user?.id);
+                  const lockedByOther = isLockedByOther(lock, user?.id);
+                  const isComplete = customer.progress === 100;
                   
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">
-                        {customer.packedOrders} / {customer.totalOrders} {t('display.products')}
-                      </span>
-                      <span className="font-medium">{customer.progress}%</span>
-                    </div>
-                    <Progress value={customer.progress} className="h-2" />
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
+                  return (
+                    <tr
+                      key={customer.id}
+                      onClick={() => !lockedByOther && handleSelectCustomer(customer)}
+                      className={cn(
+                        'border-b transition-colors cursor-pointer',
+                        lockedByMe && 'bg-primary/5',
+                        lockedByOther && 'opacity-50 cursor-not-allowed',
+                        isComplete && 'bg-success/5',
+                        !lockedByOther && 'hover:bg-muted/50 active:bg-muted'
+                      )}
+                    >
+                      <td className="p-4 font-mono text-sm">{customer.customer_number}</td>
+                      <td className="p-4">
+                        <span className="font-medium">{customer.name}</span>
+                      </td>
+                      <td className="p-4 text-center">
+                        <span className="text-muted-foreground">
+                          {customer.packedOrders} / {customer.totalOrders}
+                        </span>
+                      </td>
+                      <td className="p-4">
+                        <div className="flex items-center gap-3 justify-center">
+                          <Progress value={customer.progress} className="h-2 w-24" />
+                          <span className="text-sm font-medium w-12 text-right">{customer.progress}%</span>
+                        </div>
+                      </td>
+                      <td className="p-4 text-center">
+                        {lockedByOther && (
+                          <Badge variant="secondary" className="gap-1">
+                            <Lock className="h-3 w-3" />
+                            {t('packing.locked')}
+                          </Badge>
+                        )}
+                        {lockedByMe && (
+                          <Badge className="gap-1 bg-primary">
+                            <Lock className="h-3 w-3" />
+                            {t('packing.yourLock')}
+                          </Badge>
+                        )}
+                        {isComplete && !lockedByMe && !lockedByOther && (
+                          <Badge className="bg-success text-success-foreground">
+                            <Check className="h-3 w-3 mr-1" />
+                            {t('packing.complete')}
+                          </Badge>
+                        )}
+                        {!isComplete && !lockedByMe && !lockedByOther && (
+                          <Badge variant="outline">{t('packing.pending')}</Badge>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </Card>
       )}
     </div>
   );
