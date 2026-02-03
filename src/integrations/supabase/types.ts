@@ -47,6 +47,7 @@ export type Database = {
       categories: {
         Row: {
           bakery_id: string
+          card_color: string | null
           created_at: string | null
           id: string
           is_active: boolean | null
@@ -57,6 +58,7 @@ export type Database = {
         }
         Insert: {
           bakery_id: string
+          card_color?: string | null
           created_at?: string | null
           id?: string
           is_active?: boolean | null
@@ -67,6 +69,7 @@ export type Database = {
         }
         Update: {
           bakery_id?: string
+          card_color?: string | null
           created_at?: string | null
           id?: string
           is_active?: boolean | null
