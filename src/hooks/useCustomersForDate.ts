@@ -40,22 +40,25 @@ export function useCustomersForDate(deliveryDate: string, categoryId?: string) {
       if (!bakeryId) return [];
       
       // Get all orders for this date with customer and product info
+      // Filter by category_id directly on orders table (not products)
       let query = supabase
         .from('orders')
         .select(`
           id,
           quantity,
           customer_id,
+          category_id,
           customer:customers(id, name, customer_number, address),
-          product:products!inner(id, name, product_number, pieces_per_tray, category_id),
+          product:products(id, name, product_number, pieces_per_tray, category_id),
           packing_status(id, status, packed_at, deviation_type, deviation_note)
         `)
         .eq('bakery_id', bakeryId)
         .eq('delivery_date', deliveryDate)
         .order('customer_id');
       
+      // Filter by category_id on orders table
       if (categoryId) {
-        query = query.eq('product.category_id', categoryId);
+        query = query.eq('category_id', categoryId);
       }
       
       const { data: orders, error } = await query;
