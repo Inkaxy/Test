@@ -288,6 +288,7 @@ export type Database = {
       import_batches: {
         Row: {
           bakery_id: string
+          category_id: string | null
           created_at: string | null
           customers_count: number | null
           delivery_date: string
@@ -298,6 +299,7 @@ export type Database = {
         }
         Insert: {
           bakery_id: string
+          category_id?: string | null
           created_at?: string | null
           customers_count?: number | null
           delivery_date: string
@@ -308,6 +310,7 @@ export type Database = {
         }
         Update: {
           bakery_id?: string
+          category_id?: string | null
           created_at?: string | null
           customers_count?: number | null
           delivery_date?: string
@@ -322,6 +325,13 @@ export type Database = {
             columns: ["bakery_id"]
             isOneToOne: false
             referencedRelation: "bakeries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_batches_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
             referencedColumns: ["id"]
           },
         ]
