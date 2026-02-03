@@ -25,6 +25,8 @@ interface ImportResult {
   customersCreated: number;
   customersUpdated: number;
   ordersCreated: number;
+  orderProductsCreated: number;
+  skippedOrders: number;
   batchId: string;
 }
 
@@ -69,6 +71,12 @@ export function useImport() {
           const result = parseOd0File(content);
           orders.push(...result.orders);
           errors.push(...result.errors.map(e => `${file.name}: ${e}`));
+          
+          // Extract delivery date from first order if not found in filename
+          if (!deliveryDate && result.orders.length > 0) {
+            const firstOrderDate = result.orders[0].deliveryDate;
+            deliveryDate = new Date(firstOrderDate);
+          }
           break;
         }
       }
@@ -106,6 +114,8 @@ export function useImport() {
       let customersCreated = 0;
       let customersUpdated = 0;
       let ordersCreated = 0;
+      let orderProductsCreated = 0;
+      let skippedOrders = 0;
       
       // Map to store product_number -> product_id
       const productMap = new Map<string, string>();
@@ -224,52 +234,69 @@ export function useImport() {
         throw new Error('Kunne ikke opprette import-batch');
       }
       
-      // Create orders
-      const ordersToInsert = data.orders
-        .map(order => {
-          const productId = productMap.get(order.productNumber);
-          const customerId = customerMap.get(order.customerNumber);
+      // Process aggregated orders
+      for (const order of data.orders) {
+        const customerId = customerMap.get(order.customerNumber);
+        
+        if (!customerId) {
+          console.warn(`Hopper over ordre: kunde ${order.customerNumber} ikke funnet`);
+          skippedOrders++;
+          continue;
+        }
+        
+        // Create order rows for each product in the aggregated order
+        for (const orderProduct of order.products) {
+          const productId = productMap.get(orderProduct.productNumber);
           
-          if (!productId || !customerId) {
-            console.warn(`Hopper over ordre: produkt ${order.productNumber} eller kunde ${order.customerNumber} ikke funnet`);
-            return null;
+          if (!productId) {
+            console.warn(`Hopper over ordrelinje: produkt ${orderProduct.productNumber} ikke funnet`);
+            continue;
           }
           
-          return {
-            bakery_id: bakeryId,
-            product_id: productId,
-            customer_id: customerId,
-            quantity: order.quantity,
-            delivery_date: deliveryDateStr,
-            import_batch_id: batch.id,
-          };
-        })
-        .filter(Boolean);
-      
-      if (ordersToInsert.length > 0) {
-        const { error: ordersError } = await supabase
-          .from('orders')
-          .insert(ordersToInsert);
-        
-        if (ordersError) {
-          throw new Error(`Feil ved oppretting av ordrer: ${ordersError.message}`);
+          // Check for existing order with same product/customer/date
+          const { data: existingOrder } = await supabase
+            .from('orders')
+            .select('id')
+            .eq('bakery_id', bakeryId)
+            .eq('customer_id', customerId)
+            .eq('product_id', productId)
+            .eq('delivery_date', order.deliveryDate)
+            .maybeSingle();
+          
+          if (existingOrder) {
+            console.log(`Duplikat ordre: kunde ${order.customerNumber}, produkt ${orderProduct.productNumber}, dato ${order.deliveryDate}`);
+            continue;
+          }
+          
+          const { data: newOrder, error: orderError } = await supabase
+            .from('orders')
+            .insert({
+              bakery_id: bakeryId,
+              product_id: productId,
+              customer_id: customerId,
+              quantity: orderProduct.quantity,
+              delivery_date: order.deliveryDate,
+              import_batch_id: batch.id,
+            })
+            .select('id')
+            .single();
+          
+          if (orderError) {
+            console.error(`Feil ved oppretting av ordre:`, orderError);
+            continue;
+          }
+          
+          if (newOrder) {
+            ordersCreated++;
+            orderProductsCreated++;
+            
+            // Create packing_status for the order
+            await supabase.from('packing_status').insert({
+              order_id: newOrder.id,
+              status: 'pending' as const,
+            });
+          }
         }
-        ordersCreated = ordersToInsert.length;
-      }
-      
-      // Create packing_status for each order
-      const { data: createdOrders } = await supabase
-        .from('orders')
-        .select('id')
-        .eq('import_batch_id', batch.id);
-      
-      if (createdOrders && createdOrders.length > 0) {
-        const packingStatuses = createdOrders.map(o => ({
-          order_id: o.id,
-          status: 'pending' as const,
-        }));
-        
-        await supabase.from('packing_status').insert(packingStatuses);
       }
       
       return {
@@ -278,6 +305,8 @@ export function useImport() {
         customersCreated,
         customersUpdated,
         ordersCreated,
+        orderProductsCreated,
+        skippedOrders,
         batchId: batch.id,
       };
     },
