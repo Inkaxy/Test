@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,8 +13,8 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuthStore } from '@/stores/authStore';
 import { useCategories } from '@/hooks/useCategories';
-import { DisplaySettings, getDefaultDisplaySettings } from '@/hooks/useDisplayOrders';
-import { Monitor, Smartphone, Palette, Layout, Settings2, ExternalLink, Loader2 } from 'lucide-react';
+import { DisplaySettings, getDefaultDisplaySettings, DisplayType, DISPLAY_TYPES } from '@/hooks/useDisplayOrders';
+import { Monitor, Smartphone, Palette, Layout, Settings2, ExternalLink, Loader2, Users, Package } from 'lucide-react';
 
 export default function DisplaySettingsPage() {
   const { t } = useTranslation();
@@ -23,6 +23,7 @@ export default function DisplaySettingsPage() {
   const { profile, getCurrentBakeryId } = useAuthStore();
   const bakeryId = getCurrentBakeryId();
   
+  const [selectedDisplayType, setSelectedDisplayType] = useState<DisplayType>('shared');
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [settings, setSettings] = useState<DisplaySettings>(getDefaultDisplaySettings());
   
@@ -44,16 +45,17 @@ export default function DisplaySettingsPage() {
     enabled: !!bakeryId,
   });
   
-  // Fetch existing settings
+  // Fetch existing settings for the selected display type and category
   const { data: existingSettings, isLoading } = useQuery({
-    queryKey: ['display-settings-admin', bakeryId, selectedCategoryId],
+    queryKey: ['display-settings-admin', bakeryId, selectedDisplayType, selectedCategoryId],
     queryFn: async () => {
       if (!bakeryId) return null;
       
       let query = supabase
         .from('display_settings')
         .select('*')
-        .eq('bakery_id', bakeryId);
+        .eq('bakery_id', bakeryId)
+        .eq('display_type', selectedDisplayType);
       
       if (selectedCategoryId) {
         query = query.eq('category_id', selectedCategoryId);
@@ -66,15 +68,22 @@ export default function DisplaySettingsPage() {
       
       if (data?.settings && typeof data.settings === 'object') {
         const merged = { ...getDefaultDisplaySettings(), ...data.settings } as DisplaySettings;
-        setSettings(merged);
         return { id: data.id, settings: merged };
       }
       
-      setSettings(getDefaultDisplaySettings());
       return null;
     },
     enabled: !!bakeryId,
   });
+  
+  // Reset settings when display type or category changes
+  useEffect(() => {
+    if (existingSettings?.settings) {
+      setSettings(existingSettings.settings);
+    } else {
+      setSettings(getDefaultDisplaySettings());
+    }
+  }, [existingSettings]);
   
   // Save settings mutation
   const saveMutation = useMutation({
@@ -93,7 +102,7 @@ export default function DisplaySettingsPage() {
         const insertData = {
           bakery_id: bakeryId,
           category_id: selectedCategoryId,
-          display_type: 'shared' as const,
+          display_type: selectedDisplayType,
           settings: settingsJson,
         };
         
@@ -105,9 +114,10 @@ export default function DisplaySettingsPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['display-settings'] });
+      queryClient.invalidateQueries({ queryKey: ['display-settings-admin'] });
       toast({
         title: 'Innstillinger lagret',
-        description: 'Display-innstillingene ble oppdatert',
+        description: `${DISPLAY_TYPES[selectedDisplayType].label}-innstillingene ble oppdatert`,
       });
     },
     onError: () => {
@@ -126,10 +136,25 @@ export default function DisplaySettingsPage() {
   const getPreviewUrl = () => {
     if (!bakery?.short_id) return null;
     const base = window.location.origin;
-    if (selectedCategoryId) {
-      return `${base}/display/shared/${bakery.short_id}/${selectedCategoryId}`;
+    
+    if (selectedDisplayType === 'shared') {
+      if (selectedCategoryId) {
+        return `${base}/display/shared/${bakery.short_id}/${selectedCategoryId}`;
+      }
+      return `${base}/display/shared/${bakery.short_id}`;
     }
-    return `${base}/display/shared/${bakery.short_id}`;
+    
+    // Customer display doesn't have a direct preview URL (requires token)
+    // Packing display is the internal packing page
+    return null;
+  };
+
+  const getDisplayTypeIcon = (type: DisplayType) => {
+    switch (type) {
+      case 'shared': return <Monitor className="h-4 w-4" />;
+      case 'customer': return <Users className="h-4 w-4" />;
+      case 'packing': return <Package className="h-4 w-4" />;
+    }
   };
   
   return (
@@ -162,32 +187,58 @@ export default function DisplaySettingsPage() {
         </div>
       </div>
       
-      {/* Category selector */}
+      {/* Display type selector */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Settings2 className="h-5 w-5" />
-            Velg kategori
+            <Monitor className="h-5 w-5" />
+            Velg skjermtype
           </CardTitle>
           <CardDescription>
-            Innstillinger kan tilpasses per kategori
+            Hvert display-type har sine egne innstillinger
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <Select 
-            value={selectedCategoryId || 'all'} 
-            onValueChange={(v) => setSelectedCategoryId(v === 'all' ? null : v)}
-          >
-            <SelectTrigger className="w-64">
-              <SelectValue placeholder="Velg kategori" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Alle kategorier (standard)</SelectItem>
-              {categories.map((cat) => (
-                <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+        <CardContent className="space-y-4">
+          <Tabs value={selectedDisplayType} onValueChange={(v) => setSelectedDisplayType(v as DisplayType)}>
+            <TabsList className="grid w-full grid-cols-3">
+              {(Object.entries(DISPLAY_TYPES) as [DisplayType, typeof DISPLAY_TYPES[DisplayType]][]).map(([type, info]) => (
+                <TabsTrigger key={type} value={type} className="flex items-center gap-2">
+                  {getDisplayTypeIcon(type)}
+                  <span className="hidden sm:inline">{info.label}</span>
+                </TabsTrigger>
               ))}
-            </SelectContent>
-          </Select>
+            </TabsList>
+          </Tabs>
+          
+          <div className="p-3 rounded-lg bg-muted/50">
+            <p className="text-sm text-muted-foreground">
+              {DISPLAY_TYPES[selectedDisplayType].description}
+            </p>
+          </div>
+          
+          {/* Category selector - only for shared display */}
+          {selectedDisplayType === 'shared' && (
+            <div className="pt-2 border-t">
+              <Label className="text-sm font-medium">Kategori-spesifikke innstillinger</Label>
+              <p className="text-xs text-muted-foreground mb-2">
+                Du kan tilpasse innstillinger per produktkategori
+              </p>
+              <Select 
+                value={selectedCategoryId || 'all'} 
+                onValueChange={(v) => setSelectedCategoryId(v === 'all' ? null : v)}
+              >
+                <SelectTrigger className="w-64">
+                  <SelectValue placeholder="Velg kategori" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Alle kategorier (standard)</SelectItem>
+                  {categories.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </CardContent>
       </Card>
       
@@ -210,7 +261,7 @@ export default function DisplaySettingsPage() {
                   Layout
                 </TabsTrigger>
                 <TabsTrigger value="display">
-                  <Monitor className="h-4 w-4 mr-2" />
+                  <Settings2 className="h-4 w-4 mr-2" />
                   Visning
                 </TabsTrigger>
               </TabsList>
@@ -339,16 +390,18 @@ export default function DisplaySettingsPage() {
                     <CardTitle>Layout</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-6">
-                    <div className="space-y-2">
-                      <Label>Antall kolonner: {settings.columns}</Label>
-                      <Slider
-                        value={[settings.columns]}
-                        onValueChange={([v]) => updateSetting('columns', v)}
-                        min={1}
-                        max={6}
-                        step={1}
-                      />
-                    </div>
+                    {selectedDisplayType === 'shared' && (
+                      <div className="space-y-2">
+                        <Label>Antall kolonner: {settings.columns}</Label>
+                        <Slider
+                          value={[settings.columns]}
+                          onValueChange={([v]) => updateSetting('columns', v)}
+                          min={1}
+                          max={6}
+                          step={1}
+                        />
+                      </div>
+                    )}
                     
                     <div className="space-y-2">
                       <Label>Kundenavn fontstørrelse</Label>
@@ -467,7 +520,7 @@ export default function DisplaySettingsPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Smartphone className="h-5 w-5" />
-                Forhåndsvisning
+                Forhåndsvisning - {DISPLAY_TYPES[selectedDisplayType].label}
               </CardTitle>
               <CardDescription>
                 Slik vil displayet se ut
@@ -483,56 +536,158 @@ export default function DisplaySettingsPage() {
               >
                 {/* Preview header */}
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-bold">{bakery?.name || 'Bakeri'}</h3>
+                  <h3 className="text-lg font-bold">
+                    {selectedDisplayType === 'customer' ? 'Meny Heimdal' : bakery?.name || 'Bakeri'}
+                  </h3>
                   {settings.show_clock && (
                     <span className="font-mono text-sm">12:34:56</span>
                   )}
                 </div>
                 
-                {/* Preview grid */}
-                <div
-                  className="grid gap-2"
-                  style={{
-                    gridTemplateColumns: `repeat(${Math.min(settings.columns, 3)}, 1fr)`,
-                  }}
-                >
-                  {['Meny Heimdal', 'Kiwi Foyn', 'Spar Kullboden'].map((name, i) => (
-                    <div
-                      key={name}
-                      className="rounded-lg p-3"
-                      style={{
-                        backgroundColor: settings.card_background_color,
-                        borderLeft: `3px solid ${
-                          i === 0 ? settings.completed_color : 
-                          i === 1 ? settings.packing_color : 
-                          settings.pending_color
-                        }`,
-                      }}
-                    >
-                      <h4 
-                        className="font-bold truncate"
-                        style={{ fontSize: `calc(${settings.customer_name_font_size} * 0.5)` }}
-                      >
-                        {name}
-                      </h4>
+                {/* Preview based on display type */}
+                {selectedDisplayType === 'shared' && (
+                  <div
+                    className="grid gap-2"
+                    style={{
+                      gridTemplateColumns: `repeat(${Math.min(settings.columns, 3)}, 1fr)`,
+                    }}
+                  >
+                    {['Meny Heimdal', 'Kiwi Foyn', 'Spar Kullboden'].map((name, i) => (
                       <div
-                        className="h-1 rounded mt-2"
-                        style={{ backgroundColor: `${settings.pending_color}40` }}
+                        key={name}
+                        className="rounded-lg p-3"
+                        style={{
+                          backgroundColor: settings.card_background_color,
+                          borderLeft: `3px solid ${
+                            i === 0 ? settings.completed_color : 
+                            i === 1 ? settings.packing_color : 
+                            settings.pending_color
+                          }`,
+                        }}
+                      >
+                        <h4 
+                          className="font-bold truncate"
+                          style={{ fontSize: `calc(${settings.customer_name_font_size} * 0.5)` }}
+                        >
+                          {name}
+                        </h4>
+                        <div
+                          className="h-1 rounded mt-2"
+                          style={{ backgroundColor: `${settings.pending_color}40` }}
+                        >
+                          <div
+                            className="h-full rounded"
+                            style={{
+                              width: i === 0 ? '100%' : i === 1 ? '60%' : '0%',
+                              backgroundColor: i === 0 ? settings.completed_color : settings.packing_color,
+                            }}
+                          />
+                        </div>
+                        <p className="text-xs mt-1 opacity-70">
+                          {i === 0 ? '5/5' : i === 1 ? '3/5' : '0/5'} produkter
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                
+                {selectedDisplayType === 'customer' && (
+                  <div className="space-y-3">
+                    {['Grovbrød', 'Rundstykker', 'Croissant'].map((name, i) => (
+                      <div
+                        key={name}
+                        className="flex items-center gap-4 rounded-lg p-3"
+                        style={{
+                          backgroundColor: settings.card_background_color,
+                          borderLeft: `4px solid ${i === 0 ? settings.completed_color : settings.pending_color}`,
+                          opacity: i === 0 ? 0.6 : 1,
+                        }}
                       >
                         <div
-                          className="h-full rounded"
+                          className="w-8 h-8 rounded-full flex items-center justify-center"
                           style={{
-                            width: i === 0 ? '100%' : i === 1 ? '60%' : '0%',
-                            backgroundColor: i === 0 ? settings.completed_color : settings.packing_color,
+                            backgroundColor: i === 0 
+                              ? `${settings.completed_color}33` 
+                              : `${settings.pending_color}33`
                           }}
-                        />
+                        >
+                          {i === 0 ? '✓' : '○'}
+                        </div>
+                        <div className="flex-1">
+                          <h4 
+                            className="font-bold"
+                            style={{ 
+                              fontSize: `calc(${settings.customer_name_font_size} * 0.6)`,
+                              textDecoration: i === 0 ? 'line-through' : 'none'
+                            }}
+                          >
+                            {name}
+                          </h4>
+                          <p className="text-xs opacity-70">PRD-00{i+1}</p>
+                        </div>
+                        <span className="font-mono font-bold">
+                          {i === 0 ? '10 stk' : i === 1 ? '2 pl' : '5 stk'}
+                        </span>
                       </div>
-                      <p className="text-xs mt-1 opacity-70">
-                        {i === 0 ? '5/5' : i === 1 ? '3/5' : '0/5'} produkter
-                      </p>
+                    ))}
+                  </div>
+                )}
+                
+                {selectedDisplayType === 'packing' && (
+                  <div className="space-y-2">
+                    {['Grovbrød', 'Rundstykker', 'Croissant', 'Baguette'].map((name, i) => (
+                      <div
+                        key={name}
+                        className="flex items-center justify-between rounded-lg p-2"
+                        style={{
+                          backgroundColor: settings.card_background_color,
+                        }}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div
+                            className="w-6 h-6 rounded flex items-center justify-center text-xs"
+                            style={{
+                              backgroundColor: i < 2 
+                                ? `${settings.completed_color}33` 
+                                : `${settings.pending_color}33`
+                            }}
+                          >
+                            {i < 2 ? '✓' : ''}
+                          </div>
+                          <span 
+                            style={{ 
+                              fontSize: settings.product_font_size,
+                              textDecoration: i < 2 ? 'line-through' : 'none',
+                              opacity: i < 2 ? 0.6 : 1
+                            }}
+                          >
+                            {name}
+                          </span>
+                        </div>
+                        <span className="font-mono text-sm">{(i+1)*5} stk</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                
+                {/* Progress bar preview */}
+                {settings.show_progress_bar && (
+                  <div className="mt-4 pt-4 border-t border-white/20">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-sm">Fremdrift</span>
+                      <span className="font-bold">50%</span>
                     </div>
-                  ))}
-                </div>
+                    <div
+                      className="h-2 rounded"
+                      style={{ backgroundColor: `${settings.pending_color}40` }}
+                    >
+                      <div
+                        className="h-full rounded w-1/2"
+                        style={{ backgroundColor: settings.packing_color }}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>

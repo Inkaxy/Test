@@ -189,6 +189,23 @@ export function useCustomerDisplayOrders(
   });
 }
 
+export type DisplayType = 'shared' | 'customer' | 'packing';
+
+export const DISPLAY_TYPES: Record<DisplayType, { label: string; description: string }> = {
+  shared: {
+    label: 'Felles Display',
+    description: 'Storskjerm i produksjonen som viser alle kunder og deres pakkestatus',
+  },
+  customer: {
+    label: 'Kunde Display',
+    description: 'Dedikert skjerm for enkelt kunde som viser deres produkter og status',
+  },
+  packing: {
+    label: 'Pakkedisplay',
+    description: 'Touch-optimalisert visning for pakkere som jobber med ordrer',
+  },
+};
+
 export interface DisplaySettings {
   background_color: string;
   card_background_color: string;
@@ -227,20 +244,27 @@ export function getDefaultDisplaySettings(): DisplaySettings {
   };
 }
 
-// Fetch display settings
-export function useDisplaySettings(bakeryId: string | null, categoryId?: string | null) {
+// Fetch display settings with support for display type
+export function useDisplaySettings(
+  bakeryId: string | null,
+  categoryId?: string | null,
+  displayType: DisplayType = 'shared'
+) {
   return useQuery({
-    queryKey: ['display-settings', bakeryId, categoryId],
+    queryKey: ['display-settings', bakeryId, categoryId, displayType],
     queryFn: async (): Promise<DisplaySettings> => {
       if (!bakeryId) return getDefaultDisplaySettings();
 
       let query = supabase
         .from('display_settings')
         .select('*')
-        .eq('bakery_id', bakeryId);
+        .eq('bakery_id', bakeryId)
+        .eq('display_type', displayType);
 
       if (categoryId) {
         query = query.eq('category_id', categoryId);
+      } else {
+        query = query.is('category_id', null);
       }
 
       const { data, error } = await query.maybeSingle();
