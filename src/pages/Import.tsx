@@ -6,10 +6,14 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Upload, File, CheckCircle2, AlertCircle, X, CalendarIcon, Package, Users, ShoppingCart } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
+import { Upload, File, CheckCircle2, AlertCircle, X, CalendarIcon, Package, Users, ShoppingCart, Cloud } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useImport } from '@/hooks/useImport';
+import { useCategories } from '@/hooks/useCategories';
+import { useOneDriveConfigs } from '@/hooks/useOneDriveConfig';
 import { format } from 'date-fns';
 import { nb } from 'date-fns/locale';
 import { ParsedProduct, ParsedCustomer, ParsedOrder } from '@/lib/fileParser';
@@ -32,6 +36,8 @@ export default function Import() {
   const { t } = useTranslation();
   const { toast } = useToast();
   const { parseFiles, importData, isImporting } = useImport();
+  const { data: categories = [] } = useCategories();
+  const { data: oneDriveConfigs = [] } = useOneDriveConfigs();
   
   const [files, setFiles] = useState<FileWithPreview[]>([]);
   const [isDragging, setIsDragging] = useState(false);
@@ -39,7 +45,11 @@ export default function Import() {
   const [parseErrors, setParseErrors] = useState<string[]>([]);
   const [deliveryDate, setDeliveryDate] = useState<Date | undefined>();
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | undefined>();
   
+  const activeCategories = categories.filter(c => c.is_active);
+  const selectedCategory = categories.find(c => c.id === selectedCategoryId);
+  const categoryOneDriveConfig = oneDriveConfigs.find(c => c.category_id === selectedCategoryId);
   const getFileType = (filename: string): FileWithPreview['type'] => {
     const ext = filename.split('.').pop()?.toLowerCase();
     if (ext === 'prd') return 'prd';
@@ -125,11 +135,11 @@ export default function Import() {
   };
   
   const handleUpload = async () => {
-    if (!parsedData || !deliveryDate) {
+    if (!parsedData || !deliveryDate || !selectedCategoryId) {
       toast({
         variant: 'destructive',
         title: t('common.error'),
-        description: !deliveryDate ? 'Velg en leveringsdato' : t('import.invalidFormat'),
+        description: !selectedCategoryId ? 'Velg en kategori' : !deliveryDate ? 'Velg en leveringsdato' : t('import.invalidFormat'),
       });
       return;
     }
@@ -142,6 +152,7 @@ export default function Import() {
         customers: parsedData.customers,
         orders: parsedData.orders,
         deliveryDate,
+        categoryId: selectedCategoryId,
       });
       
       setUploadProgress(100);
@@ -184,7 +195,7 @@ export default function Import() {
   const hasCus = files.some(f => f.type === 'cus' && f.status === 'valid');
   const hasOd0 = files.some(f => f.type === 'od0' && f.status === 'valid');
   
-  const canImport = parsedData && deliveryDate && (
+  const canImport = parsedData && deliveryDate && selectedCategoryId && (
     parsedData.products.length > 0 ||
     parsedData.customers.length > 0 ||
     parsedData.orders.length > 0
@@ -275,6 +286,48 @@ export default function Import() {
                 </div>
               </div>
             )}
+            
+            {/* Category selector */}
+            <div className="space-y-2">
+              <Label>Kategori for ordrer</Label>
+              <Select value={selectedCategoryId} onValueChange={setSelectedCategoryId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Velg kategori..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {activeCategories.map((category) => (
+                    <SelectItem key={category.id} value={category.id}>
+                      <div className="flex items-center gap-2">
+                        <span>{category.name}</span>
+                        <Badge variant="outline" className="text-xs">
+                          {category.packing_mode === 'product_based' ? 'Produkt' : 'Kunde'}
+                        </Badge>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Produkter og kunder deles på tvers av kategorier. Ordrer (.OD0) knyttes til valgt kategori.
+              </p>
+              
+              {/* OneDrive status indicator */}
+              {selectedCategory && (
+                <div className="flex items-center gap-2 mt-2">
+                  {categoryOneDriveConfig?.sync_status === 'configured' ? (
+                    <Badge variant="outline" className="gap-1 text-success border-success/30">
+                      <Cloud className="h-3 w-3" />
+                      OneDrive koblet
+                    </Badge>
+                  ) : (
+                    <Badge variant="secondary" className="gap-1">
+                      <Cloud className="h-3 w-3" />
+                      OneDrive ikke koblet
+                    </Badge>
+                  )}
+                </div>
+              )}
+            </div>
             
             {/* Delivery date picker */}
             <div className="flex items-center gap-4">

@@ -17,6 +17,7 @@ interface ImportData {
   customers: ParsedCustomer[];
   orders: ParsedOrder[];
   deliveryDate: Date;
+  categoryId: string;
 }
 
 interface ImportResult {
@@ -35,7 +36,7 @@ export function useImport() {
   const { getCurrentBakeryId } = useAuthStore();
   
   const parseFiles = async (files: File[]): Promise<{
-    data: Omit<ImportData, 'deliveryDate'> & { deliveryDate: Date | null };
+    data: Omit<ImportData, 'deliveryDate' | 'categoryId'> & { deliveryDate: Date | null };
     errors: string[];
   }> => {
     const products: ParsedProduct[] = [];
@@ -290,6 +291,7 @@ export function useImport() {
               quantity: orderProduct.quantity,
               delivery_date: order.deliveryDate,
               import_batch_id: batch.id,
+              category_id: data.categoryId,
             })
             .select('id')
             .single();
