@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 import { useBakerySettings, useUpdateBakerySettings } from '@/hooks/useBakerySettings';
 import { useToast } from '@/hooks/use-toast';
+import { DeviationSettingsCard } from '@/components/settings/DeviationSettingsCard';
 
 export default function Settings() {
   const { t, i18n } = useTranslation();
@@ -92,6 +93,9 @@ export default function Settings() {
           </RadioGroup>
         </CardContent>
       </Card>
+      
+      {/* Deviation settings */}
+      <DeviationSettingsCard />
       
       {/* Auto-delete settings */}
       <Card>

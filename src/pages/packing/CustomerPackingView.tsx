@@ -6,10 +6,6 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
 import { Lock, Users, Package, Loader2, ArrowLeft, Check, AlertTriangle, Undo2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { nb, enUS } from 'date-fns/locale';
@@ -27,8 +23,15 @@ import {
 import { useMarkAsPacked, useReportDeviation, useUndoPacking } from '@/hooks/useOrders';
 import { useAuthStore } from '@/stores/authStore';
 import { useToast } from '@/hooks/use-toast';
+import { DeviationDialog } from '@/components/packing/DeviationDialog';
 
-type DeviationType = 'shortage' | 'damaged' | 'wrong_product' | 'other';
+interface DeviationOrderInfo {
+  id: string;
+  packingStatusId?: string;
+  productName: string;
+  customerName: string;
+  quantity: number;
+}
 
 export default function CustomerPackingView() {
   const { t, i18n } = useTranslation();
@@ -39,9 +42,7 @@ export default function CustomerPackingView() {
   const locale = i18n.language === 'nb' ? nb : enUS;
   
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerWithOrders | null>(null);
-  const [deviationOrder, setDeviationOrder] = useState<{ id: string; packingStatusId?: string } | null>(null);
-  const [deviationType, setDeviationType] = useState<DeviationType>('shortage');
-  const [deviationNote, setDeviationNote] = useState('');
+  const [deviationOrder, setDeviationOrder] = useState<DeviationOrderInfo | null>(null);
   
   const dateStr = date || format(new Date(), 'yyyy-MM-dd');
   
@@ -133,19 +134,17 @@ export default function CustomerPackingView() {
     }
   };
   
-  const handleReportDeviation = async () => {
+  const handleReportDeviation = async (data: { deviationType: string; deviationNote: string }) => {
     if (!deviationOrder) return;
     
     try {
       await reportDeviation.mutateAsync({
         orderId: deviationOrder.id,
         packingStatusId: deviationOrder.packingStatusId,
-        deviationType,
-        deviationNote: deviationNote || undefined,
+        deviationType: data.deviationType as 'shortage' | 'damaged' | 'wrong_product' | 'other',
+        deviationNote: data.deviationNote || undefined,
       });
       setDeviationOrder(null);
-      setDeviationType('shortage');
-      setDeviationNote('');
     } catch (error) {
       toast({
         variant: 'destructive',
@@ -270,7 +269,10 @@ export default function CustomerPackingView() {
                             variant="outline"
                             onClick={() => setDeviationOrder({ 
                               id: order.id, 
-                              packingStatusId: order.packing_status?.id 
+                              packingStatusId: order.packing_status?.id,
+                              productName: order.product.name,
+                              customerName: currentCustomer.name,
+                              quantity: order.quantity,
                             })}
                             className="h-14 w-14"
                           >
@@ -300,54 +302,17 @@ export default function CustomerPackingView() {
         </div>
         
         {/* Deviation dialog */}
-        <Dialog open={!!deviationOrder} onOpenChange={() => setDeviationOrder(null)}>
-          <DialogContent className="max-w-lg">
-            <DialogHeader>
-              <DialogTitle className="text-xl">{t('packing.reportDeviation')}</DialogTitle>
-            </DialogHeader>
-            
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label className="text-base">{t('packing.deviationType')}</Label>
-                <Select value={deviationType} onValueChange={(v) => setDeviationType(v as DeviationType)}>
-                  <SelectTrigger className="h-12 text-base">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="shortage" className="text-base py-3">{t('packing.shortage')}</SelectItem>
-                    <SelectItem value="damaged" className="text-base py-3">{t('packing.damaged')}</SelectItem>
-                    <SelectItem value="wrong_product" className="text-base py-3">{t('packing.wrongProduct')}</SelectItem>
-                    <SelectItem value="other" className="text-base py-3">{t('packing.other')}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="space-y-2">
-                <Label className="text-base">{t('packing.deviationNote')}</Label>
-                <Textarea
-                  value={deviationNote}
-                  onChange={(e) => setDeviationNote(e.target.value)}
-                  placeholder={t('common.optional')}
-                  className="min-h-[100px] text-base"
-                />
-              </div>
-            </div>
-            
-            <DialogFooter className="gap-2">
-              <Button variant="outline" size="lg" onClick={() => setDeviationOrder(null)}>
-                {t('common.cancel')}
-              </Button>
-              <Button 
-                size="lg"
-                onClick={handleReportDeviation}
-                disabled={reportDeviation.isPending}
-              >
-                {reportDeviation.isPending && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
-                {t('common.confirm')}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <DeviationDialog
+          open={!!deviationOrder}
+          onOpenChange={(open) => !open && setDeviationOrder(null)}
+          orderInfo={deviationOrder ? {
+            customerName: deviationOrder.customerName,
+            productName: deviationOrder.productName,
+            orderedQuantity: deviationOrder.quantity,
+          } : undefined}
+          onConfirm={handleReportDeviation}
+          isPending={reportDeviation.isPending}
+        />
       </div>
     );
   }
