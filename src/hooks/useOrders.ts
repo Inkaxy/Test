@@ -177,6 +177,106 @@ export function useMarkAsPacked() {
   });
 }
 
+// Batch version for marking multiple orders at once - much faster!
+export function useBatchMarkAsPacked() {
+  const queryClient = useQueryClient();
+  const { user, getCurrentBakeryId } = useAuthStore();
+  
+  return useMutation({
+    mutationFn: async ({ 
+      orders, 
+      categoryId, 
+      deliveryDate 
+    }: { 
+      orders: Array<{ orderId: string; packingStatusId?: string; customerId?: string; productId?: string }>;
+      categoryId?: string | null;
+      deliveryDate?: string;
+    }) => {
+      const bakeryId = getCurrentBakeryId();
+      const packedAt = new Date().toISOString();
+      
+      // Separate orders that need insert vs update
+      const ordersToInsert = orders.filter(o => !o.packingStatusId);
+      const ordersToUpdate = orders.filter(o => o.packingStatusId);
+      
+      // Run inserts and updates in parallel
+      const promises: Promise<void>[] = [];
+      
+      if (ordersToInsert.length > 0) {
+        const insertPromise = (async () => {
+          const { error } = await supabase
+            .from('packing_status')
+            .insert(ordersToInsert.map(o => ({
+              order_id: o.orderId,
+              status: 'packed' as const,
+              packed_at: packedAt,
+              packed_by: user?.id,
+            })));
+          if (error) throw error;
+        })();
+        promises.push(insertPromise);
+      }
+      
+      if (ordersToUpdate.length > 0) {
+        // Update all at once using IN clause
+        const idsToUpdate = ordersToUpdate.map(o => o.packingStatusId!);
+        const updatePromise = (async () => {
+          const { error } = await supabase
+            .from('packing_status')
+            .update({
+              status: 'packed' as const,
+              packed_at: packedAt,
+              packed_by: user?.id,
+            })
+            .in('id', idsToUpdate);
+          if (error) throw error;
+        })();
+        promises.push(updatePromise);
+      }
+      
+      await Promise.all(promises);
+      
+      // Send single broadcast for all updates
+      if (bakeryId && deliveryDate) {
+        const updatePayload = {
+          type: 'batch_update',
+          order_ids: orders.map(o => o.orderId),
+          status: 'packed' as const,
+          packed_at: packedAt,
+          count: orders.length,
+        };
+        
+        // Broadcast to general channel
+        const generalChannel = supabase.channel(`packing:${bakeryId}:${deliveryDate}`);
+        await generalChannel.send({
+          type: 'broadcast',
+          event: 'packing_update',
+          payload: updatePayload,
+        });
+        
+        // Also broadcast to category-specific channel if provided
+        if (categoryId) {
+          const categoryChannel = supabase.channel(`packing:${bakeryId}:${categoryId}:${deliveryDate}`);
+          await categoryChannel.send({
+            type: 'broadcast',
+            event: 'packing_update',
+            payload: updatePayload,
+          });
+        }
+      }
+      
+      return { count: orders.length };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      queryClient.invalidateQueries({ queryKey: ['orders-by-product'] });
+      queryClient.invalidateQueries({ queryKey: ['display-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['customers-for-date'] });
+      queryClient.invalidateQueries({ queryKey: ['products-for-date'] });
+    },
+  });
+}
+
 type DeviationType = 'shortage' | 'damaged' | 'wrong_product' | 'other';
 
 export function useReportDeviation() {
