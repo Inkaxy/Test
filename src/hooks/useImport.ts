@@ -160,6 +160,7 @@ export function useImport() {
           .eq('bakery_id', bakeryId)
           .eq('delivery_date', deliveryDateStr)
           .eq('category_id', data.categoryId)
+          .not('category_id', 'is', null)
       ]);
       
       const defaultCategoryId = defaultCategory?.id || null;
