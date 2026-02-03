@@ -214,9 +214,18 @@ export default function DisplaySettingsPage() {
     return null;
   };
   
-  const getKioskPackingUrl = () => {
+  const getKioskPackingUrl = (mode: 'customer' | 'product' = 'customer') => {
     const base = window.location.origin;
     if (!bakery?.short_id) return null;
+    
+    if (mode === 'product') {
+      if (selectedCategoryId) {
+        return `${base}/kiosk/packing/${bakery.short_id}/product/${selectedCategoryId}`;
+      }
+      return `${base}/kiosk/packing/${bakery.short_id}/product`;
+    }
+    
+    // Customer-based (default)
     if (selectedCategoryId) {
       return `${base}/kiosk/packing/${bakery.short_id}/${selectedCategoryId}`;
     }
@@ -374,34 +383,67 @@ export default function DisplaySettingsPage() {
             </div>
           )}
           
-          {/* Kiosk Packing URL */}
+          {/* Kiosk Packing URLs */}
           {bakery?.short_id && (
-            <div className="pt-4 border-t mt-4">
-              <Label className="text-sm font-medium flex items-center gap-2">
-                <Smartphone className="h-4 w-4" />
-                Kiosk pakke-URL (Fully Kiosk)
-              </Label>
-              <p className="text-xs text-muted-foreground mb-2">
-                Bruk denne URL-en for nettbrett med Fully Kiosk eller lignende kiosk-app
-              </p>
-              <div className="flex gap-2 items-center">
-                <Input 
-                  readOnly 
-                  value={getKioskPackingUrl() || ''} 
-                  className="flex-1 font-mono text-sm"
-                />
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => getKioskPackingUrl() && copyToClipboard(getKioskPackingUrl()!)}
-                >
-                  <Copy className="h-4 w-4" />
-                </Button>
-                <Button variant="outline" size="icon" asChild>
-                  <a href={getKioskPackingUrl() || ''} target="_blank" rel="noopener noreferrer">
-                    <ExternalLink className="h-4 w-4" />
-                  </a>
-                </Button>
+            <div className="pt-4 border-t mt-4 space-y-4">
+              {/* Customer-based kiosk */}
+              <div>
+                <Label className="text-sm font-medium flex items-center gap-2">
+                  <Users className="h-4 w-4" />
+                  Kiosk pakke-URL - Kundebasert
+                </Label>
+                <p className="text-xs text-muted-foreground mb-2">
+                  Pakk per kunde - velg kunde, så pakk alle produkter for den kunden
+                </p>
+                <div className="flex gap-2 items-center">
+                  <Input 
+                    readOnly 
+                    value={getKioskPackingUrl('customer') || ''} 
+                    className="flex-1 font-mono text-sm"
+                  />
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => getKioskPackingUrl('customer') && copyToClipboard(getKioskPackingUrl('customer')!)}
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                  <Button variant="outline" size="icon" asChild>
+                    <a href={getKioskPackingUrl('customer') || ''} target="_blank" rel="noopener noreferrer">
+                      <ExternalLink className="h-4 w-4" />
+                    </a>
+                  </Button>
+                </div>
+              </div>
+              
+              {/* Product-based kiosk */}
+              <div>
+                <Label className="text-sm font-medium flex items-center gap-2">
+                  <Package className="h-4 w-4" />
+                  Kiosk pakke-URL - Produktbasert
+                </Label>
+                <p className="text-xs text-muted-foreground mb-2">
+                  Pakk per produkt - velg produkt, så pakk alle kundeordrer for det produktet
+                </p>
+                <div className="flex gap-2 items-center">
+                  <Input 
+                    readOnly 
+                    value={getKioskPackingUrl('product') || ''} 
+                    className="flex-1 font-mono text-sm"
+                  />
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => getKioskPackingUrl('product') && copyToClipboard(getKioskPackingUrl('product')!)}
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                  <Button variant="outline" size="icon" asChild>
+                    <a href={getKioskPackingUrl('product') || ''} target="_blank" rel="noopener noreferrer">
+                      <ExternalLink className="h-4 w-4" />
+                    </a>
+                  </Button>
+                </div>
               </div>
             </div>
           )}
