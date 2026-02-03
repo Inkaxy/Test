@@ -144,7 +144,11 @@
     "packAllProducts": "Pack all products for this customer",
     "selectProductToPack": "Select a product to pack all customer orders",
     "orders": "orders",
-    "traysCalculated": "Trays/pcs"
+    "traysCalculated": "Trays/pcs",
+    "fullTrays": "full trays",
+    "loosePieces": "loose pcs",
+    "perTray": "per tray",
+    "piecesTotal": "pieces total"
   },
   "products": {
     "title": "Products",

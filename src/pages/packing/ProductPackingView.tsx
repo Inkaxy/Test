@@ -221,6 +221,15 @@ export default function ProductPackingView() {
     return t('packing.traysAndPieces', { trays: t('packing.trays', { count: trays }), pieces });
   };
   
+  const getTrayCalculation = (quantity: number, piecesPerTray?: number | null) => {
+    if (!piecesPerTray) return null;
+    
+    const trays = Math.floor(quantity / piecesPerTray);
+    const pieces = quantity % piecesPerTray;
+    
+    return { trays, pieces, piecesPerTray };
+  };
+  
   const getStatusBadge = (status?: string) => {
     switch (status) {
       case 'packed':
@@ -494,10 +503,43 @@ export default function ProductPackingView() {
                     )}
                   </div>
                   
+                  {/* Tray Calculator */}
+                  {(() => {
+                    const calc = getTrayCalculation(product.totalQuantity, product.pieces_per_tray);
+                    if (calc) {
+                      return (
+                        <div className="flex items-center gap-3 mb-3 p-3 rounded-lg bg-primary/10 border border-primary/20">
+                          <Package className="h-5 w-5 text-primary" />
+                          <div className="flex items-center gap-4 text-sm">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-2xl font-bold text-primary">{calc.trays}</span>
+                              <span className="text-muted-foreground">{t('packing.fullTrays')}</span>
+                            </div>
+                            {calc.pieces > 0 && (
+                              <>
+                                <span className="text-muted-foreground">+</span>
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-2xl font-bold text-primary">{calc.pieces}</span>
+                                  <span className="text-muted-foreground">{t('packing.loosePieces')}</span>
+                                </div>
+                              </>
+                            )}
+                          </div>
+                          <span className="ml-auto text-xs text-muted-foreground">
+                            ({calc.piecesPerTray} {t('packing.perTray')})
+                          </span>
+                        </div>
+                      );
+                    }
+                    return (
+                      <div className="flex items-center gap-2 mb-3 text-sm text-muted-foreground">
+                        <span>{product.totalQuantity} {t('packing.piecesTotal')}</span>
+                      </div>
+                    );
+                  })()}
+                  
                   <div className="flex items-center gap-4 mb-3 text-sm text-muted-foreground">
                     <span>{product.totalOrders} {t('packing.orders')}</span>
-                    <span>•</span>
-                    <span>{getQuantityDisplay(product.totalQuantity, product.pieces_per_tray)}</span>
                   </div>
                   
                   <div className="space-y-2">
