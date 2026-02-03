@@ -19,6 +19,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { useMarkAsPacked, useReportDeviation, useUndoPacking } from '@/hooks/useOrders';
 import { useToast } from '@/hooks/use-toast';
 import { ProductTableView, ProductWithOrders } from '@/components/packing/ProductTableView';
+import { BatchPackingView } from '@/components/packing/BatchPackingView';
 import { PackingHeader } from '@/components/packing/PackingHeader';
 
 type DeviationType = 'shortage' | 'damaged' | 'wrong_product' | 'other';
@@ -126,6 +127,7 @@ export default function ProductPackingView() {
   const locale = i18n.language === 'nb' ? nb : enUS;
   
   const [selectedProduct, setSelectedProduct] = useState<ProductWithOrders | null>(null);
+  const [selectedProducts, setSelectedProducts] = useState<ProductWithOrders[]>([]);
   const [deviationOrder, setDeviationOrder] = useState<{ id: string; packingStatusId?: string } | null>(null);
   const [deviationType, setDeviationType] = useState<DeviationType>('shortage');
   const [deviationNote, setDeviationNote] = useState('');
@@ -166,7 +168,9 @@ export default function ProductPackingView() {
   const undoPacking = useUndoPacking();
   
   const handleBack = () => {
-    if (selectedProduct) {
+    if (selectedProducts.length > 0) {
+      setSelectedProducts([]);
+    } else if (selectedProduct) {
       setSelectedProduct(null);
     } else {
       navigate('/packing');
@@ -174,19 +178,47 @@ export default function ProductPackingView() {
   };
   
   const handleStartPacking = (productIds: string[]) => {
-    if (productIds.length === 1) {
-      const product = products.find(p => p.id === productIds[0]);
-      if (product) {
-        setSelectedProduct(product);
-      }
-    } else {
-      // For multiple products, select the first one for now
-      // TODO: Could implement a batch packing view
-      const product = products.find(p => p.id === productIds[0]);
-      if (product) {
-        setSelectedProduct(product);
-      }
+    const selected = products.filter(p => productIds.includes(p.id));
+    if (selected.length === 1) {
+      setSelectedProduct(selected[0]);
+    } else if (selected.length > 1) {
+      setSelectedProducts(selected);
     }
+  };
+  
+  const handleBatchMarkPacked = async (orderId: string, packingStatusId?: string, customerId?: string, productId?: string) => {
+    try {
+      await markAsPacked.mutateAsync({
+        orderId,
+        packingStatusId,
+        customerId,
+        productId,
+        categoryId,
+        deliveryDate: dateStr,
+      });
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: t('common.error'),
+        description: t('packing.couldNotPack'),
+      });
+    }
+  };
+  
+  const handleBatchUndo = async (packingStatusId: string) => {
+    try {
+      await undoPacking.mutateAsync({ packingStatusId });
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: t('common.error'),
+        description: t('packing.couldNotUndo'),
+      });
+    }
+  };
+  
+  const handleBatchReportDeviation = (orderId: string, packingStatusId?: string) => {
+    setDeviationOrder({ id: orderId, packingStatusId });
   };
   
   const handleMarkPacked = async (order: ProductOrder) => {
@@ -277,6 +309,78 @@ export default function ProductPackingView() {
     );
   }
   
+  // Batch packing view - multiple products selected
+  if (selectedProducts.length > 0) {
+    // Get fresh data for selected products
+    const freshSelectedProducts = selectedProducts.map(sp => 
+      products.find(p => p.id === sp.id) || sp
+    );
+    
+    return (
+      <>
+        <BatchPackingView
+          products={freshSelectedProducts}
+          dateStr={dateStr}
+          onBack={handleBack}
+          onMarkPacked={handleBatchMarkPacked}
+          onReportDeviation={handleBatchReportDeviation}
+          onUndo={handleBatchUndo}
+          isMarkingPacked={markAsPacked.isPending}
+          isUndoing={undoPacking.isPending}
+        />
+        
+        {/* Deviation dialog */}
+        <Dialog open={!!deviationOrder} onOpenChange={() => setDeviationOrder(null)}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle className="text-xl">{t('packing.reportDeviation')}</DialogTitle>
+            </DialogHeader>
+            
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label className="text-base">{t('packing.deviationType')}</Label>
+                <Select value={deviationType} onValueChange={(v) => setDeviationType(v as DeviationType)}>
+                  <SelectTrigger className="h-12 text-base">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="shortage" className="text-base py-3">{t('packing.shortage')}</SelectItem>
+                    <SelectItem value="damaged" className="text-base py-3">{t('packing.damaged')}</SelectItem>
+                    <SelectItem value="wrong_product" className="text-base py-3">{t('packing.wrongProduct')}</SelectItem>
+                    <SelectItem value="other" className="text-base py-3">{t('packing.other')}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label className="text-base">{t('packing.deviationNote')}</Label>
+                <Textarea
+                  value={deviationNote}
+                  onChange={(e) => setDeviationNote(e.target.value)}
+                  placeholder={t('common.optional')}
+                  className="min-h-[100px] text-base"
+                />
+              </div>
+            </div>
+            
+            <DialogFooter className="gap-2">
+              <Button variant="outline" size="lg" onClick={() => setDeviationOrder(null)}>
+                {t('common.cancel')}
+              </Button>
+              <Button 
+                size="lg"
+                onClick={handleReportDeviation}
+                disabled={reportDeviation.isPending}
+              >
+                {reportDeviation.isPending && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
+                {t('common.confirm')}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </>
+    );
+  }
   // Product detail view - shows all customer orders for this product
   if (selectedProduct) {
     const currentProduct = products.find(p => p.id === selectedProduct.id) || selectedProduct;
