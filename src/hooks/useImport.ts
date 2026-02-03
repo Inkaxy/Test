@@ -12,6 +12,14 @@ import {
   extractDateFromFilename 
 } from '@/lib/fileParser';
 
+function toLocalDateString(date: Date): string {
+  // Avoid timezone drift from toISOString() when we treat dates as date-only.
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const dd = String(date.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
 interface ImportData {
   products: ParsedProduct[];
   customers: ParsedCustomer[];
@@ -96,7 +104,7 @@ export function useImport() {
         throw new Error('Ingen bakeri valgt. Kontakt administrator.');
       }
       
-      const deliveryDateStr = data.deliveryDate.toISOString().split('T')[0];
+      const deliveryDateStr = toLocalDateString(data.deliveryDate);
       
       // Check for duplicate import (same bakery + date + category)
       const { data: existingBatch } = await supabase
