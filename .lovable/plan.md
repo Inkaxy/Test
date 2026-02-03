@@ -1,208 +1,131 @@
 
-# Plan: Dato-velger per kategori for pakkesider
+# Plan: Fiks tegnkoding for norske tegn (ÆØÅ)
 
-## Oversikt
-Implementere et kategoribasert navigasjonssystem med dato-velger for pakkesidene. Systemet har tre separate bruksområder:
+## Problemanalyse
 
-1. **Felles Display + Kunde Display** (TV-skjermer): Bruker URL-parameter for dato
-2. **Kundebasert Pakkedisplay** (Nettbrett): Fullskjerm kalendervisning som inngangspunkt for pakking
+Filene fra det eksterne bakeri-systemet er sannsynligvis kodet i **UTF-8** eller **Windows-1252**, men koden leser dem som **ISO-8859-1**. Dette forårsaker at:
+- "Nøtterøy" → "NÃ¸tterÃ¸y"
+- "Føynland" → "FÃ¸ynland"  
+- "Hvasserbrød" → "HvasserbrÃ¸d"
 
-## Arkitektur
+## Løsning
 
-### Navigasjonsflyt
+Implementer **smart tegnkodingsdeteksjon** som:
+1. Prøver UTF-8 først (moderne standard)
+2. Sjekker om resultatet inneholder ødelagte tegn
+3. Faller tilbake til Windows-1252 eller ISO-8859-1 om nødvendig
 
-```text
-+----------------------------------+
-|          /packing                |
-|  (Hovedside med kategorifaner)   |
-+----------------------------------+
-              |
-    +---------+---------+
-    |                   |
-    v                   v
-+------------+    +----------------+
-| Produktbasert |    | Kundebasert    |
-| (Kategori A)  |    | (Kategori B)   |
-+------------+    +----------------+
-    |                   |
-    v                   v
-+------------+    +------------------+
-| Dato-velger |    | Kalendervisning  |
-| i header   |    | (fullskjerm)     |
-+------------+    +------------------+
-                        |
-                        v
-              +------------------+
-              | Pakkevisning     |
-              | (nettbrett-opt.) |
-              +------------------+
+## Teknisk implementasjon
+
+### Steg 1: Oppdater `readFileAsText` funksjonen
+
+**Fil:** `src/lib/fileParser.ts`
+
+```typescript
+/**
+ * Read file content as text with automatic encoding detection
+ * Tries UTF-8 first, then falls back to Windows-1252 for Nordic files
+ */
+export async function readFileAsText(file: File): Promise<string> {
+  // First try UTF-8
+  const utf8Content = await readWithEncoding(file, 'UTF-8');
+  
+  // Check for garbled characters (UTF-8 read as Latin-1 produces "Ã")
+  if (!hasGarbledCharacters(utf8Content)) {
+    return utf8Content;
+  }
+  
+  // If garbled, try Windows-1252 (common for older Nordic systems)
+  console.log('Detected encoding issue, trying Windows-1252...');
+  const win1252Content = await readWithEncoding(file, 'windows-1252');
+  
+  if (!hasGarbledCharacters(win1252Content)) {
+    return win1252Content;
+  }
+  
+  // Final fallback: ISO-8859-1
+  console.log('Trying ISO-8859-1 fallback...');
+  return readWithEncoding(file, 'ISO-8859-1');
+}
+
+function readWithEncoding(file: File, encoding: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => resolve(e.target?.result as string);
+    reader.onerror = (e) => reject(e);
+    reader.readAsText(file, encoding);
+  });
+}
+
+/**
+ * Detect garbled Nordic characters
+ * When UTF-8 is read as ISO-8859-1:
+ * - ø becomes Ã¸
+ * - æ becomes Ã¦  
+ * - å becomes Ã¥
+ */
+function hasGarbledCharacters(content: string): boolean {
+  // Common patterns when UTF-8 Nordic chars are misread as ISO-8859-1
+  const garbledPatterns = [
+    /Ã¸/,  // ø
+    /Ã¦/,  // æ
+    /Ã¥/,  // å
+    /Ã˜/,  // Ø
+    /Ã†/,  // Æ
+    /Ã…/,  // Å
+    /Ã¸/,  // Alternative ø pattern
+  ];
+  
+  return garbledPatterns.some(pattern => pattern.test(content));
+}
 ```
 
-## Detaljert implementasjon
+## Hvorfor denne løsningen fungerer
 
-### 1. Oppdater pakkeside (`/packing`) med kategorifaner
-
-**Endringer i `src/pages/Packing.tsx`:**
-- Legge til kategori-faner øverst på siden
-- Hver kategori viser sin pakkemodus (produkt- eller kundebasert)
-- Dato-velger i header per kategori
-- Automatisk navigere til riktig modus basert på `packing_mode`
-
-### 2. Ny pakkekalender-komponent for kundebasert pakking
-
-**Ny fil: `src/components/packing/PackingCalendar.tsx`**
-
-Visuell kalender med:
-- Fargekoder per dag (beige = klar, grønn = fullført, oransje = pågår)
-- Klikk på dato viser statistikk og "Fortsett pakking"-knapp
-- Optimalisert for store touch-flater (nettbrett)
-
-**Ny fil: `src/hooks/usePackingCalendar.ts`**
-
-Hooks for å hente:
-- Månedsoversikt med status per dato
-- Detaljert statistikk for valgt dato
-- Topp-produkter for dagen
-
-### 3. Ny nettbrett-optimalisert kundebasert pakkeside
-
-**Ny fil: `src/pages/packing/CustomerPackingTablet.tsx`**
-
-Fullskjerm pakkevisning for nettbrett:
-- Store touch-vennlige knapper (minimum 48x48px)
-- Tydelig fremdriftslinje
-- Kunder som grid med store kort
-- Bruk av Pakkedisplay-innstillinger for farger og fonter
-
-### 4. Routing-struktur
-
-Oppdatere `src/App.tsx` med nye ruter:
-
-| Rute | Beskrivelse |
-|------|-------------|
-| `/packing` | Kategorivalg med dato-velger |
-| `/packing/:categoryId` | Spesifikk kategori med kalender |
-| `/packing/:categoryId/date/:date` | Pakkevisning for dato |
-| `/display/packing` | Display for TV (eksisterende) |
-
-### 5. Kalendervisning-komponent
-
-**Layout:**
 ```text
-+------------------------------------------+
-| < Februar 2026 >                         |
-+------------------------------------------+
-|  Ma   Ti   On   To   Fr   Lø   Sø       |
-+------+------+------+------+------+------+
-|      |      |      |      |      |   1  |
-|      |      |      |      |      | ○    |
-+------+------+------+------+------+------+
-|   2  |   3  |   4  |   5  |   6  |   7  |
-| ●    | ●    | ●    | ○    | ○    |      |
-+------+------+------+------+------+------+
-                    ...
+┌─────────────────────────────────────────────────────────────┐
+│            TEGNKODING DETEKSJONSFLYT                        │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  1. Les fil som UTF-8                                       │
+│        ↓                                                    │
+│  2. Sjekk for "Ã¸", "Ã¦", "Ã¥" mønstre                      │
+│        ↓                                                    │
+│  ┌─────┴─────┐                                              │
+│  │           │                                              │
+│  Ingen       Fant ødelagte tegn                             │
+│  problemer        ↓                                         │
+│  ↓           3. Les fil som Windows-1252                    │
+│  Bruk UTF-8       ↓                                         │
+│              4. Sjekk igjen                                 │
+│                   ↓                                         │
+│              ┌────┴────┐                                    │
+│              │         │                                    │
+│              OK        Fortsatt feil                        │
+│              ↓              ↓                               │
+│         Bruk Win-1252  Bruk ISO-8859-1                      │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-Fargekoder:
-- ● Fylt oransje: Klar for pakking (har upakkede ordrer)
-- ● Fylt grønn: Fullført (100% pakket)
-- ○ Ring: Har ordrer (noen pakket)
-- ⬤ I dag: Spesiell markering
+## Forventet resultat
 
-### 6. Dato-detaljer panel (høyre side)
+| Før (feil) | Etter (riktig) |
+|------------|----------------|
+| Meny NÃ¸tterÃ¸y | Meny Nøtterøy |
+| Spar FÃ¸ynland | Spar Føynland |
+| Kiwi GauterÃ¸d | Kiwi Gauterød |
+| HvasserbrÃ¸d | Hvasserbrød |
+| MelkebrÃ¸d | Melkebrød |
+| FÃ¦rderbrÃ¸d | Færderbrød |
 
-Vises når en dato velges:
-- Stor datotittel formatert (f.eks. "02. februar 2026")
-- Statusbadge (Klar / Pågår / Fullført)
-- Tre statistikk-kort:
-  - Totalt ordrer
-  - Unike kunder
-  - Produkttyper
-- Liste over mest bestilte produkter med antall
-- Stor "Fortsett pakking"-knapp
-
-## Filer som opprettes
-
-| Fil | Beskrivelse |
-|-----|-------------|
-| `src/hooks/usePackingCalendar.ts` | Hooks for kalenderdata og statistikk |
-| `src/components/packing/PackingCalendar.tsx` | Kalender-komponent med statistikk |
-| `src/components/packing/CategoryTabs.tsx` | Gjenbrukbare kategorifaner |
-| `src/pages/packing/CustomerPackingView.tsx` | Nettbrett-optimalisert pakkevisning |
-
-## Filer som endres
+## Endringer
 
 | Fil | Endring |
 |-----|---------|
-| `src/pages/Packing.tsx` | Legge til kategorifaner og kalenderintegrering |
-| `src/pages/CustomerPacking.tsx` | Koble til pakkedisplay-innstillinger |
-| `src/App.tsx` | Legge til nye ruter for kategoribasert navigering |
-| `src/components/ui/calendar.tsx` | Legge til `pointer-events-auto` for popover-støtte |
+| `src/lib/fileParser.ts` | Oppdater `readFileAsText` med smart encoding-deteksjon |
 
-## Tekniske detaljer
+## Risiko
 
-### Database-spørringer
-
-**Månedsoversikt:**
-```sql
-SELECT 
-  delivery_date,
-  COUNT(*) as total_orders,
-  COUNT(CASE WHEN ps.status = 'packed' THEN 1 END) as packed_orders
-FROM orders o
-LEFT JOIN packing_status ps ON o.id = ps.order_id
-WHERE bakery_id = ? 
-  AND delivery_date BETWEEN ? AND ?
-  AND category_id = ?
-GROUP BY delivery_date
-```
-
-**Dato-statistikk:**
-```sql
-SELECT 
-  COUNT(DISTINCT customer_id) as unique_customers,
-  COUNT(DISTINCT product_id) as product_types,
-  SUM(quantity) as total_items
-FROM orders
-WHERE bakery_id = ? AND delivery_date = ? AND category_id = ?
-```
-
-### Props og state
-
-```typescript
-interface PackingCalendarProps {
-  categoryId: string;
-  bakeryId: string;
-  onDateSelect: (date: Date) => void;
-}
-
-interface DateStats {
-  date: string;
-  totalOrders: number;
-  packedOrders: number;
-  uniqueCustomers: number;
-  productTypes: number;
-  topProducts: { name: string; quantity: number }[];
-  status: 'pending' | 'in_progress' | 'completed';
-}
-```
-
-### Nettbrett-optimalisering
-
-- Minimum touch-target: 48x48px
-- Store fontstørrelser (bruk av display-innstillinger)
-- Ingen hover-states (kun active/pressed)
-- Swipe-navigering mellom kunder (valgfritt)
-- Fullskjerm-modus uten header/sidebar
-
-## Brukerflyt eksempel
-
-1. Bruker navigerer til `/packing`
-2. Ser kategorifaner (Bakevarer, Smørbrød, etc.)
-3. Velger kategori "Smørbrød" (kundebasert modus)
-4. Ser kalendervisning med fargekoder
-5. Klikker på 3. februar (oransje = klar for pakking)
-6. Høyre panel viser: 38 ordrer, 24 kunder, 15 produkttyper
-7. Klikker "Fortsett pakking"
-8. Navigeres til fullskjerm pakkevisning for den datoen
-9. Pakker ordrer med store touch-vennlige knapper
+- **Lav risiko** - Endringen påvirker kun filinnlesning
+- Eksisterende data i databasen med feil tegn må importeres på nytt
