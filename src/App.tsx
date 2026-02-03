@@ -25,6 +25,7 @@ import NotFound from './pages/NotFound';
 // Display pages (public)
 import SharedDisplay from './pages/display/SharedDisplay';
 import CustomerDisplay from './pages/display/CustomerDisplay';
+import PackingDisplay from './pages/display/PackingDisplay';
 
 // Components
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
@@ -46,6 +47,16 @@ function AppRoutes() {
       <Route path="/display/shared/:bakeryShortId/:categoryId" element={<SharedDisplay />} />
       <Route path="/display/shared/:bakeryShortId" element={<SharedDisplay />} />
       <Route path="/display/customer/:displayToken" element={<CustomerDisplay />} />
+      
+      {/* Protected packing display route */}
+      <Route
+        path="/display/packing"
+        element={
+          <ProtectedRoute>
+            <PackingDisplay />
+          </ProtectedRoute>
+        }
+      />
       
       {/* Protected dashboard routes */}
       <Route

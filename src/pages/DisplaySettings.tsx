@@ -192,14 +192,23 @@ export default function DisplaySettingsPage() {
   };
   
   const getPreviewUrl = () => {
-    if (!bakery?.short_id) return null;
     const base = window.location.origin;
     
     if (selectedDisplayType === 'shared') {
+      if (!bakery?.short_id) return null;
       if (selectedCategoryId) {
         return `${base}/display/shared/${bakery.short_id}/${selectedCategoryId}`;
       }
       return `${base}/display/shared/${bakery.short_id}`;
+    }
+    
+    if (selectedDisplayType === 'packing') {
+      const params = new URLSearchParams();
+      if (selectedCategoryId) {
+        params.set('category', selectedCategoryId);
+      }
+      const queryString = params.toString();
+      return `${base}/display/packing${queryString ? `?${queryString}` : ''}`;
     }
     
     return null;
