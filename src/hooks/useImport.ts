@@ -131,109 +131,162 @@ export function useImport() {
       const productMap = new Map<string, string>();
       const customerMap = new Map<string, string>();
       
-      // Fetch default category for the bakery (first active category)
-      const { data: defaultCategory } = await supabase
-        .from('categories')
-        .select('id')
-        .eq('bakery_id', bakeryId)
-        .eq('is_active', true)
-        .order('sort_order', { ascending: true })
-        .limit(1)
-        .maybeSingle();
+      // Fetch default category and existing data in parallel
+      const [
+        { data: defaultCategory },
+        { data: existingProducts },
+        { data: existingCustomers },
+        { data: existingOrders }
+      ] = await Promise.all([
+        supabase
+          .from('categories')
+          .select('id')
+          .eq('bakery_id', bakeryId)
+          .eq('is_active', true)
+          .order('sort_order', { ascending: true })
+          .limit(1)
+          .maybeSingle(),
+        supabase
+          .from('products')
+          .select('id, product_number')
+          .eq('bakery_id', bakeryId),
+        supabase
+          .from('customers')
+          .select('id, customer_number')
+          .eq('bakery_id', bakeryId),
+        supabase
+          .from('orders')
+          .select('id, customer_id, product_id, delivery_date, category_id')
+          .eq('bakery_id', bakeryId)
+          .eq('delivery_date', deliveryDateStr)
+          .eq('category_id', data.categoryId)
+      ]);
       
       const defaultCategoryId = defaultCategory?.id || null;
       
-      // Upsert products
+      // Build maps for existing products/customers
+      const existingProductMap = new Map<string, string>();
+      existingProducts?.forEach(p => existingProductMap.set(p.product_number, p.id));
+      
+      const existingCustomerMap = new Map<string, string>();
+      existingCustomers?.forEach(c => existingCustomerMap.set(c.customer_number, c.id));
+      
+      // Build set of existing order keys for quick duplicate check
+      const existingOrderKeys = new Set<string>();
+      existingOrders?.forEach(o => {
+        existingOrderKeys.add(`${o.customer_id}:${o.product_id}`);
+      });
+      
+      // Separate products into new vs existing for batch operations
+      const productsToInsert: Array<{
+        bakery_id: string;
+        product_number: string;
+        name: string;
+        category_id: string | null;
+      }> = [];
+      const productsToUpdate: Array<{ id: string; name: string }> = [];
+      
       for (const product of data.products) {
-        const { data: existing } = await supabase
-          .from('products')
-          .select('id')
-          .eq('bakery_id', bakeryId)
-          .eq('product_number', product.productNumber)
-          .maybeSingle();
-        
-        if (existing) {
-          await supabase
-            .from('products')
-            .update({ name: product.name, is_active: true })
-            .eq('id', existing.id);
-          productMap.set(product.productNumber, existing.id);
+        const existingId = existingProductMap.get(product.productNumber);
+        if (existingId) {
+          productsToUpdate.push({ id: existingId, name: product.name });
+          productMap.set(product.productNumber, existingId);
           productsUpdated++;
         } else {
-          const { data: newProduct } = await supabase
-            .from('products')
-            .insert({
-              bakery_id: bakeryId,
-              product_number: product.productNumber,
-              name: product.name,
-              category_id: defaultCategoryId,
-            })
-            .select('id')
-            .single();
-          
-          if (newProduct) {
-            productMap.set(product.productNumber, newProduct.id);
-            productsCreated++;
-          }
+          productsToInsert.push({
+            bakery_id: bakeryId,
+            product_number: product.productNumber,
+            name: product.name,
+            category_id: defaultCategoryId,
+          });
         }
       }
       
-      // Upsert customers
-      for (const customer of data.customers) {
-        const { data: existing } = await supabase
-          .from('customers')
-          .select('id')
-          .eq('bakery_id', bakeryId)
-          .eq('customer_number', customer.customerNumber)
-          .maybeSingle();
+      // Batch insert new products
+      if (productsToInsert.length > 0) {
+        const { data: newProducts } = await supabase
+          .from('products')
+          .insert(productsToInsert)
+          .select('id, product_number');
         
-        if (existing) {
-          await supabase
-            .from('customers')
-            .update({ 
-              name: customer.name, 
-              address: customer.address,
-              is_active: true 
-            })
-            .eq('id', existing.id);
-          customerMap.set(customer.customerNumber, existing.id);
+        newProducts?.forEach(p => {
+          productMap.set(p.product_number, p.id);
+          productsCreated++;
+        });
+      }
+      
+      // Batch update existing products (in chunks to avoid too large queries)
+      if (productsToUpdate.length > 0) {
+        await Promise.all(
+          productsToUpdate.map(p => 
+            supabase
+              .from('products')
+              .update({ name: p.name, is_active: true })
+              .eq('id', p.id)
+          )
+        );
+      }
+      
+      // Separate customers into new vs existing for batch operations
+      const customersToInsert: Array<{
+        bakery_id: string;
+        customer_number: string;
+        name: string;
+        address: string | null;
+      }> = [];
+      const customersToUpdate: Array<{ id: string; name: string; address: string | null }> = [];
+      
+      for (const customer of data.customers) {
+        const existingId = existingCustomerMap.get(customer.customerNumber);
+        if (existingId) {
+          customersToUpdate.push({ 
+            id: existingId, 
+            name: customer.name, 
+            address: customer.address 
+          });
+          customerMap.set(customer.customerNumber, existingId);
           customersUpdated++;
         } else {
-          const { data: newCustomer } = await supabase
-            .from('customers')
-            .insert({
-              bakery_id: bakeryId,
-              customer_number: customer.customerNumber,
-              name: customer.name,
-              address: customer.address,
-            })
-            .select('id')
-            .single();
-          
-          if (newCustomer) {
-            customerMap.set(customer.customerNumber, newCustomer.id);
-            customersCreated++;
-          }
+          customersToInsert.push({
+            bakery_id: bakeryId,
+            customer_number: customer.customerNumber,
+            name: customer.name,
+            address: customer.address,
+          });
         }
       }
       
-      // Load existing products/customers for order matching if not in import
-      const { data: existingProducts } = await supabase
-        .from('products')
-        .select('id, product_number')
-        .eq('bakery_id', bakeryId);
+      // Batch insert new customers
+      if (customersToInsert.length > 0) {
+        const { data: newCustomers } = await supabase
+          .from('customers')
+          .insert(customersToInsert)
+          .select('id, customer_number');
+        
+        newCustomers?.forEach(c => {
+          customerMap.set(c.customer_number, c.id);
+          customersCreated++;
+        });
+      }
       
+      // Batch update existing customers
+      if (customersToUpdate.length > 0) {
+        await Promise.all(
+          customersToUpdate.map(c => 
+            supabase
+              .from('customers')
+              .update({ name: c.name, address: c.address, is_active: true })
+              .eq('id', c.id)
+          )
+        );
+      }
+      
+      // Add remaining products/customers to maps
       existingProducts?.forEach(p => {
         if (!productMap.has(p.product_number)) {
           productMap.set(p.product_number, p.id);
         }
       });
-      
-      const { data: existingCustomers } = await supabase
-        .from('customers')
-        .select('id, customer_number')
-        .eq('bakery_id', bakeryId);
-      
       existingCustomers?.forEach(c => {
         if (!customerMap.has(c.customer_number)) {
           customerMap.set(c.customer_number, c.id);
@@ -258,7 +311,17 @@ export function useImport() {
         throw new Error('Kunne ikke opprette import-batch');
       }
       
-      // Process aggregated orders
+      // Prepare all orders for batch insert
+      const ordersToInsert: Array<{
+        bakery_id: string;
+        product_id: string;
+        customer_id: string;
+        quantity: number;
+        delivery_date: string;
+        import_batch_id: string;
+        category_id: string;
+      }> = [];
+      
       for (const order of data.orders) {
         const customerId = customerMap.get(order.customerNumber);
         
@@ -268,7 +331,6 @@ export function useImport() {
           continue;
         }
         
-        // Create order rows for each product in the aggregated order
         for (const orderProduct of order.products) {
           const productId = productMap.get(orderProduct.productNumber);
           
@@ -277,51 +339,62 @@ export function useImport() {
             continue;
           }
           
-          // Check for existing order with same product/customer/date/category
-          const { data: existingOrder } = await supabase
-            .from('orders')
-            .select('id')
-            .eq('bakery_id', bakeryId)
-            .eq('customer_id', customerId)
-            .eq('product_id', productId)
-            .eq('delivery_date', order.deliveryDate)
-            .eq('category_id', data.categoryId)
-            .maybeSingle();
-          
-          if (existingOrder) {
-            console.log(`Duplikat ordre: kunde ${order.customerNumber}, produkt ${orderProduct.productNumber}, dato ${order.deliveryDate}, kategori ${data.categoryId}`);
+          // Check for duplicate using our pre-fetched set
+          const orderKey = `${customerId}:${productId}`;
+          if (existingOrderKeys.has(orderKey)) {
+            console.log(`Duplikat ordre: kunde ${order.customerNumber}, produkt ${orderProduct.productNumber}`);
             continue;
           }
           
-          const { data: newOrder, error: orderError } = await supabase
-            .from('orders')
-            .insert({
-              bakery_id: bakeryId,
-              product_id: productId,
-              customer_id: customerId,
-              quantity: orderProduct.quantity,
-              delivery_date: order.deliveryDate,
-              import_batch_id: batch.id,
-              category_id: data.categoryId,
-            })
-            .select('id')
-            .single();
+          // Add to set to prevent duplicates within same import
+          existingOrderKeys.add(orderKey);
           
-          if (orderError) {
-            console.error(`Feil ved oppretting av ordre:`, orderError);
-            continue;
-          }
-          
-          if (newOrder) {
-            ordersCreated++;
-            orderProductsCreated++;
-            
-            // Create packing_status for the order
-            await supabase.from('packing_status').insert({
-              order_id: newOrder.id,
-              status: 'pending' as const,
-            });
-          }
+          ordersToInsert.push({
+            bakery_id: bakeryId,
+            product_id: productId,
+            customer_id: customerId,
+            quantity: orderProduct.quantity,
+            delivery_date: order.deliveryDate,
+            import_batch_id: batch.id,
+            category_id: data.categoryId,
+          });
+        }
+      }
+      
+      // Batch insert orders in chunks of 500
+      const CHUNK_SIZE = 500;
+      const createdOrderIds: string[] = [];
+      
+      for (let i = 0; i < ordersToInsert.length; i += CHUNK_SIZE) {
+        const chunk = ordersToInsert.slice(i, i + CHUNK_SIZE);
+        const { data: newOrders, error: orderError } = await supabase
+          .from('orders')
+          .insert(chunk)
+          .select('id');
+        
+        if (orderError) {
+          console.error(`Feil ved batch-innsetting av ordrer:`, orderError);
+          continue;
+        }
+        
+        if (newOrders) {
+          createdOrderIds.push(...newOrders.map(o => o.id));
+        }
+      }
+      
+      ordersCreated = createdOrderIds.length;
+      orderProductsCreated = createdOrderIds.length;
+      
+      // Batch insert packing_status for all orders
+      if (createdOrderIds.length > 0) {
+        const packingStatusToInsert = createdOrderIds.map(orderId => ({
+          order_id: orderId,
+          status: 'pending' as const,
+        }));
+        
+        for (let i = 0; i < packingStatusToInsert.length; i += CHUNK_SIZE) {
+          const chunk = packingStatusToInsert.slice(i, i + CHUNK_SIZE);
+          await supabase.from('packing_status').insert(chunk);
         }
       }
       
