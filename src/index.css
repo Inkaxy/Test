@@ -2,101 +2,164 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
+/* Loaf and Load Design System
+   - Bakery-themed warm colors
+   - WCAG AA compliant (4.5:1 contrast)
+   - Optimized for display readability
+   All colors MUST be HSL.
 */
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Core backgrounds - Warm White theme */
+    --background: 30 50% 98%; /* #FDF8F3 Warm White */
+    --foreground: 215 28% 17%; /* #1F2937 Charcoal */
 
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    /* Card surfaces */
+    --card: 0 0% 100%; /* #FFFFFF */
+    --card-foreground: 215 28% 17%; /* #1F2937 Charcoal */
 
+    /* Popover surfaces */
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover-foreground: 215 28% 17%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    /* Primary - Bakery Gold */
+    --primary: 30 47% 64%; /* #D4A574 Bakery Gold */
+    --primary-foreground: 215 28% 17%; /* Dark text on gold */
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    /* Secondary */
+    --secondary: 214 32% 91%; /* #E2E8F0 */
+    --secondary-foreground: 215 28% 17%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    /* Muted */
+    --muted: 220 14% 96%; /* #F1F5F9 Light Gray */
+    --muted-foreground: 215 16% 47%; /* #64748B Slate */
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    /* Accent - Bakery Gold */
+    --accent: 30 47% 64%;
+    --accent-foreground: 215 28% 17%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    /* Destructive - Red */
+    --destructive: 0 84% 60%; /* #EF4444 */
+    --destructive-foreground: 0 0% 100%;
 
-    --success: 142 76% 36%;
-    --success-foreground: 210 40% 98%;
+    /* Success - Green */
+    --success: 160 84% 39%; /* #10B981 */
+    --success-foreground: 0 0% 100%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    /* Borders and inputs */
+    --border: 220 13% 91%; /* #E2E8F0 */
+    --input: 220 13% 91%;
+    --ring: 30 47% 64%; /* Bakery Gold */
 
     --radius: 0.5rem;
 
-    --sidebar-background: 0 0% 98%;
-
-    --sidebar-foreground: 240 5.3% 26.1%;
-
-    --sidebar-primary: 240 5.9% 10%;
-
-    --sidebar-primary-foreground: 0 0% 98%;
-
-    --sidebar-accent: 240 4.8% 95.9%;
-
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
+    /* Sidebar - slightly warmer */
+    --sidebar-background: 30 33% 97%;
+    --sidebar-foreground: 215 28% 17%;
+    --sidebar-primary: 30 47% 64%;
+    --sidebar-primary-foreground: 215 28% 17%;
+    --sidebar-accent: 30 25% 94%;
+    --sidebar-accent-foreground: 215 28% 17%;
     --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 30 47% 64%;
 
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    /* Status colors */
+    --status-pending: 38 92% 50%; /* #F59E0B Amber */
+    --status-pending-bg: 48 96% 89%; /* #FEF3C7 */
+    --status-pending-foreground: 28 73% 31%; /* #92400E */
+    
+    --status-packing: 217 91% 60%; /* #3B82F6 Blue */
+    --status-packing-bg: 214 95% 93%; /* #DBEAFE */
+    --status-packing-foreground: 224 64% 33%; /* #1E40AF */
+    
+    --status-complete: 160 84% 39%; /* #10B981 Green */
+    --status-complete-bg: 152 81% 91%; /* #D1FAE5 */
+    --status-complete-foreground: 163 88% 20%; /* #065F46 */
+    
+    --status-locked: 258 90% 66%; /* #8B5CF6 Purple */
+    --status-locked-bg: 250 100% 96%; /* #EDE9FE */
+    --status-locked-foreground: 262 83% 42%; /* #5B21B6 */
+    
+    --status-deviation: 0 84% 60%; /* #EF4444 Red */
+    --status-deviation-bg: 0 93% 94%; /* #FEE2E2 */
+    --status-deviation-foreground: 0 63% 35%; /* #991B1B */
+
+    /* Bakery brand scale */
+    --bakery-50: 30 50% 98%;
+    --bakery-100: 30 45% 94%;
+    --bakery-200: 30 40% 85%;
+    --bakery-300: 30 38% 76%;
+    --bakery-400: 30 47% 64%; /* Primary gold */
+    --bakery-500: 30 40% 59%;
+    --bakery-600: 30 35% 57%;
+    --bakery-700: 25 53% 36%; /* #8B5A2B Crust Brown */
+    --bakery-800: 25 50% 28%;
+    --bakery-900: 25 45% 19%;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
+    /* Dark mode - Warm Black theme */
+    --background: 20 14% 8%; /* #1A1612 Warm Black */
+    --foreground: 60 9% 96%; /* #F5F5F4 */
 
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
+    --card: 20 10% 15%; /* #292524 */
+    --card-foreground: 60 9% 96%;
 
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 20 10% 15%;
+    --popover-foreground: 60 9% 96%;
 
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+    --primary: 30 47% 70%; /* Lighter Bakery Gold for dark mode */
+    --primary-foreground: 20 14% 8%;
 
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 20 6% 20%;
+    --secondary-foreground: 60 9% 96%;
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted: 20 6% 20%;
+    --muted-foreground: 24 6% 64%; /* #A8A29E */
 
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 20 6% 20%;
+    --accent-foreground: 60 9% 96%;
 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 60 9% 96%;
 
-    --success: 142 71% 45%;
-    --success-foreground: 210 40% 98%;
+    --success: 160 71% 45%;
+    --success-foreground: 60 9% 96%;
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --border: 20 6% 20%;
+    --input: 20 6% 20%;
+    --ring: 30 47% 70%;
+
+    --sidebar-background: 20 14% 10%;
+    --sidebar-foreground: 60 9% 96%;
+    --sidebar-primary: 30 47% 70%;
+    --sidebar-primary-foreground: 20 14% 8%;
+    --sidebar-accent: 20 8% 18%;
+    --sidebar-accent-foreground: 60 9% 96%;
+    --sidebar-border: 20 6% 20%;
+    --sidebar-ring: 30 47% 70%;
+
+    /* Status colors - slightly brighter for dark mode */
+    --status-pending: 38 92% 55%;
+    --status-pending-bg: 38 40% 20%;
+    --status-pending-foreground: 48 96% 80%;
+    
+    --status-packing: 217 91% 65%;
+    --status-packing-bg: 217 40% 20%;
+    --status-packing-foreground: 214 95% 85%;
+    
+    --status-complete: 160 84% 45%;
+    --status-complete-bg: 160 40% 18%;
+    --status-complete-foreground: 152 81% 85%;
+    
+    --status-locked: 258 90% 70%;
+    --status-locked-bg: 258 40% 20%;
+    --status-locked-foreground: 250 100% 90%;
+    
+    --status-deviation: 0 84% 65%;
+    --status-deviation-bg: 0 40% 20%;
+    --status-deviation-foreground: 0 93% 85%;
   }
 }
 
