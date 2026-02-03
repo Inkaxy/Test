@@ -1,58 +1,26 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, Package } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { useCategories, Category } from '@/hooks/useCategories';
 import { useAuthStore } from '@/stores/authStore';
-import { CategoryTabs } from '@/components/packing/CategoryTabs';
-import { PackingCalendar } from '@/components/packing/PackingCalendar';
+import { PackingCategoryCard } from '@/components/packing/PackingCategoryCard';
+import { AddPackingCategoryCard } from '@/components/packing/AddPackingCategoryCard';
+import { OneDriveConfigDialog } from '@/components/categories/OneDriveConfigDialog';
 
 export default function Packing() {
   const { t } = useTranslation();
-  const { getCurrentBakeryId } = useAuthStore();
-  const bakeryId = getCurrentBakeryId();
+  const { isBakeryAdmin, isSuperAdmin } = useAuthStore();
   
-  const { data: categories = [], isLoading: categoriesLoading } = useCategories();
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const { data: categories = [], isLoading } = useCategories();
+  const [oneDriveCategory, setOneDriveCategory] = useState<Category | null>(null);
   
-  // Auto-select first category when categories load
-  useEffect(() => {
-    if (categories.length > 0 && !selectedCategoryId) {
-      const activeCategories = categories.filter(c => c.is_active);
-      if (activeCategories.length > 0) {
-        setSelectedCategoryId(activeCategories[0].id);
-      }
-    }
-  }, [categories, selectedCategoryId]);
+  const activeCategories = categories.filter(c => c.is_active);
+  const isAdmin = isBakeryAdmin() || isSuperAdmin();
   
-  const selectedCategory = categories.find(c => c.id === selectedCategoryId);
-  
-  if (categoriesLoading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
         <Loader2 className="h-10 w-10 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
-  
-  const activeCategories = categories.filter(c => c.is_active);
-  
-  if (activeCategories.length === 0) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">{t('packing.title')}</h1>
-          <p className="text-muted-foreground">{t('categories.noCategories')}</p>
-        </div>
-        
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <Package className="h-12 w-12 text-muted-foreground mb-4" />
-            <p className="text-muted-foreground text-center">
-              {t('categories.noCategories')}
-            </p>
-          </CardContent>
-        </Card>
       </div>
     );
   }
@@ -63,24 +31,41 @@ export default function Packing() {
       <div>
         <h1 className="text-3xl font-bold tracking-tight">{t('packing.title')}</h1>
         <p className="text-muted-foreground">
-          Velg kategori og dato for å starte pakking
+          Velg et pakkealternativ for å starte pakking
         </p>
       </div>
       
-      {/* Category tabs */}
-      <CategoryTabs
-        categories={activeCategories}
-        selectedCategoryId={selectedCategoryId}
-        onSelectCategory={setSelectedCategoryId}
-      />
+      {/* Category Cards Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        {activeCategories.map((category) => (
+          <PackingCategoryCard
+            key={category.id}
+            category={category}
+            onOneDriveConfig={() => setOneDriveCategory(category)}
+          />
+        ))}
+        
+        {/* Add new category card - only for admins */}
+        {isAdmin && (
+          <AddPackingCategoryCard sortOrder={categories.length + 1} />
+        )}
+      </div>
       
-      {/* Calendar view for selected category */}
-      {selectedCategory && bakeryId && (
-        <PackingCalendar
-          category={selectedCategory}
-          bakeryId={bakeryId}
-        />
+      {/* Empty state */}
+      {activeCategories.length === 0 && !isAdmin && (
+        <div className="text-center py-12">
+          <p className="text-muted-foreground">
+            {t('categories.noCategories')}
+          </p>
+        </div>
       )}
+      
+      {/* OneDrive config dialog */}
+      <OneDriveConfigDialog
+        category={oneDriveCategory}
+        open={!!oneDriveCategory}
+        onOpenChange={(open) => !open && setOneDriveCategory(null)}
+      />
     </div>
   );
 }
