@@ -25,7 +25,7 @@ export default function CustomerDisplay() {
 
   // Fetch customer info by token
   const { data: customer, isLoading: customerLoading } = useCustomerByToken(displayToken || null);
-  const { data: settings } = useDisplaySettings(customer?.bakery_id || null);
+  const { data: settings } = useDisplaySettings(customer?.bakery_id || null, null, 'customer');
   
   const displaySettings: DisplaySettings = settings || getDefaultDisplaySettings();
 

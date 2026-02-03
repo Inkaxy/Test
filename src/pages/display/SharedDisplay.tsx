@@ -26,7 +26,7 @@ export default function SharedDisplay() {
   // Fetch bakery info
   const { data: bakery, isLoading: bakeryLoading } = useBakeryByShortId(bakeryShortId || null);
   const { data: category } = useCategoryById(categoryId || null);
-  const { data: settings } = useDisplaySettings(bakery?.id || null, categoryId);
+  const { data: settings } = useDisplaySettings(bakery?.id || null, categoryId, 'shared');
   
   const displaySettings: DisplaySettings = settings || getDefaultDisplaySettings();
 
