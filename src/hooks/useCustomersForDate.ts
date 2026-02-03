@@ -30,29 +30,35 @@ export interface CustomerWithOrders {
   progress: number;
 }
 
-export function useCustomersForDate(deliveryDate: string) {
+export function useCustomersForDate(deliveryDate: string, categoryId?: string) {
   const { getCurrentBakeryId } = useAuthStore();
   
   return useQuery({
-    queryKey: ['customers-for-date', deliveryDate, getCurrentBakeryId()],
+    queryKey: ['customers-for-date', deliveryDate, getCurrentBakeryId(), categoryId],
     queryFn: async () => {
       const bakeryId = getCurrentBakeryId();
       if (!bakeryId) return [];
       
       // Get all orders for this date with customer and product info
-      const { data: orders, error } = await supabase
+      let query = supabase
         .from('orders')
         .select(`
           id,
           quantity,
           customer_id,
           customer:customers(id, name, customer_number, address),
-          product:products(id, name, product_number, pieces_per_tray, category_id),
+          product:products!inner(id, name, product_number, pieces_per_tray, category_id),
           packing_status(id, status, packed_at, deviation_type, deviation_note)
         `)
         .eq('bakery_id', bakeryId)
         .eq('delivery_date', deliveryDate)
         .order('customer_id');
+      
+      if (categoryId) {
+        query = query.eq('product.category_id', categoryId);
+      }
+      
+      const { data: orders, error } = await query;
       
       if (error) throw error;
       if (!orders) return [];
