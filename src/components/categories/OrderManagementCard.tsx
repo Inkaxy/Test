@@ -8,12 +8,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { TypeConfirmDialog } from '@/components/ui/type-confirm-dialog';
-import { CalendarIcon, Trash2, Loader2 } from 'lucide-react';
+import { CalendarIcon, Trash2, Loader2, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
 import { nb } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
-import { useCategories, Category } from '@/hooks/useCategories';
-import { useDeleteOrdersBeforeDate, useDeleteImportBatch } from '@/hooks/useDeleteOrders';
+import { useCategories } from '@/hooks/useCategories';
+import { useDeleteOrdersBeforeDate, useDeleteImportBatch, useDeleteOrphanedOrders } from '@/hooks/useDeleteOrders';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuthStore } from '@/stores/authStore';
@@ -37,13 +37,53 @@ export function OrderManagementCard() {
   
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('all');
   const [beforeDate, setBeforeDate] = useState<Date>();
+  const [orphanDate, setOrphanDate] = useState<Date>();
   const [deleteBeforeDateOpen, setDeleteBeforeDateOpen] = useState(false);
   const [deleteBatchOpen, setDeleteBatchOpen] = useState(false);
+  const [deleteOrphanedOpen, setDeleteOrphanedOpen] = useState(false);
   const [selectedBatch, setSelectedBatch] = useState<ImportBatch | null>(null);
   
   const { data: categories = [] } = useCategories();
   const deleteOrdersBeforeDate = useDeleteOrdersBeforeDate();
   const deleteImportBatch = useDeleteImportBatch();
+  const deleteOrphanedOrders = useDeleteOrphanedOrders();
+  
+  // Fetch orphaned orders count
+  const { data: orphanedOrdersData, isLoading: orphanedLoading } = useQuery({
+    queryKey: ['orphaned-orders', getCurrentBakeryId(), orphanDate],
+    queryFn: async () => {
+      const bakeryId = getCurrentBakeryId();
+      if (!bakeryId) return { count: 0, dates: [] };
+      
+      // Get count of orphaned orders
+      let countQuery = supabase
+        .from('orders')
+        .select('id', { count: 'exact', head: true })
+        .eq('bakery_id', bakeryId)
+        .is('category_id', null);
+      
+      if (orphanDate) {
+        const dateStr = orphanDate.toISOString().split('T')[0];
+        countQuery = countQuery.eq('delivery_date', dateStr);
+      }
+      
+      const { count, error: countError } = await countQuery;
+      if (countError) throw countError;
+      
+      // Get unique dates with orphaned orders
+      const { data: dateData, error: dateError } = await supabase
+        .from('orders')
+        .select('delivery_date')
+        .eq('bakery_id', bakeryId)
+        .is('category_id', null);
+      
+      if (dateError) throw dateError;
+      
+      const uniqueDates = [...new Set(dateData?.map(d => d.delivery_date) || [])].sort().reverse();
+      
+      return { count: count || 0, dates: uniqueDates };
+    },
+  });
   
   // Fetch import batches
   const { data: importBatches = [], isLoading: batchesLoading } = useQuery({
@@ -129,6 +169,25 @@ export function OrderManagementCard() {
     setDeleteBatchOpen(true);
   };
   
+  const handleDeleteOrphaned = async () => {
+    try {
+      const count = await deleteOrphanedOrders.mutateAsync({ forDate: orphanDate });
+      
+      toast({
+        title: 'Foreldreløse ordrer slettet',
+        description: `${count} ordre(r) uten kategori ble slettet.`,
+      });
+      
+      setDeleteOrphanedOpen(false);
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Feil',
+        description: error instanceof Error ? error.message : 'Kunne ikke slette ordrer',
+      });
+    }
+  };
+  
   return (
     <>
       <Card>
@@ -195,6 +254,76 @@ export function OrderManagementCard() {
               </Button>
             </div>
           </div>
+          
+          {/* Orphaned orders cleanup */}
+          {(orphanedOrdersData?.count || 0) > 0 && (
+            <div className="border border-destructive/30 bg-destructive/5 rounded-lg p-4 space-y-3">
+              <div className="flex items-center gap-2 text-destructive">
+                <AlertTriangle className="h-5 w-5" />
+                <h4 className="font-medium">Foreldreløse ordrer funnet</h4>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Det finnes <strong>{orphanedOrdersData?.count}</strong> ordre(r) uten kategori. 
+                Disse kan blokkere ny import og bør slettes.
+              </p>
+              
+              {orphanedOrdersData?.dates && orphanedOrdersData.dates.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {orphanedOrdersData.dates.slice(0, 10).map((date) => (
+                    <Badge key={date} variant="outline" className="text-xs">
+                      {format(new Date(date), 'dd.MM.yyyy', { locale: nb })}
+                    </Badge>
+                  ))}
+                  {orphanedOrdersData.dates.length > 10 && (
+                    <Badge variant="outline" className="text-xs">
+                      +{orphanedOrdersData.dates.length - 10} flere
+                    </Badge>
+                  )}
+                </div>
+              )}
+              
+              <div className="flex items-end gap-2">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Filtrer på dato (valgfritt)</label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          'w-[200px] justify-start text-left font-normal',
+                          !orphanDate && 'text-muted-foreground'
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {orphanDate ? format(orphanDate, 'dd.MM.yyyy', { locale: nb }) : 'Alle datoer'}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={orphanDate}
+                        onSelect={setOrphanDate}
+                        locale={nb}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                {orphanDate && (
+                  <Button variant="ghost" size="sm" onClick={() => setOrphanDate(undefined)}>
+                    Vis alle
+                  </Button>
+                )}
+                <Button
+                  variant="destructive"
+                  onClick={() => setDeleteOrphanedOpen(true)}
+                  disabled={orphanedLoading}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Slett {orphanedOrdersData?.count || 0} ordrer
+                </Button>
+              </div>
+            </div>
+          )}
           
           {/* Import batches table */}
           <div>
@@ -291,6 +420,26 @@ export function OrderManagementCard() {
         }
         onConfirm={handleDeleteBatch}
         isLoading={deleteImportBatch.isPending}
+      />
+      
+      {/* Delete orphaned orders confirmation */}
+      <TypeConfirmDialog
+        open={deleteOrphanedOpen}
+        onOpenChange={setDeleteOrphanedOpen}
+        title="Slett foreldreløse ordrer"
+        description={
+          <span>
+            Du er i ferd med å slette <strong>{orphanedOrdersData?.count || 0} ordre(r)</strong> uten kategori
+            {orphanDate ? (
+              <> for <strong>{format(orphanDate, 'dd.MM.yyyy', { locale: nb })}</strong></>
+            ) : (
+              <> for <strong>alle datoer</strong></>
+            )}
+            . Denne handlingen kan ikke angres.
+          </span>
+        }
+        onConfirm={handleDeleteOrphaned}
+        isLoading={deleteOrphanedOrders.isPending}
       />
     </>
   );
