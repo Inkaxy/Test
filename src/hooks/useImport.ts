@@ -98,16 +98,17 @@ export function useImport() {
       
       const deliveryDateStr = data.deliveryDate.toISOString().split('T')[0];
       
-      // Check for duplicate import
+      // Check for duplicate import (same bakery + date + category)
       const { data: existingBatch } = await supabase
         .from('import_batches')
         .select('id')
         .eq('bakery_id', bakeryId)
         .eq('delivery_date', deliveryDateStr)
+        .eq('category_id', data.categoryId)
         .maybeSingle();
       
       if (existingBatch) {
-        throw new Error(`Data for ${deliveryDateStr} er allerede importert. Slett eksisterende import først.`);
+        throw new Error(`Data for ${deliveryDateStr} er allerede importert til denne kategorien. Slett eksisterende import først.`);
       }
       
       let productsCreated = 0;
@@ -237,6 +238,7 @@ export function useImport() {
         .insert({
           bakery_id: bakeryId,
           delivery_date: deliveryDateStr,
+          category_id: data.categoryId,
           products_count: productsCreated + productsUpdated,
           customers_count: customersCreated + customersUpdated,
           orders_count: data.orders.length,
