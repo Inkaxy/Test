@@ -1,11 +1,52 @@
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { LanguageSwitcher } from '@/components/LanguageSwitcher';
+import { Switch } from '@/components/ui/switch';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Loader2 } from 'lucide-react';
+import { useBakerySettings, useUpdateBakerySettings } from '@/hooks/useBakerySettings';
+import { useToast } from '@/hooks/use-toast';
 
 export default function Settings() {
   const { t, i18n } = useTranslation();
+  const { toast } = useToast();
+  
+  const { data: settings, isLoading } = useBakerySettings();
+  const updateSettings = useUpdateBakerySettings();
+  
+  const [autoDeleteEnabled, setAutoDeleteEnabled] = useState(false);
+  const [autoDeleteDays, setAutoDeleteDays] = useState(30);
+  
+  useEffect(() => {
+    if (settings) {
+      setAutoDeleteEnabled(settings.auto_delete_enabled || false);
+      setAutoDeleteDays(settings.auto_delete_days || 30);
+    }
+  }, [settings]);
+  
+  const handleSaveAutoDelete = async () => {
+    try {
+      await updateSettings.mutateAsync({
+        auto_delete_enabled: autoDeleteEnabled,
+        auto_delete_days: autoDeleteDays,
+      });
+      toast({
+        title: 'Innstillinger lagret',
+        description: autoDeleteEnabled 
+          ? `Ordrer eldre enn ${autoDeleteDays} dager vil bli merket for sletting.`
+          : 'Automatisk sletting er deaktivert.',
+      });
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Feil',
+        description: error instanceof Error ? error.message : 'Kunne ikke lagre innstillinger',
+      });
+    }
+  };
   
   return (
     <div className="space-y-6">
@@ -49,6 +90,64 @@ export default function Settings() {
               </div>
             </Label>
           </RadioGroup>
+        </CardContent>
+      </Card>
+      
+      {/* Auto-delete settings */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Automatisk sletting av ordrer</CardTitle>
+          <CardDescription>
+            Konfigurer automatisk sletting av gamle ordrer for å holde databasen ryddig.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {isLoading ? (
+            <div className="flex items-center justify-center py-4">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : (
+            <>
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label>Aktiver automatisk sletting</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Ordrer eldre enn angitt antall dager vil bli merket for sletting.
+                  </p>
+                </div>
+                <Switch
+                  checked={autoDeleteEnabled}
+                  onCheckedChange={setAutoDeleteEnabled}
+                />
+              </div>
+              
+              {autoDeleteEnabled && (
+                <div className="space-y-2">
+                  <Label htmlFor="auto-delete-days">Slett ordrer eldre enn (dager)</Label>
+                  <Input
+                    id="auto-delete-days"
+                    type="number"
+                    min={1}
+                    max={365}
+                    value={autoDeleteDays}
+                    onChange={(e) => setAutoDeleteDays(parseInt(e.target.value) || 30)}
+                    className="w-32"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Ordrer med leveringsdato eldre enn {autoDeleteDays} dager vil bli merket for automatisk sletting.
+                  </p>
+                </div>
+              )}
+              
+              <Button
+                onClick={handleSaveAutoDelete}
+                disabled={updateSettings.isPending}
+              >
+                {updateSettings.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Lagre innstillinger
+              </Button>
+            </>
+          )}
         </CardContent>
       </Card>
     </div>
