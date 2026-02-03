@@ -59,7 +59,7 @@ export function CustomerScreenSettingsDialog({
     setLocalDisplayToken(customer.display_token ?? null);
     setShowQrCode(false);
     setShowSharedQrCode(false);
-  }, [open, customer?.id]);
+  }, [open, customer?.id, customer?.has_dedicated_display, customer?.display_token]);
 
   if (!customer) return null;
 
