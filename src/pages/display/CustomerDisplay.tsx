@@ -3,8 +3,7 @@ import { useEffect, useState, useRef } from 'react';
 import { format, isToday, parseISO } from 'date-fns';
 import { nb } from 'date-fns/locale';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Wifi, WifiOff, Clock, Maximize, Truck } from 'lucide-react';
-import { Progress } from '@/components/ui/progress';
+import { Wifi, WifiOff, Clock, Maximize, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -16,6 +15,7 @@ import {
   useLatestOrderDate,
 } from '@/hooks/useDisplayOrders';
 import { useRealtimeDisplay } from '@/hooks/useRealtimeDisplay';
+import { useReceivePackingSelection } from '@/hooks/usePackingSelection';
 import { cn } from '@/lib/utils';
 import logoIcon from '@/assets/logo-icon.png';
 
@@ -25,6 +25,7 @@ export default function CustomerDisplay() {
   const dateParam = searchParams.get('date');
   
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [wakeLockActive, setWakeLockActive] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Fetch customer info by token
@@ -42,19 +43,31 @@ export default function CustomerDisplay() {
   // Use date param if provided, otherwise use latest order date, or today as fallback
   const deliveryDate = dateParam || latestOrderDate || format(new Date(), 'yyyy-MM-dd');
 
-  // Fetch orders for this customer
-  const { data: orders = [], isLoading: ordersLoading } = useCustomerDisplayOrders(
+  // Fetch all orders for this customer on this date
+  const { data: allOrders = [], isLoading: ordersLoading } = useCustomerDisplayOrders(
     customer?.id || null,
     customer?.bakery_id || null,
     deliveryDate
   );
 
-  // Subscribe to realtime updates
+  // Subscribe to realtime packing selection
+  const { selection, isSubscribed } = useReceivePackingSelection(
+    customer?.bakery_id || null,
+    customer?.id || null,
+    deliveryDate
+  );
+
+  // Subscribe to realtime packing status updates
   const { isConnected } = useRealtimeDisplay({
     bakeryId: customer?.bakery_id || null,
     deliveryDate,
     enabled: !!customer?.bakery_id,
   });
+
+  // Filter orders to only show products that are selected for packing
+  const orders = selection?.productIds?.length
+    ? allOrders.filter((order) => selection.productIds.includes(order.product.id))
+    : [];
 
   // Update clock every second
   useEffect(() => {
@@ -73,9 +86,11 @@ export default function CustomerDisplay() {
       try {
         if ('wakeLock' in navigator) {
           wakeLock = await navigator.wakeLock.request('screen');
+          setWakeLockActive(true);
         }
       } catch (err) {
         console.log('Wake Lock not supported or failed:', err);
+        setWakeLockActive(false);
       }
     };
     
@@ -104,6 +119,16 @@ export default function CustomerDisplay() {
   const totalCount = orders.length;
   const progress = totalCount > 0 ? Math.round((packedCount / totalCount) * 100) : 0;
 
+  // When nothing is selected, calculate progress from all orders
+  const allPackedCount = allOrders.filter(
+    (o) => o.packing_status?.status === 'packed' || o.packing_status?.status === 'deviation'
+  ).length;
+  const allTotalCount = allOrders.length;
+  const allProgress = allTotalCount > 0 ? Math.round((allPackedCount / allTotalCount) * 100) : 0;
+
+  // Use overall progress when no selection, otherwise use selected progress
+  const displayProgress = selection?.productIds?.length ? progress : allProgress;
+
   const isLoading = customerLoading || ordersLoading;
   const isTodayDate = isToday(parseISO(deliveryDate));
   const formattedDate = format(parseISO(deliveryDate), 'EEEE dd.MM.yy', { locale: nb });
@@ -119,12 +144,22 @@ export default function CustomerDisplay() {
     }
   };
 
-  // Get status text and color
+  // Get status text and color based on whether products are selected
   const getStatusInfo = () => {
-    if (totalCount === 0) return { text: 'Ingen ordrer', color: 'bg-muted text-muted-foreground' };
+    const hasSelection = selection?.productIds?.length;
+    
+    if (!hasSelection) {
+      // No selection - use overall status
+      if (allTotalCount === 0) return { text: 'Ingen ordrer', color: 'bg-muted text-muted-foreground' };
+      if (allProgress === 100) return { text: 'Ferdig', color: 'bg-complete text-complete-foreground' };
+      if (allProgress > 0) return { text: 'Pågående', color: 'bg-packing text-packing-foreground' };
+      return { text: 'Venter', color: 'bg-pending text-pending-foreground' };
+    }
+    
+    // Has selection - use selection status
     if (progress === 100) return { text: 'Ferdig', color: 'bg-complete text-complete-foreground' };
     if (progress > 0) return { text: 'Pågående', color: 'bg-packing text-packing-foreground' };
-    return { text: 'Venter', color: 'bg-pending text-pending-foreground' };
+    return { text: 'Pågående', color: 'bg-packing text-packing-foreground' };
   };
 
   const statusInfo = getStatusInfo();
@@ -169,6 +204,8 @@ export default function CustomerDisplay() {
     );
   }
 
+  const hasSelectedProducts = selection?.productIds?.length;
+
   return (
     <div
       ref={containerRef}
@@ -194,67 +231,77 @@ export default function CustomerDisplay() {
         </div>
       </div>
 
-      {/* Products List */}
+      {/* Products List or Waiting State */}
       <div className="flex-1 px-4 space-y-3 overflow-auto">
-        <AnimatePresence mode="popLayout">
-          {orders.map((order, index) => {
-            const isPacked =
-              order.packing_status?.status === 'packed' ||
-              order.packing_status?.status === 'deviation';
+        {hasSelectedProducts ? (
+          <AnimatePresence mode="popLayout">
+            {orders.map((order, index) => {
+              const isPacked =
+                order.packing_status?.status === 'packed' ||
+                order.packing_status?.status === 'deviation';
 
-            return (
-              <motion.div
-                key={order.id}
-                layout
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{
-                  duration: 0.3,
-                  delay: index * 0.05,
-                }}
-                className={cn(
-                  'rounded-xl p-6 border-2 transition-all',
-                  getProductCardStyle(isPacked)
-                )}
-              >
-                <div className="flex items-start justify-between gap-4">
-                  {/* Product info */}
-                  <div className="flex-1 min-w-0">
-                    <h3 className={cn(
-                      'text-2xl md:text-3xl font-semibold text-foreground',
-                      isPacked && 'line-through opacity-70'
-                    )}>
-                      {order.product.name}
-                    </h3>
-                  </div>
-
-                  {/* Quantity and status */}
-                  <div className="text-right flex flex-col items-end gap-2">
-                    <div className="flex items-baseline gap-1">
-                      <span className={cn(
-                        'text-4xl md:text-5xl font-bold',
-                        isPacked ? 'text-complete' : 'text-primary'
+              return (
+                <motion.div
+                  key={order.id}
+                  layout
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{
+                    duration: 0.3,
+                    delay: index * 0.05,
+                  }}
+                  className={cn(
+                    'rounded-xl p-6 border-2 transition-all',
+                    getProductCardStyle(isPacked)
+                  )}
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    {/* Product info */}
+                    <div className="flex-1 min-w-0">
+                      <h3 className={cn(
+                        'text-2xl md:text-3xl font-semibold text-foreground',
+                        isPacked && 'line-through opacity-70'
                       )}>
-                        {order.quantity}
-                      </span>
-                      <span className="text-lg text-muted-foreground">stk</span>
+                        {order.product.name}
+                      </h3>
                     </div>
-                    <div className="text-sm text-muted-foreground">
-                      {isPacked ? '1/1' : '0/1'}
-                    </div>
-                    {getProductStatusBadge(order)}
-                  </div>
-                </div>
-              </motion.div>
-            );
-          })}
-        </AnimatePresence>
 
-        {orders.length === 0 && (
-          <div className="flex items-center justify-center py-12">
-            <p className="text-xl text-muted-foreground">Ingen ordrer for denne datoen</p>
-          </div>
+                    {/* Quantity and status */}
+                    <div className="text-right flex flex-col items-end gap-2">
+                      <div className="flex items-baseline gap-1">
+                        <span className={cn(
+                          'text-4xl md:text-5xl font-bold',
+                          isPacked ? 'text-complete' : 'text-primary'
+                        )}>
+                          {order.quantity}
+                        </span>
+                        <span className="text-lg text-muted-foreground">stk</span>
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        {isPacked ? '1/1' : '0/1'}
+                      </div>
+                      {getProductStatusBadge(order)}
+                    </div>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
+        ) : (
+          // Waiting state - no products selected for packing
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="flex flex-col items-center justify-center py-16 px-4"
+          >
+            <div className="bg-muted/50 rounded-2xl p-8 border-2 border-dashed border-muted-foreground/30 text-center max-w-md">
+              <Loader2 className="h-12 w-12 animate-spin text-muted-foreground mx-auto mb-4" />
+              <p className="text-xl text-muted-foreground">
+                Venter på produktvalg...
+              </p>
+            </div>
+          </motion.div>
         )}
       </div>
 
@@ -277,7 +324,7 @@ export default function CustomerDisplay() {
               <motion.div
                 className="h-full bg-primary rounded-full"
                 initial={{ width: 0 }}
-                animate={{ width: `${progress}%` }}
+                animate={{ width: `${displayProgress}%` }}
                 transition={{ duration: 0.5, ease: 'easeOut' }}
               />
             </div>
@@ -285,7 +332,7 @@ export default function CustomerDisplay() {
             <motion.div
               className="absolute top-1/2 -translate-y-1/2"
               initial={{ left: '0%' }}
-              animate={{ left: `${Math.max(0, Math.min(progress - 3, 97))}%` }}
+              animate={{ left: `${Math.max(0, Math.min(displayProgress - 3, 97))}%` }}
               transition={{ duration: 0.5, ease: 'easeOut' }}
             >
               <img src={logoIcon} alt="" className="h-8 w-auto" />
@@ -293,7 +340,7 @@ export default function CustomerDisplay() {
           </div>
           
           <p className="text-center text-2xl font-bold text-foreground">
-            {progress}%
+            {displayProgress}%
           </p>
         </div>
       </div>
@@ -315,10 +362,10 @@ export default function CustomerDisplay() {
             
             <Badge className={cn(
               'gap-1',
-              isConnected ? 'bg-complete' : 'bg-destructive'
+              isConnected && isSubscribed ? 'bg-complete' : 'bg-destructive'
             )}>
-              {isConnected ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
-              {isConnected ? 'Live' : 'Frakoblet'}
+              {isConnected && isSubscribed ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
+              {isConnected && isSubscribed ? 'Live' : 'Frakoblet'}
             </Badge>
           </div>
 
@@ -326,8 +373,11 @@ export default function CustomerDisplay() {
           <div className="text-center text-sm text-muted-foreground space-y-1">
             <p>Automatiske oppdateringer via websockets</p>
             <p className="flex items-center justify-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-complete animate-pulse" />
-              Skjermen holdes våken
+              <span className={cn(
+                'w-2 h-2 rounded-full',
+                wakeLockActive ? 'bg-complete animate-pulse' : 'bg-amber-500'
+              )} />
+              {wakeLockActive ? 'Skjermen holdes våken' : 'Wake Lock inaktiv'}
             </p>
           </div>
         </div>
