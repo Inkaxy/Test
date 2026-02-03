@@ -141,7 +141,10 @@
     "yourLock": "Your lock",
     "locked": "Locked",
     "complete": "Complete",
-    "packAllProducts": "Pack all products for this customer"
+    "packAllProducts": "Pack all products for this customer",
+    "selectProductToPack": "Select a product to pack all customer orders",
+    "orders": "orders",
+    "traysCalculated": "Trays/pcs"
   },
   "products": {
     "title": "Products",
