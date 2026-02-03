@@ -142,9 +142,10 @@ export function useCustomerByToken(displayToken: string | null) {
 
       const { data, error } = await supabase
         .from('customers')
-        .select('id, name, customer_number, bakery_id')
+        .select('id, name, customer_number, bakery_id, has_dedicated_display')
         .eq('display_token', displayToken)
-        .single();
+        .eq('has_dedicated_display', true)
+        .maybeSingle();
 
       if (error) throw error;
       return data;
