@@ -16,7 +16,7 @@ import { cn } from '@/lib/utils';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuthStore } from '@/stores/authStore';
-import { useMarkAsPacked, useReportDeviation, useUndoPacking } from '@/hooks/useOrders';
+import { useMarkAsPacked, useReportDeviation, useUndoPacking, useBatchMarkAsPacked } from '@/hooks/useOrders';
 import { useToast } from '@/hooks/use-toast';
 import { ProductTableView, ProductWithOrders } from '@/components/packing/ProductTableView';
 import { BatchPackingView } from '@/components/packing/BatchPackingView';
@@ -164,6 +164,7 @@ export default function ProductPackingView() {
   }, [bakeryId, dateStr, categoryId, queryClient]);
   
   const markAsPacked = useMarkAsPacked();
+  const batchMarkAsPacked = useBatchMarkAsPacked();
   const reportDeviation = useReportDeviation();
   const undoPacking = useUndoPacking();
   
@@ -321,11 +322,20 @@ export default function ProductPackingView() {
         <BatchPackingView
           products={freshSelectedProducts}
           dateStr={dateStr}
+          categoryId={categoryId}
           onBack={handleBack}
           onMarkPacked={handleBatchMarkPacked}
+          onBatchMarkPacked={async (orders) => {
+            await batchMarkAsPacked.mutateAsync({
+              orders,
+              categoryId,
+              deliveryDate: dateStr,
+            });
+          }}
           onReportDeviation={handleBatchReportDeviation}
           onUndo={handleBatchUndo}
           isMarkingPacked={markAsPacked.isPending}
+          isBatchMarkingPacked={batchMarkAsPacked.isPending}
           isUndoing={undoPacking.isPending}
         />
         

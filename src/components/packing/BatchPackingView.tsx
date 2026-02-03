@@ -13,22 +13,28 @@ import { ProductWithOrders } from './ProductTableView';
 interface BatchPackingViewProps {
   products: ProductWithOrders[];
   dateStr: string;
+  categoryId?: string;
   onBack: () => void;
   onMarkPacked: (orderId: string, packingStatusId?: string, customerId?: string, productId?: string) => Promise<void>;
+  onBatchMarkPacked: (orders: Array<{ orderId: string; packingStatusId?: string; customerId?: string; productId?: string }>) => Promise<void>;
   onReportDeviation: (orderId: string, packingStatusId?: string) => void;
   onUndo: (packingStatusId: string) => Promise<void>;
   isMarkingPacked: boolean;
+  isBatchMarkingPacked: boolean;
   isUndoing: boolean;
 }
 
 export function BatchPackingView({
   products,
   dateStr,
+  categoryId,
   onBack,
   onMarkPacked,
+  onBatchMarkPacked,
   onReportDeviation,
   onUndo,
   isMarkingPacked,
+  isBatchMarkingPacked,
   isUndoing,
 }: BatchPackingViewProps) {
   const { t, i18n } = useTranslation();
@@ -74,11 +80,17 @@ export function BatchPackingView({
   }, [handleKeyDown]);
   
   const handleMarkAllPacked = async () => {
-    if (!activeProduct) return;
+    if (!activeProduct || pendingOrders.length === 0) return;
     
-    for (const order of pendingOrders) {
-      await onMarkPacked(order.id, order.packing_status?.id, order.customer.id, activeProduct.id);
-    }
+    // Use batch operation for much faster performance
+    const ordersToMark = pendingOrders.map(order => ({
+      orderId: order.id,
+      packingStatusId: order.packing_status?.id,
+      customerId: order.customer.id,
+      productId: activeProduct.id,
+    }));
+    
+    await onBatchMarkPacked(ordersToMark);
   };
   
   const handleMarkProductComplete = () => {
@@ -226,11 +238,15 @@ export function BatchPackingView({
             <Button
               size="sm"
               onClick={handleMarkAllPacked}
-              disabled={pendingOrders.length === 0 || isMarkingPacked}
+              disabled={pendingOrders.length === 0 || isBatchMarkingPacked}
               className="gap-1"
             >
-              <Check className="h-4 w-4" />
-              Alle ({activeProduct.totalOrders})
+              {isBatchMarkingPacked ? (
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+              ) : (
+                <Check className="h-4 w-4" />
+              )}
+              Alle ({pendingOrders.length})
             </Button>
           </div>
         </div>
