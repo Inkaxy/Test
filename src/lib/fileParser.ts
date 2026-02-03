@@ -373,14 +373,57 @@ export function extractDateFromFilename(filename: string): Date | null {
 }
 
 /**
- * Read file content as text
- * Uses ISO-8859-1 encoding for Nordic character support
+ * Read file content as text with automatic encoding detection
+ * Tries UTF-8 first, then falls back to Windows-1252 for Nordic files
  */
 export async function readFileAsText(file: File): Promise<string> {
+  // First try UTF-8
+  const utf8Content = await readWithEncoding(file, 'UTF-8');
+  
+  // Check for garbled characters (UTF-8 read as Latin-1 produces "Ã")
+  if (!hasGarbledCharacters(utf8Content)) {
+    return utf8Content;
+  }
+  
+  // If garbled, try Windows-1252 (common for older Nordic systems)
+  console.log('Detected encoding issue, trying Windows-1252...');
+  const win1252Content = await readWithEncoding(file, 'windows-1252');
+  
+  if (!hasGarbledCharacters(win1252Content)) {
+    return win1252Content;
+  }
+  
+  // Final fallback: ISO-8859-1
+  console.log('Trying ISO-8859-1 fallback...');
+  return readWithEncoding(file, 'ISO-8859-1');
+}
+
+function readWithEncoding(file: File, encoding: string): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (e) => resolve(e.target?.result as string);
     reader.onerror = (e) => reject(e);
-    reader.readAsText(file, 'ISO-8859-1'); // Nordic encoding fallback
+    reader.readAsText(file, encoding);
   });
+}
+
+/**
+ * Detect garbled Nordic characters
+ * When UTF-8 is read as ISO-8859-1:
+ * - ø becomes Ã¸
+ * - æ becomes Ã¦  
+ * - å becomes Ã¥
+ */
+function hasGarbledCharacters(content: string): boolean {
+  // Common patterns when UTF-8 Nordic chars are misread as ISO-8859-1
+  const garbledPatterns = [
+    /Ã¸/,  // ø
+    /Ã¦/,  // æ
+    /Ã¥/,  // å
+    /Ã˜/,  // Ø
+    /Ã†/,  // Æ
+    /Ã…/,  // Å
+  ];
+  
+  return garbledPatterns.some(pattern => pattern.test(content));
 }
