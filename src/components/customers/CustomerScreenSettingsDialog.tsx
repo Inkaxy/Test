@@ -5,10 +5,13 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
-import { Copy, ExternalLink, QrCode, Monitor, Loader2 } from 'lucide-react';
+import { Copy, ExternalLink, QrCode, Monitor, Loader2, Users } from 'lucide-react';
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useUpdateCustomer, Customer } from '@/hooks/useCustomers';
+import { useAuthStore } from '@/stores/authStore';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { QRCodeSVG } from 'qrcode.react';
 
 interface CustomerScreenSettingsDialogProps {
@@ -25,15 +28,40 @@ export function CustomerScreenSettingsDialog({
   const { t } = useTranslation();
   const { toast } = useToast();
   const updateCustomer = useUpdateCustomer();
+  const { getCurrentBakeryId } = useAuthStore();
   const [showQrCode, setShowQrCode] = useState(false);
+  const [showSharedQrCode, setShowSharedQrCode] = useState(false);
+
+  const bakeryId = getCurrentBakeryId();
+
+  // Fetch bakery info for short_id
+  const { data: bakery } = useQuery({
+    queryKey: ['bakery-info', bakeryId],
+    queryFn: async () => {
+      if (!bakeryId) return null;
+      const { data, error } = await supabase
+        .from('bakeries')
+        .select('id, name, short_id')
+        .eq('id', bakeryId)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!bakeryId && open,
+  });
 
   if (!customer) return null;
 
-  const displayUrl = customer.display_token
+  const dedicatedDisplayUrl = customer.display_token
     ? `${window.location.origin}/display/customer/${customer.display_token}`
     : '';
 
+  const sharedDisplayUrl = bakery?.short_id
+    ? `${window.location.origin}/display/shared/${bakery.short_id}`
+    : '';
+
   const hasDedicatedDisplay = customer.has_dedicated_display ?? false;
+  const currentDisplayUrl = hasDedicatedDisplay ? dedicatedDisplayUrl : sharedDisplayUrl;
 
   const handleToggleDedicatedDisplay = async (enabled: boolean) => {
     try {
@@ -63,18 +91,18 @@ export function CustomerScreenSettingsDialog({
     }
   };
 
-  const handleCopyUrl = async () => {
-    if (!displayUrl) return;
-    await navigator.clipboard.writeText(displayUrl);
+  const handleCopyUrl = async (url: string) => {
+    if (!url) return;
+    await navigator.clipboard.writeText(url);
     toast({
       title: 'Kopiert',
       description: 'URL kopiert til utklippstavlen',
     });
   };
 
-  const handleOpenScreen = () => {
-    if (!displayUrl) return;
-    window.open(displayUrl, '_blank');
+  const handleOpenScreen = (url: string) => {
+    if (!url) return;
+    window.open(url, '_blank');
   };
 
   return (
@@ -120,21 +148,24 @@ export function CustomerScreenSettingsDialog({
             </CardContent>
           </Card>
 
-          {/* Display URL section - only shown when dedicated display is enabled */}
-          {hasDedicatedDisplay && displayUrl && (
+          {/* Dedicated Display URL section - only shown when dedicated display is enabled */}
+          {hasDedicatedDisplay && dedicatedDisplayUrl && (
             <>
               <div className="space-y-2">
-                <Label>Skjerm URL</Label>
+                <Label className="flex items-center gap-2">
+                  <Monitor className="h-4 w-4" />
+                  Dedikert skjerm URL
+                </Label>
                 <div className="flex gap-2">
                   <Input
-                    value={displayUrl}
+                    value={dedicatedDisplayUrl}
                     readOnly
                     className="font-mono text-sm"
                   />
                   <Button
                     variant="outline"
                     size="icon"
-                    onClick={handleCopyUrl}
+                    onClick={() => handleCopyUrl(dedicatedDisplayUrl)}
                     title="Kopier URL"
                   >
                     <Copy className="h-4 w-4" />
@@ -143,11 +174,11 @@ export function CustomerScreenSettingsDialog({
               </div>
 
               <div className="flex flex-wrap gap-2">
-                <Button variant="outline" className="gap-2" onClick={handleCopyUrl}>
+                <Button variant="outline" className="gap-2" onClick={() => handleCopyUrl(dedicatedDisplayUrl)}>
                   <Copy className="h-4 w-4" />
                   Kopier URL
                 </Button>
-                <Button variant="outline" className="gap-2" onClick={handleOpenScreen}>
+                <Button variant="outline" className="gap-2" onClick={() => handleOpenScreen(dedicatedDisplayUrl)}>
                   <ExternalLink className="h-4 w-4" />
                   Åpne skjerm
                 </Button>
@@ -164,7 +195,7 @@ export function CustomerScreenSettingsDialog({
 
               {showQrCode && (
                 <div className="flex justify-center p-4 bg-white rounded-lg">
-                  <QRCodeSVG value={displayUrl} size={200} />
+                  <QRCodeSVG value={dedicatedDisplayUrl} size={200} />
                 </div>
               )}
 
@@ -176,6 +207,73 @@ export function CustomerScreenSettingsDialog({
                     <li>Skjermen viser real-time status for kundens ordrer</li>
                     <li>URL kan deles direkte med kunden</li>
                     <li>Automatisk oppdatering hvert 30. sekund</li>
+                  </ul>
+                </CardContent>
+              </Card>
+            </>
+          )}
+
+          {/* Shared Display URL section - shown when dedicated display is NOT enabled */}
+          {!hasDedicatedDisplay && sharedDisplayUrl && (
+            <>
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <Users className="h-4 w-4" />
+                  Felles skjerm URL
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  Denne kunden vises på den felles skjermen sammen med andre kunder
+                </p>
+                <div className="flex gap-2">
+                  <Input
+                    value={sharedDisplayUrl}
+                    readOnly
+                    className="font-mono text-sm"
+                  />
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => handleCopyUrl(sharedDisplayUrl)}
+                    title="Kopier URL"
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <Button variant="outline" className="gap-2" onClick={() => handleCopyUrl(sharedDisplayUrl)}>
+                  <Copy className="h-4 w-4" />
+                  Kopier URL
+                </Button>
+                <Button variant="outline" className="gap-2" onClick={() => handleOpenScreen(sharedDisplayUrl)}>
+                  <ExternalLink className="h-4 w-4" />
+                  Åpne skjerm
+                </Button>
+              </div>
+
+              <Button
+                variant="outline"
+                className="w-full gap-2"
+                onClick={() => setShowSharedQrCode(!showSharedQrCode)}
+              >
+                <QrCode className="h-4 w-4" />
+                {showSharedQrCode ? 'Skjul QR-kode' : 'Vis QR-kode'}
+              </Button>
+
+              {showSharedQrCode && (
+                <div className="flex justify-center p-4 bg-white rounded-lg">
+                  <QRCodeSVG value={sharedDisplayUrl} size={200} />
+                </div>
+              )}
+
+              <Card className="bg-muted/50">
+                <CardContent className="pt-4">
+                  <p className="text-sm font-medium mb-2">Tips:</p>
+                  <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                    <li>Felles skjerm viser alle kunder samlet</li>
+                    <li>Aktiver dedikert skjerm for egen visning</li>
+                    <li>Sanntidsoppdatering av pakkestatus</li>
                   </ul>
                 </CardContent>
               </Card>
