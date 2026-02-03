@@ -20,6 +20,7 @@ interface CategoryFormData {
   packing_mode: 'product_based' | 'customer_based';
   sort_order: number;
   is_active: boolean;
+  card_color: string;
 }
 
 const emptyForm: CategoryFormData = {
@@ -27,6 +28,7 @@ const emptyForm: CategoryFormData = {
   packing_mode: 'product_based',
   sort_order: 0,
   is_active: true,
+  card_color: 'primary',
 };
 
 export default function Categories() {
@@ -58,6 +60,7 @@ export default function Categories() {
         packing_mode: category.packing_mode,
         sort_order: category.sort_order,
         is_active: category.is_active ?? true,
+        card_color: category.card_color || 'primary',
       });
     } else {
       setEditCategory(null);

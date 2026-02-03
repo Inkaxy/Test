@@ -33,6 +33,7 @@ export function AddPackingCategoryCard({ sortOrder }: AddPackingCategoryCardProp
         packing_mode: packingMode,
         sort_order: sortOrder,
         is_active: true,
+        card_color: 'primary',
       });
       
       toast({ title: 'Pakkealternativ opprettet' });

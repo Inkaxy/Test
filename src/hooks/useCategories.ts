@@ -9,6 +9,7 @@ export interface Category {
   packing_mode: 'product_based' | 'customer_based';
   sort_order: number;
   is_active: boolean;
+  card_color: string | null;
 }
 
 export function useCategories() {
