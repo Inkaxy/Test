@@ -19,6 +19,7 @@ interface CustomerFormData {
   name: string;
   address: string | null;
   is_active: boolean;
+  priority: number;
 }
 
 const emptyForm: CustomerFormData = {
@@ -26,6 +27,7 @@ const emptyForm: CustomerFormData = {
   name: '',
   address: null,
   is_active: true,
+  priority: 50,
 };
 
 export default function Customers() {
@@ -57,6 +59,7 @@ export default function Customers() {
         name: customer.name,
         address: customer.address,
         is_active: customer.is_active ?? true,
+        priority: customer.priority ?? 50,
       });
     } else {
       setEditCustomer(null);
@@ -144,6 +147,7 @@ export default function Customers() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-16 text-center">Prioritet</TableHead>
                   <TableHead>{t('customers.customerNumber')}</TableHead>
                   <TableHead>{t('customers.customerName')}</TableHead>
                   <TableHead>{t('customers.address')}</TableHead>
@@ -155,13 +159,20 @@ export default function Customers() {
               <TableBody>
                 {filteredCustomers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                       {t('customers.noCustomers')}
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredCustomers.map((customer) => (
+                  filteredCustomers
+                    .sort((a, b) => (a.priority ?? 50) - (b.priority ?? 50))
+                    .map((customer) => (
                     <TableRow key={customer.id}>
+                      <TableCell className="text-center">
+                        <Badge variant={customer.priority && customer.priority < 50 ? 'default' : 'secondary'} className="font-mono">
+                          {customer.priority ?? 50}
+                        </Badge>
+                      </TableCell>
                       <TableCell className="font-mono">{customer.customer_number}</TableCell>
                       <TableCell className="font-medium">{customer.name}</TableCell>
                       <TableCell className="text-muted-foreground">{customer.address || '-'}</TableCell>
@@ -235,6 +246,26 @@ export default function Customers() {
                 onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value || null }))}
                 placeholder={t('common.optional')}
               />
+            </div>
+            
+            <div className="space-y-2">
+              <Label>Prioritet (pakkerekkefølge)</Label>
+              <div className="flex items-center gap-3">
+                <Input
+                  type="number"
+                  min={1}
+                  max={100}
+                  value={formData.priority}
+                  onChange={(e) => setFormData(prev => ({ ...prev, priority: parseInt(e.target.value) || 50 }))}
+                  className="w-24"
+                />
+                <span className="text-sm text-muted-foreground">
+                  1 = Høyest prioritet (pakkes først)
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Kunder med lavere tall pakkes før kunder med høyere tall. Standard er 50.
+              </p>
             </div>
             
             <div className="flex items-center justify-between">

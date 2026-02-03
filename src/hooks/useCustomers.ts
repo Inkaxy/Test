@@ -11,6 +11,7 @@ export interface Customer {
   is_active: boolean;
   has_dedicated_display: boolean | null;
   display_token: string | null;
+  priority: number | null;
 }
 
 export function useCustomers() {
