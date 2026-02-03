@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
@@ -13,7 +13,7 @@ import { Package, Loader2, ArrowLeft, Check, AlertTriangle, Undo2 } from 'lucide
 import { format } from 'date-fns';
 import { nb, enUS } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuthStore } from '@/stores/authStore';
 import { useMarkAsPacked, useReportDeviation, useUndoPacking } from '@/hooks/useOrders';
@@ -129,7 +129,9 @@ export default function ProductPackingView() {
   const { t, i18n } = useTranslation();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { categoryId, date } = useParams<{ categoryId: string; date: string }>();
+  const { getCurrentBakeryId } = useAuthStore();
   const locale = i18n.language === 'nb' ? nb : enUS;
   
   const [selectedProduct, setSelectedProduct] = useState<ProductWithOrders | null>(null);
@@ -138,8 +140,42 @@ export default function ProductPackingView() {
   const [deviationNote, setDeviationNote] = useState('');
   
   const dateStr = date || format(new Date(), 'yyyy-MM-dd');
+  const bakeryId = getCurrentBakeryId();
   
   const { data: products = [], isLoading: productsLoading } = useProductsForDate(dateStr, categoryId);
+  
+  // Real-time subscription for packing status updates
+  useEffect(() => {
+    if (!bakeryId) return;
+    
+    console.log('Setting up realtime subscription for packing_status');
+    
+    const channel = supabase
+      .channel('packing-status-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'packing_status',
+        },
+        (payload) => {
+          console.log('Packing status change received:', payload);
+          // Invalidate the products query to refetch with new packing status
+          queryClient.invalidateQueries({ 
+            queryKey: ['products-for-date', bakeryId, dateStr, categoryId] 
+          });
+        }
+      )
+      .subscribe((status) => {
+        console.log('Realtime subscription status:', status);
+      });
+    
+    return () => {
+      console.log('Cleaning up realtime subscription');
+      supabase.removeChannel(channel);
+    };
+  }, [bakeryId, dateStr, categoryId, queryClient]);
   
   const markAsPacked = useMarkAsPacked();
   const reportDeviation = useReportDeviation();
