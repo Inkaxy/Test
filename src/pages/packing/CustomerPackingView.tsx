@@ -371,7 +371,8 @@ export default function CustomerPackingView() {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b bg-muted/50">
+             <tr className="border-b bg-muted/50">
+                  <th className="text-center p-4 font-medium text-muted-foreground w-12">#</th>
                   <th className="text-left p-4 font-medium text-muted-foreground">{t('customers.customerNumber')}</th>
                   <th className="text-left p-4 font-medium text-muted-foreground">{t('common.name')}</th>
                   <th className="text-center p-4 font-medium text-muted-foreground">{t('display.products')}</th>
@@ -380,7 +381,7 @@ export default function CustomerPackingView() {
                 </tr>
               </thead>
               <tbody>
-                {customers.map((customer) => {
+                {customers.map((customer, index) => {
                   const lock = getLock(customer.id);
                   const lockedByMe = isLockedByCurrentUser(lock, user?.id);
                   const lockedByOther = isLockedByOther(lock, user?.id);
@@ -398,6 +399,11 @@ export default function CustomerPackingView() {
                         !lockedByOther && 'hover:bg-muted/50 active:bg-muted'
                       )}
                     >
+                      <td className="p-4 text-center">
+                        <Badge variant={customer.priority && customer.priority < 50 ? 'default' : 'outline'} className="font-mono text-xs">
+                          {index + 1}
+                        </Badge>
+                      </td>
                       <td className="p-4 font-mono text-sm">{customer.customer_number}</td>
                       <td className="p-4">
                         <span className="font-medium">{customer.name}</span>

@@ -204,6 +204,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           name: string
+          priority: number | null
           updated_at: string | null
         }
         Insert: {
@@ -216,6 +217,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           name: string
+          priority?: number | null
           updated_at?: string | null
         }
         Update: {
@@ -228,6 +230,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           name?: string
+          priority?: number | null
           updated_at?: string | null
         }
         Relationships: [

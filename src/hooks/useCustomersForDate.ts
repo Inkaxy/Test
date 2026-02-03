@@ -7,6 +7,7 @@ export interface CustomerWithOrders {
   name: string;
   customer_number: string;
   address: string | null;
+  priority: number | null;
   orders: {
     id: string;
     quantity: number;
@@ -48,7 +49,7 @@ export function useCustomersForDate(deliveryDate: string, categoryId?: string) {
           quantity,
           customer_id,
           category_id,
-          customer:customers(id, name, customer_number, address),
+          customer:customers(id, name, customer_number, address, priority),
           product:products(id, name, product_number, pieces_per_tray, category_id),
           packing_status(id, status, packed_at, deviation_type, deviation_note)
         `)
@@ -80,6 +81,7 @@ export function useCustomersForDate(deliveryDate: string, categoryId?: string) {
             name: order.customer.name,
             customer_number: order.customer.customer_number,
             address: order.customer.address,
+            priority: (order.customer as any).priority ?? 50,
             orders: [],
             totalOrders: 0,
             packedOrders: 0,
@@ -113,8 +115,15 @@ export function useCustomersForDate(deliveryDate: string, categoryId?: string) {
           : 0,
       }));
       
-      // Sort by customer number
-      customers.sort((a, b) => a.customer_number.localeCompare(b.customer_number));
+      // Sort by priority first (lower = higher priority), then by customer number
+      customers.sort((a, b) => {
+        const priorityA = a.priority ?? 50;
+        const priorityB = b.priority ?? 50;
+        if (priorityA !== priorityB) {
+          return priorityA - priorityB;
+        }
+        return a.customer_number.localeCompare(b.customer_number);
+      });
       
       return customers;
     },
