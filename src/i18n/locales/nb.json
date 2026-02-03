@@ -288,6 +288,8 @@
     "preview": "Forhåndsvisning",
     "displayUrls": "Display-URLer",
     "sharedDisplayUrl": "Felles display URL",
+    "kioskPackingUrl": "Kiosk pakke-URL",
+    "kioskPackingDescription": "Bruk denne URL-en for nettbrett med Fully Kiosk eller lignende kiosk-app",
     "copyUrl": "Kopier URL",
     "urlCopied": "URL kopiert til utklippstavle",
     "noOrders": "Ingen ordrer for denne datoen",

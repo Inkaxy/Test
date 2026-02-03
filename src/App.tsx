@@ -14,6 +14,7 @@ import Packing from './pages/Packing';
 import CustomerPacking from './pages/CustomerPacking';
 import CustomerPackingView from './pages/packing/CustomerPackingView';
 import ProductPackingView from './pages/packing/ProductPackingView';
+import KioskPackingView from './pages/packing/KioskPackingView';
 import Products from './pages/Products';
 import Customers from './pages/Customers';
 import Categories from './pages/Categories';
@@ -49,6 +50,10 @@ function AppRoutes() {
       <Route path="/display/shared/:bakeryShortId/:categoryId" element={<SharedDisplay />} />
       <Route path="/display/shared/:bakeryShortId" element={<SharedDisplay />} />
       <Route path="/display/customer/:displayToken" element={<CustomerDisplay />} />
+      
+      {/* Public kiosk packing routes (no auth required) */}
+      <Route path="/kiosk/packing/:bakeryShortId/:categoryId" element={<KioskPackingView />} />
+      <Route path="/kiosk/packing/:bakeryShortId" element={<KioskPackingView />} />
       
       {/* Protected packing display route */}
       <Route
