@@ -164,21 +164,45 @@ export default function CustomerDisplay() {
 
   const statusInfo = getStatusInfo();
 
-  // Get product card background color based on status
-  const getProductCardStyle = (isPacked: boolean) => {
-    if (isPacked) {
-      return 'bg-complete/20 border-complete/40';
+  // Get product line color from palette based on product ID (consistent coloring)
+  const getProductLineColor = (productId: string, isPacked: boolean): React.CSSProperties => {
+    if (!displaySettings.product_line_colors_enabled || !displaySettings.product_line_colors_palette?.length) {
+      // Fallback to default styling
+      if (isPacked) {
+        return { backgroundColor: 'hsl(var(--complete) / 0.2)', borderColor: 'hsl(var(--complete) / 0.4)' };
+      }
+      return { backgroundColor: '#FEF3C7', borderColor: '#FCD34D' };
     }
-    return 'bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800';
+
+    // Use hash of product ID to get consistent color index
+    let hash = 0;
+    for (let i = 0; i < productId.length; i++) {
+      const char = productId.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash;
+    }
+    const colorIndex = Math.abs(hash) % displaySettings.product_line_colors_palette.length;
+    const baseColor = displaySettings.product_line_colors_palette[colorIndex];
+    
+    // If packed, add a green tint/overlay effect
+    if (isPacked) {
+      return { 
+        backgroundColor: baseColor, 
+        borderColor: 'hsl(var(--complete))',
+        opacity: 0.7,
+      };
+    }
+    
+    return { backgroundColor: baseColor, borderColor: `${baseColor}CC` };
   };
 
   // Get status badge for product
   const getProductStatusBadge = (order: typeof orders[0]) => {
     const isPacked = order.packing_status?.status === 'packed' || order.packing_status?.status === 'deviation';
     if (isPacked) {
-      return <Badge className="bg-complete text-complete-foreground">Pakket</Badge>;
+      return <Badge className="bg-complete text-complete-foreground">Ferdig</Badge>;
     }
-    return <Badge variant="secondary" className="bg-pending text-pending-foreground">Venter</Badge>;
+    return <Badge variant="secondary" className="bg-amber-100 text-amber-800 border-amber-300">Venter</Badge>;
   };
 
   if (isLoading) {
@@ -251,10 +275,8 @@ export default function CustomerDisplay() {
                     duration: 0.3,
                     delay: index * 0.05,
                   }}
-                  className={cn(
-                    'rounded-xl p-6 border-2 transition-all',
-                    getProductCardStyle(isPacked)
-                  )}
+                  className="rounded-xl p-6 border-2 transition-all"
+                  style={getProductLineColor(order.product.id, isPacked)}
                 >
                   <div className="flex items-start justify-between gap-4">
                     {/* Product info */}
