@@ -207,38 +207,132 @@ export const DISPLAY_TYPES: Record<DisplayType, { label: string; description: st
 };
 
 export interface DisplaySettings {
+  // Topptekst (Header)
+  header_show_bakery_name: boolean;
+  header_show_category_name: boolean;
+  header_show_clock: boolean;
+  header_show_date: boolean;
+  header_bakery_font_size: string;
+  header_clock_format: '12h' | '24h';
+  
+  // Statistikk-kort (Stats card)
+  stats_show_total_progress: boolean;
+  stats_show_packed_count: boolean;
+  stats_show_remaining_count: boolean;
+  stats_progress_bar_style: 'bar' | 'circle' | 'none';
+  stats_progress_bar_height: string;
+  
+  // Kundekort (Customer cards)
+  card_show_customer_number: boolean;
+  card_show_product_list: boolean;
+  card_show_product_numbers: boolean;
+  card_show_quantity_as_trays: boolean;
+  card_show_individual_progress: boolean;
+  card_compact_mode: boolean;
+  
+  // Utseende (Appearance)
   background_color: string;
   card_background_color: string;
   text_color: string;
   pending_color: string;
   packing_color: string;
   completed_color: string;
+  border_radius: string;
+  card_border_width: string;
+  
+  // Layout & Scroll
+  columns: number;
+  gap_size: string;
+  padding: string;
   customer_name_font_size: string;
   product_font_size: string;
+  auto_scroll_enabled: boolean;
+  auto_scroll_speed: 'slow' | 'medium' | 'fast';
+  auto_scroll_pause_on_hover: boolean;
+  
+  // Animasjoner (Animations)
+  animation_enabled: boolean;
+  animation_speed: 'fast' | 'normal' | 'slow';
+  animation_on_status_change: boolean;
+  animation_highlight_new: boolean;
+  animation_highlight_duration: number;
+  
+  // Sanntid & Status (Realtime & Status)
+  realtime_show_connection_status: boolean;
+  realtime_show_last_update: boolean;
+  realtime_auto_refresh_interval: number;
+  realtime_sound_on_complete: boolean;
+  realtime_flash_on_update: boolean;
+  
+  // Legacy support
   show_progress_bar: boolean;
   progress_bar_style: string;
-  animation_enabled: boolean;
-  animation_speed: string;
-  columns: number;
   show_clock: boolean;
   show_date: boolean;
 }
 
 export function getDefaultDisplaySettings(): DisplaySettings {
   return {
+    // Topptekst
+    header_show_bakery_name: true,
+    header_show_category_name: true,
+    header_show_clock: true,
+    header_show_date: true,
+    header_bakery_font_size: '1.875rem',
+    header_clock_format: '24h',
+    
+    // Statistikk-kort
+    stats_show_total_progress: true,
+    stats_show_packed_count: true,
+    stats_show_remaining_count: true,
+    stats_progress_bar_style: 'bar',
+    stats_progress_bar_height: '1rem',
+    
+    // Kundekort
+    card_show_customer_number: false,
+    card_show_product_list: true,
+    card_show_product_numbers: false,
+    card_show_quantity_as_trays: true,
+    card_show_individual_progress: true,
+    card_compact_mode: false,
+    
+    // Utseende
     background_color: '#1a1a2e',
     card_background_color: '#16213e',
     text_color: '#ffffff',
     pending_color: '#6b7280',
     packing_color: '#f59e0b',
     completed_color: '#22c55e',
+    border_radius: '0.75rem',
+    card_border_width: '4px',
+    
+    // Layout & Scroll
+    columns: 3,
+    gap_size: '1rem',
+    padding: '1.5rem',
     customer_name_font_size: '2rem',
     product_font_size: '1rem',
-    show_progress_bar: true,
-    progress_bar_style: 'bar',
+    auto_scroll_enabled: false,
+    auto_scroll_speed: 'medium',
+    auto_scroll_pause_on_hover: true,
+    
+    // Animasjoner
     animation_enabled: true,
     animation_speed: 'normal',
-    columns: 3,
+    animation_on_status_change: true,
+    animation_highlight_new: true,
+    animation_highlight_duration: 3000,
+    
+    // Sanntid & Status
+    realtime_show_connection_status: true,
+    realtime_show_last_update: false,
+    realtime_auto_refresh_interval: 60,
+    realtime_sound_on_complete: false,
+    realtime_flash_on_update: true,
+    
+    // Legacy
+    show_progress_bar: true,
+    progress_bar_style: 'bar',
     show_clock: true,
     show_date: true,
   };

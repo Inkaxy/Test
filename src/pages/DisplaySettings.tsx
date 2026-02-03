@@ -9,12 +9,16 @@ import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuthStore } from '@/stores/authStore';
 import { useCategories } from '@/hooks/useCategories';
 import { DisplaySettings, getDefaultDisplaySettings, DisplayType, DISPLAY_TYPES } from '@/hooks/useDisplayOrders';
-import { Monitor, Smartphone, Palette, Layout, Settings2, ExternalLink, Loader2, Users, Package } from 'lucide-react';
+import { 
+  Monitor, Smartphone, ExternalLink, Loader2, Users, Package, 
+  Type, BarChart3, LayoutGrid, Sparkles, Layout, Zap, Bell 
+} from 'lucide-react';
 
 export default function DisplaySettingsPage() {
   const { t } = useTranslation();
@@ -45,7 +49,7 @@ export default function DisplaySettingsPage() {
     enabled: !!bakeryId,
   });
   
-  // Fetch existing settings for the selected display type and category
+  // Fetch existing settings
   const { data: existingSettings, isLoading } = useQuery({
     queryKey: ['display-settings-admin', bakeryId, selectedDisplayType, selectedCategoryId],
     queryFn: async () => {
@@ -76,7 +80,6 @@ export default function DisplaySettingsPage() {
     enabled: !!bakeryId,
   });
   
-  // Reset settings when display type or category changes
   useEffect(() => {
     if (existingSettings?.settings) {
       setSettings(existingSettings.settings);
@@ -144,8 +147,6 @@ export default function DisplaySettingsPage() {
       return `${base}/display/shared/${bakery.short_id}`;
     }
     
-    // Customer display doesn't have a direct preview URL (requires token)
-    // Packing display is the internal packing page
     return null;
   };
 
@@ -156,6 +157,26 @@ export default function DisplaySettingsPage() {
       case 'packing': return <Package className="h-4 w-4" />;
     }
   };
+
+  // Color input component
+  const ColorInput = ({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) => (
+    <div className="space-y-2">
+      <Label className="text-sm">{label}</Label>
+      <div className="flex gap-2">
+        <Input
+          type="color"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-12 h-10 p-1 cursor-pointer"
+        />
+        <Input
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="flex-1 font-mono text-sm"
+        />
+      </div>
+    </div>
+  );
   
   return (
     <div className="space-y-6">
@@ -216,7 +237,6 @@ export default function DisplaySettingsPage() {
             </p>
           </div>
           
-          {/* Category selector - only for shared display */}
           {selectedDisplayType === 'shared' && (
             <div className="pt-2 border-t">
               <Label className="text-sm font-medium">Kategori-spesifikke innstillinger</Label>
@@ -248,255 +268,491 @@ export default function DisplaySettingsPage() {
         </div>
       ) : (
         <div className="grid gap-6 lg:grid-cols-2">
-          {/* Settings panels */}
-          <div className="space-y-6">
-            <Tabs defaultValue="colors">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="colors">
-                  <Palette className="h-4 w-4 mr-2" />
-                  Farger
-                </TabsTrigger>
-                <TabsTrigger value="layout">
-                  <Layout className="h-4 w-4 mr-2" />
-                  Layout
-                </TabsTrigger>
-                <TabsTrigger value="display">
-                  <Settings2 className="h-4 w-4 mr-2" />
-                  Visning
-                </TabsTrigger>
-              </TabsList>
+          {/* Settings accordion */}
+          <div className="space-y-4">
+            <Accordion type="multiple" defaultValue={['header', 'appearance']} className="space-y-2">
+              {/* Topptekst */}
+              <AccordionItem value="header" className="border rounded-lg px-4">
+                <AccordionTrigger className="hover:no-underline">
+                  <div className="flex items-center gap-3">
+                    <Type className="h-5 w-5 text-muted-foreground" />
+                    <span className="font-medium">Topptekst</span>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="space-y-4 pt-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label>Vis bakerinavn</Label>
+                      <p className="text-xs text-muted-foreground">Vis bakeriets navn i header</p>
+                    </div>
+                    <Switch
+                      checked={settings.header_show_bakery_name}
+                      onCheckedChange={(v) => updateSetting('header_show_bakery_name', v)}
+                    />
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label>Vis kategorinavn</Label>
+                      <p className="text-xs text-muted-foreground">Vis valgt kategori i header</p>
+                    </div>
+                    <Switch
+                      checked={settings.header_show_category_name}
+                      onCheckedChange={(v) => updateSetting('header_show_category_name', v)}
+                    />
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label>Vis klokke</Label>
+                      <p className="text-xs text-muted-foreground">Vis sanntidsklokke</p>
+                    </div>
+                    <Switch
+                      checked={settings.header_show_clock}
+                      onCheckedChange={(v) => updateSetting('header_show_clock', v)}
+                    />
+                  </div>
+                  
+                  {settings.header_show_clock && (
+                    <div className="space-y-2">
+                      <Label>Klokkeformat</Label>
+                      <Select 
+                        value={settings.header_clock_format} 
+                        onValueChange={(v) => updateSetting('header_clock_format', v as '12h' | '24h')}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="24h">24-timer (14:30)</SelectItem>
+                          <SelectItem value="12h">12-timer (2:30 PM)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                  
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label>Vis dato</Label>
+                      <p className="text-xs text-muted-foreground">Vis leveringsdato</p>
+                    </div>
+                    <Switch
+                      checked={settings.header_show_date}
+                      onCheckedChange={(v) => updateSetting('header_show_date', v)}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label>Fontstørrelse bakerinavn</Label>
+                    <Select 
+                      value={settings.header_bakery_font_size} 
+                      onValueChange={(v) => updateSetting('header_bakery_font_size', v)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="1.5rem">Liten</SelectItem>
+                        <SelectItem value="1.875rem">Normal</SelectItem>
+                        <SelectItem value="2.25rem">Stor</SelectItem>
+                        <SelectItem value="3rem">Ekstra stor</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
               
-              <TabsContent value="colors" className="space-y-4 mt-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Fargepalett</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label>Bakgrunnsfarge</Label>
-                        <div className="flex gap-2">
-                          <Input
-                            type="color"
-                            value={settings.background_color}
-                            onChange={(e) => updateSetting('background_color', e.target.value)}
-                            className="w-12 h-10 p-1"
-                          />
-                          <Input
-                            value={settings.background_color}
-                            onChange={(e) => updateSetting('background_color', e.target.value)}
-                            className="flex-1"
-                          />
-                        </div>
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Label>Kortbakgrunn</Label>
-                        <div className="flex gap-2">
-                          <Input
-                            type="color"
-                            value={settings.card_background_color}
-                            onChange={(e) => updateSetting('card_background_color', e.target.value)}
-                            className="w-12 h-10 p-1"
-                          />
-                          <Input
-                            value={settings.card_background_color}
-                            onChange={(e) => updateSetting('card_background_color', e.target.value)}
-                            className="flex-1"
-                          />
-                        </div>
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Label>Tekstfarge</Label>
-                        <div className="flex gap-2">
-                          <Input
-                            type="color"
-                            value={settings.text_color}
-                            onChange={(e) => updateSetting('text_color', e.target.value)}
-                            className="w-12 h-10 p-1"
-                          />
-                          <Input
-                            value={settings.text_color}
-                            onChange={(e) => updateSetting('text_color', e.target.value)}
-                            className="flex-1"
-                          />
-                        </div>
-                      </div>
+              {/* Statistikk-kort */}
+              <AccordionItem value="stats" className="border rounded-lg px-4">
+                <AccordionTrigger className="hover:no-underline">
+                  <div className="flex items-center gap-3">
+                    <BarChart3 className="h-5 w-5 text-muted-foreground" />
+                    <span className="font-medium">Statistikk-kort</span>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="space-y-4 pt-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label>Vis total fremdrift</Label>
+                      <p className="text-xs text-muted-foreground">Overordnet prosent ferdig</p>
+                    </div>
+                    <Switch
+                      checked={settings.stats_show_total_progress}
+                      onCheckedChange={(v) => updateSetting('stats_show_total_progress', v)}
+                    />
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label>Vis antall pakket</Label>
+                      <p className="text-xs text-muted-foreground">Antall ordrer som er pakket</p>
+                    </div>
+                    <Switch
+                      checked={settings.stats_show_packed_count}
+                      onCheckedChange={(v) => updateSetting('stats_show_packed_count', v)}
+                    />
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label>Vis gjenstående</Label>
+                      <p className="text-xs text-muted-foreground">Antall ordrer som gjenstår</p>
+                    </div>
+                    <Switch
+                      checked={settings.stats_show_remaining_count}
+                      onCheckedChange={(v) => updateSetting('stats_show_remaining_count', v)}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label>Fremdriftsbar stil</Label>
+                    <Select 
+                      value={settings.stats_progress_bar_style} 
+                      onValueChange={(v) => updateSetting('stats_progress_bar_style', v as 'bar' | 'circle' | 'none')}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="bar">Horisontal bar</SelectItem>
+                        <SelectItem value="circle">Sirkel</SelectItem>
+                        <SelectItem value="none">Ingen</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label>Fremdriftsbar høyde</Label>
+                    <Select 
+                      value={settings.stats_progress_bar_height} 
+                      onValueChange={(v) => updateSetting('stats_progress_bar_height', v)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="0.5rem">Tynn</SelectItem>
+                        <SelectItem value="1rem">Normal</SelectItem>
+                        <SelectItem value="1.5rem">Bred</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+              
+              {/* Kundekort */}
+              <AccordionItem value="cards" className="border rounded-lg px-4">
+                <AccordionTrigger className="hover:no-underline">
+                  <div className="flex items-center gap-3">
+                    <LayoutGrid className="h-5 w-5 text-muted-foreground" />
+                    <span className="font-medium">Kundekort</span>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="space-y-4 pt-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label>Vis kundenummer</Label>
+                      <p className="text-xs text-muted-foreground">Vis kundenummer under navn</p>
+                    </div>
+                    <Switch
+                      checked={settings.card_show_customer_number}
+                      onCheckedChange={(v) => updateSetting('card_show_customer_number', v)}
+                    />
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label>Vis produktliste</Label>
+                      <p className="text-xs text-muted-foreground">Vis liste over produkter</p>
+                    </div>
+                    <Switch
+                      checked={settings.card_show_product_list}
+                      onCheckedChange={(v) => updateSetting('card_show_product_list', v)}
+                    />
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label>Vis produktnumre</Label>
+                      <p className="text-xs text-muted-foreground">Vis produktnummer ved navn</p>
+                    </div>
+                    <Switch
+                      checked={settings.card_show_product_numbers}
+                      onCheckedChange={(v) => updateSetting('card_show_product_numbers', v)}
+                    />
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label>Vis antall som brett</Label>
+                      <p className="text-xs text-muted-foreground">Konverter stykker til brett</p>
+                    </div>
+                    <Switch
+                      checked={settings.card_show_quantity_as_trays}
+                      onCheckedChange={(v) => updateSetting('card_show_quantity_as_trays', v)}
+                    />
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label>Vis individuell fremdrift</Label>
+                      <p className="text-xs text-muted-foreground">Fremdriftsbar per kunde</p>
+                    </div>
+                    <Switch
+                      checked={settings.card_show_individual_progress}
+                      onCheckedChange={(v) => updateSetting('card_show_individual_progress', v)}
+                    />
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label>Kompakt modus</Label>
+                      <p className="text-xs text-muted-foreground">Mindre plass per kort</p>
+                    </div>
+                    <Switch
+                      checked={settings.card_compact_mode}
+                      onCheckedChange={(v) => updateSetting('card_compact_mode', v)}
+                    />
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+              
+              {/* Utseende */}
+              <AccordionItem value="appearance" className="border rounded-lg px-4">
+                <AccordionTrigger className="hover:no-underline">
+                  <div className="flex items-center gap-3">
+                    <Sparkles className="h-5 w-5 text-muted-foreground" />
+                    <span className="font-medium">Utseende</span>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="space-y-4 pt-2">
+                  <div className="grid grid-cols-2 gap-4">
+                    <ColorInput 
+                      label="Bakgrunnsfarge" 
+                      value={settings.background_color}
+                      onChange={(v) => updateSetting('background_color', v)}
+                    />
+                    <ColorInput 
+                      label="Kortbakgrunn" 
+                      value={settings.card_background_color}
+                      onChange={(v) => updateSetting('card_background_color', v)}
+                    />
+                    <ColorInput 
+                      label="Tekstfarge" 
+                      value={settings.text_color}
+                      onChange={(v) => updateSetting('text_color', v)}
+                    />
+                  </div>
+                  
+                  <div className="border-t pt-4">
+                    <h4 className="text-sm font-medium mb-3">Statusfarger</h4>
+                    <div className="grid grid-cols-3 gap-3">
+                      <ColorInput 
+                        label="Venter" 
+                        value={settings.pending_color}
+                        onChange={(v) => updateSetting('pending_color', v)}
+                      />
+                      <ColorInput 
+                        label="Pakker" 
+                        value={settings.packing_color}
+                        onChange={(v) => updateSetting('packing_color', v)}
+                      />
+                      <ColorInput 
+                        label="Ferdig" 
+                        value={settings.completed_color}
+                        onChange={(v) => updateSetting('completed_color', v)}
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="border-t pt-4 space-y-4">
+                    <div className="space-y-2">
+                      <Label>Hjørneafrunding</Label>
+                      <Select 
+                        value={settings.border_radius} 
+                        onValueChange={(v) => updateSetting('border_radius', v)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="0">Ingen</SelectItem>
+                          <SelectItem value="0.375rem">Liten</SelectItem>
+                          <SelectItem value="0.75rem">Normal</SelectItem>
+                          <SelectItem value="1rem">Stor</SelectItem>
+                          <SelectItem value="1.5rem">Ekstra stor</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                     
-                    <div className="border-t pt-4">
-                      <h4 className="text-sm font-medium mb-3">Statusfarger</h4>
-                      <div className="grid grid-cols-3 gap-4">
-                        <div className="space-y-2">
-                          <Label>Venter</Label>
-                          <div className="flex gap-2">
-                            <Input
-                              type="color"
-                              value={settings.pending_color}
-                              onChange={(e) => updateSetting('pending_color', e.target.value)}
-                              className="w-12 h-10 p-1"
-                            />
-                            <Input
-                              value={settings.pending_color}
-                              onChange={(e) => updateSetting('pending_color', e.target.value)}
-                              className="flex-1 text-xs"
-                            />
-                          </div>
-                        </div>
-                        
-                        <div className="space-y-2">
-                          <Label>Pakker</Label>
-                          <div className="flex gap-2">
-                            <Input
-                              type="color"
-                              value={settings.packing_color}
-                              onChange={(e) => updateSetting('packing_color', e.target.value)}
-                              className="w-12 h-10 p-1"
-                            />
-                            <Input
-                              value={settings.packing_color}
-                              onChange={(e) => updateSetting('packing_color', e.target.value)}
-                              className="flex-1 text-xs"
-                            />
-                          </div>
-                        </div>
-                        
-                        <div className="space-y-2">
-                          <Label>Ferdig</Label>
-                          <div className="flex gap-2">
-                            <Input
-                              type="color"
-                              value={settings.completed_color}
-                              onChange={(e) => updateSetting('completed_color', e.target.value)}
-                              className="w-12 h-10 p-1"
-                            />
-                            <Input
-                              value={settings.completed_color}
-                              onChange={(e) => updateSetting('completed_color', e.target.value)}
-                              className="flex-1 text-xs"
-                            />
-                          </div>
-                        </div>
-                      </div>
+                    <div className="space-y-2">
+                      <Label>Kantlinje bredde</Label>
+                      <Select 
+                        value={settings.card_border_width} 
+                        onValueChange={(v) => updateSetting('card_border_width', v)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="2px">Tynn</SelectItem>
+                          <SelectItem value="4px">Normal</SelectItem>
+                          <SelectItem value="6px">Bred</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
               
-              <TabsContent value="layout" className="space-y-4 mt-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Layout</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    {selectedDisplayType === 'shared' && (
-                      <div className="space-y-2">
-                        <Label>Antall kolonner: {settings.columns}</Label>
-                        <Slider
-                          value={[settings.columns]}
-                          onValueChange={([v]) => updateSetting('columns', v)}
-                          min={1}
-                          max={6}
-                          step={1}
-                        />
+              {/* Layout & Scroll */}
+              <AccordionItem value="layout" className="border rounded-lg px-4">
+                <AccordionTrigger className="hover:no-underline">
+                  <div className="flex items-center gap-3">
+                    <Layout className="h-5 w-5 text-muted-foreground" />
+                    <span className="font-medium">Layout & Scroll</span>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="space-y-4 pt-2">
+                  {selectedDisplayType === 'shared' && (
+                    <div className="space-y-2">
+                      <Label>Antall kolonner: {settings.columns}</Label>
+                      <Slider
+                        value={[settings.columns]}
+                        onValueChange={([v]) => updateSetting('columns', v)}
+                        min={1}
+                        max={6}
+                        step={1}
+                      />
+                    </div>
+                  )}
+                  
+                  <div className="space-y-2">
+                    <Label>Kundenavn fontstørrelse</Label>
+                    <Select 
+                      value={settings.customer_name_font_size} 
+                      onValueChange={(v) => updateSetting('customer_name_font_size', v)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="1.5rem">Liten</SelectItem>
+                        <SelectItem value="2rem">Normal</SelectItem>
+                        <SelectItem value="2.5rem">Stor</SelectItem>
+                        <SelectItem value="3rem">Ekstra stor</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label>Produktnavn fontstørrelse</Label>
+                    <Select 
+                      value={settings.product_font_size} 
+                      onValueChange={(v) => updateSetting('product_font_size', v)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="0.875rem">Liten</SelectItem>
+                        <SelectItem value="1rem">Normal</SelectItem>
+                        <SelectItem value="1.25rem">Stor</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label>Mellomrom mellom kort</Label>
+                    <Select 
+                      value={settings.gap_size} 
+                      onValueChange={(v) => updateSetting('gap_size', v)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="0.5rem">Liten</SelectItem>
+                        <SelectItem value="1rem">Normal</SelectItem>
+                        <SelectItem value="1.5rem">Stor</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="border-t pt-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label>Auto-scroll</Label>
+                        <p className="text-xs text-muted-foreground">Rull automatisk gjennom innhold</p>
                       </div>
+                      <Switch
+                        checked={settings.auto_scroll_enabled}
+                        onCheckedChange={(v) => updateSetting('auto_scroll_enabled', v)}
+                      />
+                    </div>
+                    
+                    {settings.auto_scroll_enabled && (
+                      <>
+                        <div className="space-y-2 mt-4">
+                          <Label>Scroll-hastighet</Label>
+                          <Select 
+                            value={settings.auto_scroll_speed} 
+                            onValueChange={(v) => updateSetting('auto_scroll_speed', v as 'slow' | 'medium' | 'fast')}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="slow">Langsom</SelectItem>
+                              <SelectItem value="medium">Normal</SelectItem>
+                              <SelectItem value="fast">Rask</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        
+                        <div className="flex items-center justify-between mt-4">
+                          <div>
+                            <Label>Pause ved hover</Label>
+                            <p className="text-xs text-muted-foreground">Stopp scroll når mus er over</p>
+                          </div>
+                          <Switch
+                            checked={settings.auto_scroll_pause_on_hover}
+                            onCheckedChange={(v) => updateSetting('auto_scroll_pause_on_hover', v)}
+                          />
+                        </div>
+                      </>
                     )}
-                    
-                    <div className="space-y-2">
-                      <Label>Kundenavn fontstørrelse</Label>
-                      <Select 
-                        value={settings.customer_name_font_size} 
-                        onValueChange={(v) => updateSetting('customer_name_font_size', v)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="1.5rem">Liten</SelectItem>
-                          <SelectItem value="2rem">Normal</SelectItem>
-                          <SelectItem value="2.5rem">Stor</SelectItem>
-                          <SelectItem value="3rem">Ekstra stor</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label>Produktnavn fontstørrelse</Label>
-                      <Select 
-                        value={settings.product_font_size} 
-                        onValueChange={(v) => updateSetting('product_font_size', v)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="0.875rem">Liten</SelectItem>
-                          <SelectItem value="1rem">Normal</SelectItem>
-                          <SelectItem value="1.25rem">Stor</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
               
-              <TabsContent value="display" className="space-y-4 mt-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Visningsalternativer</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Label>Vis klokke</Label>
-                        <p className="text-sm text-muted-foreground">Vis sanntidsklokke i header</p>
-                      </div>
-                      <Switch
-                        checked={settings.show_clock}
-                        onCheckedChange={(v) => updateSetting('show_clock', v)}
-                      />
+              {/* Animasjoner */}
+              <AccordionItem value="animations" className="border rounded-lg px-4">
+                <AccordionTrigger className="hover:no-underline">
+                  <div className="flex items-center gap-3">
+                    <Zap className="h-5 w-5 text-muted-foreground" />
+                    <span className="font-medium">Animasjoner</span>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="space-y-4 pt-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label>Aktiver animasjoner</Label>
+                      <p className="text-xs text-muted-foreground">Generelle overganger og effekter</p>
                     </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Label>Vis dato</Label>
-                        <p className="text-sm text-muted-foreground">Vis leveringsdato i header</p>
-                      </div>
-                      <Switch
-                        checked={settings.show_date}
-                        onCheckedChange={(v) => updateSetting('show_date', v)}
-                      />
-                    </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Label>Vis fremdriftsbar</Label>
-                        <p className="text-sm text-muted-foreground">Vis total pakkefremdrift</p>
-                      </div>
-                      <Switch
-                        checked={settings.show_progress_bar}
-                        onCheckedChange={(v) => updateSetting('show_progress_bar', v)}
-                      />
-                    </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Label>Animasjoner</Label>
-                        <p className="text-sm text-muted-foreground">Aktiver overganger og animasjoner</p>
-                      </div>
-                      <Switch
-                        checked={settings.animation_enabled}
-                        onCheckedChange={(v) => updateSetting('animation_enabled', v)}
-                      />
-                    </div>
-                    
-                    {settings.animation_enabled && (
+                    <Switch
+                      checked={settings.animation_enabled}
+                      onCheckedChange={(v) => updateSetting('animation_enabled', v)}
+                    />
+                  </div>
+                  
+                  {settings.animation_enabled && (
+                    <>
                       <div className="space-y-2">
                         <Label>Animasjonshastighet</Label>
                         <Select 
                           value={settings.animation_speed} 
-                          onValueChange={(v) => updateSetting('animation_speed', v)}
+                          onValueChange={(v) => updateSetting('animation_speed', v as 'fast' | 'normal' | 'slow')}
                         >
                           <SelectTrigger>
                             <SelectValue />
@@ -508,11 +764,113 @@ export default function DisplaySettingsPage() {
                           </SelectContent>
                         </Select>
                       </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </Tabs>
+                      
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <Label>Animasjon ved statusendring</Label>
+                          <p className="text-xs text-muted-foreground">Animer når status endres</p>
+                        </div>
+                        <Switch
+                          checked={settings.animation_on_status_change}
+                          onCheckedChange={(v) => updateSetting('animation_on_status_change', v)}
+                        />
+                      </div>
+                      
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <Label>Marker nylig oppdatert</Label>
+                          <p className="text-xs text-muted-foreground">Fremhev kort som nettopp ble oppdatert</p>
+                        </div>
+                        <Switch
+                          checked={settings.animation_highlight_new}
+                          onCheckedChange={(v) => updateSetting('animation_highlight_new', v)}
+                        />
+                      </div>
+                      
+                      {settings.animation_highlight_new && (
+                        <div className="space-y-2">
+                          <Label>Fremhevingsvarighet: {settings.animation_highlight_duration / 1000}s</Label>
+                          <Slider
+                            value={[settings.animation_highlight_duration]}
+                            onValueChange={([v]) => updateSetting('animation_highlight_duration', v)}
+                            min={1000}
+                            max={10000}
+                            step={1000}
+                          />
+                        </div>
+                      )}
+                    </>
+                  )}
+                </AccordionContent>
+              </AccordionItem>
+              
+              {/* Sanntid & Status */}
+              <AccordionItem value="realtime" className="border rounded-lg px-4">
+                <AccordionTrigger className="hover:no-underline">
+                  <div className="flex items-center gap-3">
+                    <Bell className="h-5 w-5 text-muted-foreground" />
+                    <span className="font-medium">Sanntid & Status</span>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="space-y-4 pt-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label>Vis tilkoblingsstatus</Label>
+                      <p className="text-xs text-muted-foreground">Indikator for sanntidstilkobling</p>
+                    </div>
+                    <Switch
+                      checked={settings.realtime_show_connection_status}
+                      onCheckedChange={(v) => updateSetting('realtime_show_connection_status', v)}
+                    />
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label>Vis siste oppdatering</Label>
+                      <p className="text-xs text-muted-foreground">Tidspunkt for siste datahenting</p>
+                    </div>
+                    <Switch
+                      checked={settings.realtime_show_last_update}
+                      onCheckedChange={(v) => updateSetting('realtime_show_last_update', v)}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label>Auto-oppdatering: hvert {settings.realtime_auto_refresh_interval}s</Label>
+                    <Slider
+                      value={[settings.realtime_auto_refresh_interval]}
+                      onValueChange={([v]) => updateSetting('realtime_auto_refresh_interval', v)}
+                      min={15}
+                      max={300}
+                      step={15}
+                    />
+                    <p className="text-xs text-muted-foreground">Fallback hvis sanntid feiler</p>
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label>Lyd ved ferdig pakket</Label>
+                      <p className="text-xs text-muted-foreground">Spill lyd når kunde er ferdig</p>
+                    </div>
+                    <Switch
+                      checked={settings.realtime_sound_on_complete}
+                      onCheckedChange={(v) => updateSetting('realtime_sound_on_complete', v)}
+                    />
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label>Flash ved oppdatering</Label>
+                      <p className="text-xs text-muted-foreground">Kort visuell markering ved endring</p>
+                    </div>
+                    <Switch
+                      checked={settings.realtime_flash_on_update}
+                      onCheckedChange={(v) => updateSetting('realtime_flash_on_update', v)}
+                    />
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
           </div>
           
           {/* Live preview */}
@@ -528,37 +886,89 @@ export default function DisplaySettingsPage() {
             </CardHeader>
             <CardContent>
               <div
-                className="rounded-lg p-4 min-h-[400px]"
+                className="rounded-lg overflow-hidden min-h-[450px]"
                 style={{
                   backgroundColor: settings.background_color,
                   color: settings.text_color,
+                  padding: settings.padding,
                 }}
               >
                 {/* Preview header */}
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-bold">
-                    {selectedDisplayType === 'customer' ? 'Meny Heimdal' : bakery?.name || 'Bakeri'}
-                  </h3>
-                  {settings.show_clock && (
-                    <span className="font-mono text-sm">12:34:56</span>
-                  )}
+                  <div>
+                    {settings.header_show_bakery_name && (
+                      <h3 className="font-bold" style={{ fontSize: settings.header_bakery_font_size }}>
+                        {selectedDisplayType === 'customer' ? 'Meny Heimdal' : bakery?.name || 'Bakeri'}
+                      </h3>
+                    )}
+                    {settings.header_show_category_name && selectedDisplayType === 'shared' && (
+                      <p className="text-sm opacity-70">Alle produkter</p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-4 text-sm">
+                    {settings.realtime_show_connection_status && (
+                      <span className="flex items-center gap-1">
+                        <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                      </span>
+                    )}
+                    {settings.header_show_clock && (
+                      <span className="font-mono">
+                        {settings.header_clock_format === '24h' ? '14:32:45' : '2:32 PM'}
+                      </span>
+                    )}
+                    {settings.header_show_date && (
+                      <span>Tirsdag 3. feb</span>
+                    )}
+                  </div>
                 </div>
                 
-                {/* Preview based on display type */}
+                {/* Stats preview */}
+                {settings.stats_show_total_progress && (
+                  <div className="mb-4">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-sm">Total fremdrift</span>
+                      <span className="font-bold">
+                        {settings.stats_show_packed_count && '8 / 15 '}
+                        (53%)
+                      </span>
+                    </div>
+                    {settings.stats_progress_bar_style !== 'none' && (
+                      <div
+                        className="rounded"
+                        style={{ 
+                          backgroundColor: `${settings.pending_color}40`,
+                          height: settings.stats_progress_bar_height,
+                        }}
+                      >
+                        <div
+                          className="h-full rounded"
+                          style={{ 
+                            width: '53%',
+                            backgroundColor: settings.packing_color,
+                          }}
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+                
+                {/* Cards preview */}
                 {selectedDisplayType === 'shared' && (
                   <div
-                    className="grid gap-2"
+                    className="grid"
                     style={{
                       gridTemplateColumns: `repeat(${Math.min(settings.columns, 3)}, 1fr)`,
+                      gap: settings.gap_size,
                     }}
                   >
-                    {['Meny Heimdal', 'Kiwi Foyn', 'Spar Kullboden'].map((name, i) => (
+                    {['Meny Heimdal', 'Kiwi Foyn', 'Spar'].map((name, i) => (
                       <div
                         key={name}
-                        className="rounded-lg p-3"
+                        className="p-3"
                         style={{
                           backgroundColor: settings.card_background_color,
-                          borderLeft: `3px solid ${
+                          borderRadius: settings.border_radius,
+                          borderLeft: `${settings.card_border_width} solid ${
                             i === 0 ? settings.completed_color : 
                             i === 1 ? settings.packing_color : 
                             settings.pending_color
@@ -571,40 +981,66 @@ export default function DisplaySettingsPage() {
                         >
                           {name}
                         </h4>
-                        <div
-                          className="h-1 rounded mt-2"
-                          style={{ backgroundColor: `${settings.pending_color}40` }}
-                        >
-                          <div
-                            className="h-full rounded"
-                            style={{
-                              width: i === 0 ? '100%' : i === 1 ? '60%' : '0%',
-                              backgroundColor: i === 0 ? settings.completed_color : settings.packing_color,
-                            }}
-                          />
-                        </div>
-                        <p className="text-xs mt-1 opacity-70">
-                          {i === 0 ? '5/5' : i === 1 ? '3/5' : '0/5'} produkter
-                        </p>
+                        {settings.card_show_customer_number && (
+                          <p className="text-xs opacity-50">#{1000 + i}</p>
+                        )}
+                        {settings.card_show_individual_progress && (
+                          <>
+                            <div
+                              className="h-1 rounded mt-2"
+                              style={{ backgroundColor: `${settings.pending_color}40` }}
+                            >
+                              <div
+                                className="h-full rounded"
+                                style={{
+                                  width: i === 0 ? '100%' : i === 1 ? '60%' : '0%',
+                                  backgroundColor: i === 0 ? settings.completed_color : settings.packing_color,
+                                }}
+                              />
+                            </div>
+                            <p className="text-xs mt-1 opacity-70">
+                              {i === 0 ? '5/5' : i === 1 ? '3/5' : '0/5'}
+                            </p>
+                          </>
+                        )}
+                        {settings.card_show_product_list && !settings.card_compact_mode && (
+                          <div className="mt-2 space-y-1">
+                            {['Grovbrød', 'Rundstykker'].slice(0, i === 2 ? 2 : 1).map((p, j) => (
+                              <div 
+                                key={p} 
+                                className="flex justify-between"
+                                style={{ 
+                                  fontSize: `calc(${settings.product_font_size} * 0.85)`,
+                                  opacity: i === 0 || (i === 1 && j === 0) ? 0.5 : 1,
+                                  textDecoration: i === 0 || (i === 1 && j === 0) ? 'line-through' : 'none',
+                                }}
+                              >
+                                <span className="truncate">{p}</span>
+                                <span className="font-mono ml-1">5</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
                 )}
                 
                 {selectedDisplayType === 'customer' && (
-                  <div className="space-y-3">
+                  <div className="space-y-2">
                     {['Grovbrød', 'Rundstykker', 'Croissant'].map((name, i) => (
                       <div
                         key={name}
-                        className="flex items-center gap-4 rounded-lg p-3"
+                        className="flex items-center gap-3 p-3"
                         style={{
                           backgroundColor: settings.card_background_color,
-                          borderLeft: `4px solid ${i === 0 ? settings.completed_color : settings.pending_color}`,
+                          borderRadius: settings.border_radius,
+                          borderLeft: `${settings.card_border_width} solid ${i === 0 ? settings.completed_color : settings.pending_color}`,
                           opacity: i === 0 ? 0.6 : 1,
                         }}
                       >
                         <div
-                          className="w-8 h-8 rounded-full flex items-center justify-center"
+                          className="w-8 h-8 rounded-full flex items-center justify-center text-sm"
                           style={{
                             backgroundColor: i === 0 
                               ? `${settings.completed_color}33` 
@@ -614,19 +1050,24 @@ export default function DisplaySettingsPage() {
                           {i === 0 ? '✓' : '○'}
                         </div>
                         <div className="flex-1">
-                          <h4 
+                          <span 
                             className="font-bold"
                             style={{ 
-                              fontSize: `calc(${settings.customer_name_font_size} * 0.6)`,
+                              fontSize: settings.product_font_size,
                               textDecoration: i === 0 ? 'line-through' : 'none'
                             }}
                           >
                             {name}
-                          </h4>
-                          <p className="text-xs opacity-70">PRD-00{i+1}</p>
+                          </span>
+                          {settings.card_show_product_numbers && (
+                            <span className="text-xs opacity-50 ml-2">PRD-00{i+1}</span>
+                          )}
                         </div>
                         <span className="font-mono font-bold">
-                          {i === 0 ? '10 stk' : i === 1 ? '2 pl' : '5 stk'}
+                          {settings.card_show_quantity_as_trays 
+                            ? (i === 1 ? '2 pl' : `${(i+1)*5} stk`)
+                            : `${(i+1)*5} stk`
+                          }
                         </span>
                       </div>
                     ))}
@@ -638,9 +1079,10 @@ export default function DisplaySettingsPage() {
                     {['Grovbrød', 'Rundstykker', 'Croissant', 'Baguette'].map((name, i) => (
                       <div
                         key={name}
-                        className="flex items-center justify-between rounded-lg p-2"
+                        className="flex items-center justify-between p-2"
                         style={{
                           backgroundColor: settings.card_background_color,
+                          borderRadius: settings.border_radius,
                         }}
                       >
                         <div className="flex items-center gap-3">
@@ -667,25 +1109,6 @@ export default function DisplaySettingsPage() {
                         <span className="font-mono text-sm">{(i+1)*5} stk</span>
                       </div>
                     ))}
-                  </div>
-                )}
-                
-                {/* Progress bar preview */}
-                {settings.show_progress_bar && (
-                  <div className="mt-4 pt-4 border-t border-white/20">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm">Fremdrift</span>
-                      <span className="font-bold">50%</span>
-                    </div>
-                    <div
-                      className="h-2 rounded"
-                      style={{ backgroundColor: `${settings.pending_color}40` }}
-                    >
-                      <div
-                        className="h-full rounded w-1/2"
-                        style={{ backgroundColor: settings.packing_color }}
-                      />
-                    </div>
                   </div>
                 )}
               </div>
