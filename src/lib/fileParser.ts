@@ -343,32 +343,95 @@ export function parseOd0File(content: string): { orders: ParsedOrder[]; errors: 
 
 /**
  * Extract delivery date from filename
- * Expected format: DD-MM-YYYY.ext or YYYY-MM-DD.ext
+ * Supported formats:
+ * - DD-MM-YYYY (e.g., 02-02-2026)
+ * - DD.MM.YYYY (e.g., 02.02.2026)
+ * - DDMMYYYY (e.g., 02022026)
+ * - YYYY-MM-DD (e.g., 2026-02-02)
+ * - YYYY.MM.DD (e.g., 2026.02.02)
+ * - YYYYMMDD (e.g., 20260202)
  */
 export function extractDateFromFilename(filename: string): Date | null {
   // Remove extension
   const nameWithoutExt = filename.replace(/\.[^.]+$/, '');
   
-  // Try DD-MM-YYYY format
-  const ddmmyyyy = nameWithoutExt.match(/(\d{2})-(\d{2})-(\d{4})/);
-  if (ddmmyyyy) {
-    const [, day, month, year] = ddmmyyyy;
+  // Try DD-MM-YYYY format (dashes)
+  const ddmmyyyyDash = nameWithoutExt.match(/(\d{2})-(\d{2})-(\d{4})/);
+  if (ddmmyyyyDash) {
+    const [, day, month, year] = ddmmyyyyDash;
     const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
     if (!isNaN(date.getTime())) {
+      console.log(`Date extracted from filename (DD-MM-YYYY): ${date.toISOString()}`);
       return date;
     }
   }
   
-  // Try YYYY-MM-DD format
-  const yyyymmdd = nameWithoutExt.match(/(\d{4})-(\d{2})-(\d{2})/);
-  if (yyyymmdd) {
-    const [, year, month, day] = yyyymmdd;
+  // Try DD.MM.YYYY format (dots)
+  const ddmmyyyyDot = nameWithoutExt.match(/(\d{2})\.(\d{2})\.(\d{4})/);
+  if (ddmmyyyyDot) {
+    const [, day, month, year] = ddmmyyyyDot;
     const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
     if (!isNaN(date.getTime())) {
+      console.log(`Date extracted from filename (DD.MM.YYYY): ${date.toISOString()}`);
       return date;
     }
   }
   
+  // Try YYYY-MM-DD format (ISO with dashes)
+  const yyyymmddDash = nameWithoutExt.match(/(\d{4})-(\d{2})-(\d{2})/);
+  if (yyyymmddDash) {
+    const [, year, month, day] = yyyymmddDash;
+    const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+    if (!isNaN(date.getTime())) {
+      console.log(`Date extracted from filename (YYYY-MM-DD): ${date.toISOString()}`);
+      return date;
+    }
+  }
+  
+  // Try YYYY.MM.DD format (ISO with dots)
+  const yyyymmddDot = nameWithoutExt.match(/(\d{4})\.(\d{2})\.(\d{2})/);
+  if (yyyymmddDot) {
+    const [, year, month, day] = yyyymmddDot;
+    const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+    if (!isNaN(date.getTime())) {
+      console.log(`Date extracted from filename (YYYY.MM.DD): ${date.toISOString()}`);
+      return date;
+    }
+  }
+  
+  // Try compact YYYYMMDD format (8 consecutive digits starting with 19 or 20)
+  const yyyymmddCompact = nameWithoutExt.match(/((?:19|20)\d{2})(\d{2})(\d{2})/);
+  if (yyyymmddCompact) {
+    const [, year, month, day] = yyyymmddCompact;
+    const monthNum = parseInt(month);
+    const dayNum = parseInt(day);
+    // Validate month and day ranges
+    if (monthNum >= 1 && monthNum <= 12 && dayNum >= 1 && dayNum <= 31) {
+      const date = new Date(parseInt(year), monthNum - 1, dayNum);
+      if (!isNaN(date.getTime())) {
+        console.log(`Date extracted from filename (YYYYMMDD): ${date.toISOString()}`);
+        return date;
+      }
+    }
+  }
+  
+  // Try compact DDMMYYYY format (8 consecutive digits ending with 19 or 20xx)
+  const ddmmyyyyCompact = nameWithoutExt.match(/(\d{2})(\d{2})((?:19|20)\d{2})/);
+  if (ddmmyyyyCompact) {
+    const [, day, month, year] = ddmmyyyyCompact;
+    const monthNum = parseInt(month);
+    const dayNum = parseInt(day);
+    // Validate month and day ranges to distinguish from YYYYMMDD
+    if (monthNum >= 1 && monthNum <= 12 && dayNum >= 1 && dayNum <= 31) {
+      const date = new Date(parseInt(year), monthNum - 1, dayNum);
+      if (!isNaN(date.getTime())) {
+        console.log(`Date extracted from filename (DDMMYYYY): ${date.toISOString()}`);
+        return date;
+      }
+    }
+  }
+  
+  console.log(`Could not extract date from filename: ${filename}`);
   return null;
 }
 
