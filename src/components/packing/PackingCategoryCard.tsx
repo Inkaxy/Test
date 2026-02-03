@@ -36,15 +36,13 @@ export const CARD_COLORS = [
 interface PackingCategoryCardProps {
   category: Category;
   onOneDriveConfig: () => void;
-  isDragging?: boolean;
-  dragHandleProps?: React.HTMLAttributes<HTMLDivElement>;
+  isEditMode?: boolean;
 }
 
 export function PackingCategoryCard({ 
   category, 
   onOneDriveConfig,
-  isDragging,
-  dragHandleProps 
+  isEditMode = false
 }: PackingCategoryCardProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -184,22 +182,18 @@ export function PackingCategoryCard({
       {/* Main Card */}
       <Card 
         className={cn(
-          "group relative cursor-pointer transition-all duration-300",
-          "hover:shadow-xl hover:-translate-y-1 hover:scale-[1.02]",
+          "group relative transition-all duration-300",
           colorConfig.class,
-          "active:scale-[0.98]",
-          isDragging && "opacity-50 rotate-2 scale-105"
+          isEditMode 
+            ? "cursor-grab active:cursor-grabbing" 
+            : "cursor-pointer hover:shadow-xl hover:-translate-y-1 hover:scale-[1.02] active:scale-[0.98]"
         )}
-        onClick={handleCardClick}
+        onClick={isEditMode ? undefined : handleCardClick}
       >
         <CardContent className="flex flex-col items-center justify-center p-6 min-h-[180px] relative">
-          {/* Drag handle */}
-          {dragHandleProps && (
-            <div 
-              {...dragHandleProps}
-              className="absolute top-2 left-2 cursor-grab active:cursor-grabbing opacity-40 hover:opacity-100 transition-opacity"
-              onClick={(e) => e.stopPropagation()}
-            >
+          {/* Drag handle indicator in edit mode */}
+          {isEditMode && (
+            <div className="absolute top-2 left-2 opacity-60">
               <GripVertical className={cn("h-5 w-5", colorConfig.textClass)} />
             </div>
           )}
@@ -216,13 +210,15 @@ export function PackingCategoryCard({
               : t('categories.customerBased').toLowerCase()})
           </p>
           
-          {/* Start packing hint on hover */}
-          <div className="absolute bottom-4 left-0 right-0 flex justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-            <Badge variant="secondary" className="gap-1 bg-white/90 text-foreground">
-              <Play className="h-3 w-3" />
-              Start pakking
-            </Badge>
-          </div>
+          {/* Start packing hint on hover - only show when not in edit mode */}
+          {!isEditMode && (
+            <div className="absolute bottom-4 left-0 right-0 flex justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+              <Badge variant="secondary" className="gap-1 bg-white/90 text-foreground">
+                <Play className="h-3 w-3" />
+                Start pakking
+              </Badge>
+            </div>
+          )}
           
           {/* Menu button */}
           <Popover open={isMenuOpen} onOpenChange={setIsMenuOpen}>
@@ -300,7 +296,7 @@ export function PackingCategoryCard({
           </Popover>
           
           {/* OneDrive connected indicator */}
-          {isConfigured && !dragHandleProps && (
+          {isConfigured && !isEditMode && (
             <div className="absolute top-2 left-2">
               <Cloud className={cn("h-4 w-4 opacity-60", colorConfig.textClass)} />
             </div>

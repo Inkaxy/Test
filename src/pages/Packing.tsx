@@ -1,6 +1,7 @@
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Loader2, Settings, GripVertical } from 'lucide-react';
+import { Reorder, AnimatePresence, motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { useCategories, useUpdateCategory, Category } from '@/hooks/useCategories';
 import { useAuthStore } from '@/stores/authStore';
@@ -18,54 +19,53 @@ export default function Packing() {
   const updateCategory = useUpdateCategory();
   const [oneDriveCategory, setOneDriveCategory] = useState<Category | null>(null);
   const [isEditMode, setIsEditMode] = useState(false);
-  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [orderedCategories, setOrderedCategories] = useState<Category[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
   
   const activeCategories = categories.filter(c => c.is_active);
   const isAdmin = isBakeryAdmin() || isSuperAdmin();
   
-  // Drag and drop handlers
-  const handleDragStart = (index: number) => {
-    setDraggedIndex(index);
+  // Sync ordered categories when categories change or edit mode is toggled
+  const displayCategories = isEditMode ? orderedCategories : activeCategories;
+  
+  // Handle reorder from framer-motion
+  const handleReorder = (newOrder: Category[]) => {
+    setOrderedCategories(newOrder);
   };
   
-  const handleDragOver = (e: React.DragEvent, index: number) => {
-    e.preventDefault();
-    if (draggedIndex === null || draggedIndex === index) return;
-  };
-  
-  const handleDrop = async (e: React.DragEvent, dropIndex: number) => {
-    e.preventDefault();
-    if (draggedIndex === null || draggedIndex === dropIndex) {
-      setDraggedIndex(null);
-      return;
-    }
-    
-    const draggedCategory = activeCategories[draggedIndex];
-    const newOrder = [...activeCategories];
-    newOrder.splice(draggedIndex, 1);
-    newOrder.splice(dropIndex, 0, draggedCategory);
-    
-    // Update sort orders in database
-    try {
-      await Promise.all(
-        newOrder.map((cat, idx) => 
-          updateCategory.mutateAsync({ id: cat.id, sort_order: idx })
-        )
+  // Save order when exiting edit mode
+  const handleToggleEditMode = async () => {
+    if (isEditMode && orderedCategories.length > 0) {
+      // Check if order changed
+      const hasChanged = orderedCategories.some(
+        (cat, idx) => cat.id !== activeCategories[idx]?.id
       );
-      toast({ title: 'Rekkefølge oppdatert' });
-    } catch (error) {
-      toast({
-        variant: 'destructive',
-        title: 'Feil',
-        description: 'Kunne ikke oppdatere rekkefølge',
-      });
+      
+      if (hasChanged) {
+        setIsSaving(true);
+        try {
+          await Promise.all(
+            orderedCategories.map((cat, idx) => 
+              updateCategory.mutateAsync({ id: cat.id, sort_order: idx })
+            )
+          );
+          toast({ title: 'Rekkefølge oppdatert' });
+        } catch (error) {
+          toast({
+            variant: 'destructive',
+            title: 'Feil',
+            description: 'Kunne ikke oppdatere rekkefølge',
+          });
+        } finally {
+          setIsSaving(false);
+        }
+      }
+      setIsEditMode(false);
+    } else {
+      // Entering edit mode - initialize ordered categories
+      setOrderedCategories([...activeCategories]);
+      setIsEditMode(true);
     }
-    
-    setDraggedIndex(null);
-  };
-  
-  const handleDragEnd = () => {
-    setDraggedIndex(null);
   };
   
   if (isLoading) {
@@ -92,9 +92,15 @@ export default function Packing() {
             variant={isEditMode ? "default" : "outline"}
             size="sm"
             className="gap-2"
-            onClick={() => setIsEditMode(!isEditMode)}
+            onClick={handleToggleEditMode}
+            disabled={isSaving}
           >
-            {isEditMode ? (
+            {isSaving ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Lagrer...
+              </>
+            ) : isEditMode ? (
               <>
                 <GripVertical className="h-4 w-4" />
                 Ferdig med sortering
@@ -117,33 +123,92 @@ export default function Packing() {
       )}
       
       {/* Category Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-        {activeCategories.map((category, index) => (
-          <div
-            key={category.id}
-            draggable={isEditMode}
-            onDragStart={() => handleDragStart(index)}
-            onDragOver={(e) => handleDragOver(e, index)}
-            onDrop={(e) => handleDrop(e, index)}
-            onDragEnd={handleDragEnd}
-            className={draggedIndex === index ? 'opacity-50' : ''}
-          >
-            <PackingCategoryCard
-              category={category}
-              onOneDriveConfig={() => setOneDriveCategory(category)}
-              isDragging={draggedIndex === index}
-              dragHandleProps={isEditMode ? {
-                className: "drag-handle"
-              } : undefined}
-            />
-          </div>
-        ))}
-        
-        {/* Add new category card - only for admins */}
-        {isAdmin && (
-          <AddPackingCategoryCard sortOrder={categories.length + 1} />
-        )}
-      </div>
+      {isEditMode ? (
+        <Reorder.Group
+          axis="x"
+          values={orderedCategories}
+          onReorder={handleReorder}
+          className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"
+        >
+          <AnimatePresence mode="popLayout">
+            {orderedCategories.map((category) => (
+              <Reorder.Item
+                key={category.id}
+                value={category}
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                whileDrag={{ 
+                  scale: 1.05, 
+                  boxShadow: "0 20px 40px rgba(0,0,0,0.2)",
+                  zIndex: 50,
+                  cursor: "grabbing"
+                }}
+                transition={{
+                  type: "spring",
+                  stiffness: 400,
+                  damping: 30,
+                }}
+                className="cursor-grab active:cursor-grabbing"
+              >
+                <PackingCategoryCard
+                  category={category}
+                  onOneDriveConfig={() => setOneDriveCategory(category)}
+                  isEditMode={true}
+                />
+              </Reorder.Item>
+            ))}
+          </AnimatePresence>
+          
+          {/* Add new category card - only for admins */}
+          {isAdmin && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+            >
+              <AddPackingCategoryCard sortOrder={categories.length + 1} />
+            </motion.div>
+          )}
+        </Reorder.Group>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          <AnimatePresence mode="popLayout">
+            {activeCategories.map((category, index) => (
+              <motion.div
+                key={category.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                transition={{ 
+                  type: "spring",
+                  stiffness: 400,
+                  damping: 30,
+                  delay: index * 0.05 
+                }}
+                layout
+              >
+                <PackingCategoryCard
+                  category={category}
+                  onOneDriveConfig={() => setOneDriveCategory(category)}
+                  isEditMode={false}
+                />
+              </motion.div>
+            ))}
+          </AnimatePresence>
+          
+          {/* Add new category card - only for admins */}
+          {isAdmin && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: activeCategories.length * 0.05 }}
+            >
+              <AddPackingCategoryCard sortOrder={categories.length + 1} />
+            </motion.div>
+          )}
+        </div>
+      )}
       
       {/* Empty state */}
       {activeCategories.length === 0 && !isAdmin && (
