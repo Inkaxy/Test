@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Copy, ExternalLink, QrCode, Monitor, Loader2, Users } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useUpdateCustomer, Customer } from '@/hooks/useCustomers';
 import { useAuthStore } from '@/stores/authStore';
@@ -31,6 +31,8 @@ export function CustomerScreenSettingsDialog({
   const { getCurrentBakeryId } = useAuthStore();
   const [showQrCode, setShowQrCode] = useState(false);
   const [showSharedQrCode, setShowSharedQrCode] = useState(false);
+  const [localHasDedicatedDisplay, setLocalHasDedicatedDisplay] = useState(false);
+  const [localDisplayToken, setLocalDisplayToken] = useState<string | null>(null);
 
   const bakeryId = getCurrentBakeryId();
 
@@ -50,20 +52,32 @@ export function CustomerScreenSettingsDialog({
     enabled: !!bakeryId && open,
   });
 
+  // Keep local state in sync with selected customer when dialog opens / customer changes
+  useEffect(() => {
+    if (!open || !customer) return;
+    setLocalHasDedicatedDisplay(customer.has_dedicated_display ?? false);
+    setLocalDisplayToken(customer.display_token ?? null);
+    setShowQrCode(false);
+    setShowSharedQrCode(false);
+  }, [open, customer?.id]);
+
   if (!customer) return null;
 
-  const dedicatedDisplayUrl = customer.display_token
-    ? `${window.location.origin}/display/customer/${customer.display_token}`
+  const localDedicatedDisplayUrl = localDisplayToken
+    ? `${window.location.origin}/display/customer/${localDisplayToken}`
     : '';
 
   const sharedDisplayUrl = bakery?.short_id
     ? `${window.location.origin}/display/shared/${bakery.short_id}`
     : '';
 
-  const hasDedicatedDisplay = customer.has_dedicated_display ?? false;
-  const currentDisplayUrl = hasDedicatedDisplay ? dedicatedDisplayUrl : sharedDisplayUrl;
+  const hasDedicatedDisplay = localHasDedicatedDisplay;
 
   const handleToggleDedicatedDisplay = async (enabled: boolean) => {
+    const prevEnabled = localHasDedicatedDisplay;
+    const prevToken = localDisplayToken;
+    setLocalHasDedicatedDisplay(enabled);
+
     try {
       const updateData: Partial<Customer> & { id: string } = {
         id: customer.id,
@@ -71,11 +85,18 @@ export function CustomerScreenSettingsDialog({
       };
 
       // Generate display_token if enabling and none exists
-      if (enabled && !customer.display_token) {
-        updateData.display_token = crypto.randomUUID();
+      if (enabled && !prevToken) {
+        const nextToken = crypto.randomUUID();
+        setLocalDisplayToken(nextToken);
+        updateData.display_token = nextToken;
       }
 
-      await updateCustomer.mutateAsync(updateData);
+      const updated = await updateCustomer.mutateAsync(updateData);
+
+      // Ensure UI reflects server truth (and keeps working even if parent keeps a stale customer object)
+      setLocalHasDedicatedDisplay(updated.has_dedicated_display ?? enabled);
+      setLocalDisplayToken(updated.display_token ?? (updateData.display_token ?? prevToken) ?? null);
+
       toast({
         title: t('common.success'),
         description: enabled
@@ -83,6 +104,9 @@ export function CustomerScreenSettingsDialog({
           : 'Dedikert skjerm deaktivert',
       });
     } catch (error) {
+      // Revert optimistic UI
+      setLocalHasDedicatedDisplay(prevEnabled);
+      setLocalDisplayToken(prevToken);
       toast({
         variant: 'destructive',
         title: t('common.error'),
@@ -149,7 +173,7 @@ export function CustomerScreenSettingsDialog({
           </Card>
 
           {/* Dedicated Display URL section - only shown when dedicated display is enabled */}
-          {hasDedicatedDisplay && dedicatedDisplayUrl && (
+          {hasDedicatedDisplay && localDedicatedDisplayUrl && (
             <>
               <div className="space-y-2">
                 <Label className="flex items-center gap-2">
@@ -158,14 +182,14 @@ export function CustomerScreenSettingsDialog({
                 </Label>
                 <div className="flex gap-2">
                   <Input
-                    value={dedicatedDisplayUrl}
+                    value={localDedicatedDisplayUrl}
                     readOnly
                     className="font-mono text-sm"
                   />
                   <Button
                     variant="outline"
                     size="icon"
-                    onClick={() => handleCopyUrl(dedicatedDisplayUrl)}
+                    onClick={() => handleCopyUrl(localDedicatedDisplayUrl)}
                     title="Kopier URL"
                   >
                     <Copy className="h-4 w-4" />
@@ -174,11 +198,11 @@ export function CustomerScreenSettingsDialog({
               </div>
 
               <div className="flex flex-wrap gap-2">
-                <Button variant="outline" className="gap-2" onClick={() => handleCopyUrl(dedicatedDisplayUrl)}>
+                <Button variant="outline" className="gap-2" onClick={() => handleCopyUrl(localDedicatedDisplayUrl)}>
                   <Copy className="h-4 w-4" />
                   Kopier URL
                 </Button>
-                <Button variant="outline" className="gap-2" onClick={() => handleOpenScreen(dedicatedDisplayUrl)}>
+                <Button variant="outline" className="gap-2" onClick={() => handleOpenScreen(localDedicatedDisplayUrl)}>
                   <ExternalLink className="h-4 w-4" />
                   Åpne skjerm
                 </Button>
@@ -195,7 +219,7 @@ export function CustomerScreenSettingsDialog({
 
               {showQrCode && (
                 <div className="flex justify-center p-4 bg-white rounded-lg">
-                  <QRCodeSVG value={dedicatedDisplayUrl} size={200} />
+                  <QRCodeSVG value={localDedicatedDisplayUrl} size={200} />
                 </div>
               )}
 
