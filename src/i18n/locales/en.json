@@ -288,6 +288,8 @@
     "preview": "Preview",
     "displayUrls": "Display URLs",
     "sharedDisplayUrl": "Shared display URL",
+    "kioskPackingUrl": "Kiosk packing URL",
+    "kioskPackingDescription": "Use this URL for tablets with Fully Kiosk or similar kiosk apps",
     "copyUrl": "Copy URL",
     "urlCopied": "URL copied to clipboard",
     "noOrders": "No orders for this date",

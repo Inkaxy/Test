@@ -213,6 +213,23 @@ export default function DisplaySettingsPage() {
     
     return null;
   };
+  
+  const getKioskPackingUrl = () => {
+    const base = window.location.origin;
+    if (!bakery?.short_id) return null;
+    if (selectedCategoryId) {
+      return `${base}/kiosk/packing/${bakery.short_id}/${selectedCategoryId}`;
+    }
+    return `${base}/kiosk/packing/${bakery.short_id}`;
+  };
+  
+  const copyToClipboard = (url: string) => {
+    navigator.clipboard.writeText(url);
+    toast({
+      title: t('display.urlCopied'),
+    });
+  };
+
 
   const getDisplayTypeIcon = (type: DisplayType) => {
     switch (type) {
@@ -354,6 +371,38 @@ export default function DisplaySettingsPage() {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+          )}
+          
+          {/* Kiosk Packing URL */}
+          {bakery?.short_id && (
+            <div className="pt-4 border-t mt-4">
+              <Label className="text-sm font-medium flex items-center gap-2">
+                <Smartphone className="h-4 w-4" />
+                Kiosk pakke-URL (Fully Kiosk)
+              </Label>
+              <p className="text-xs text-muted-foreground mb-2">
+                Bruk denne URL-en for nettbrett med Fully Kiosk eller lignende kiosk-app
+              </p>
+              <div className="flex gap-2 items-center">
+                <Input 
+                  readOnly 
+                  value={getKioskPackingUrl() || ''} 
+                  className="flex-1 font-mono text-sm"
+                />
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => getKioskPackingUrl() && copyToClipboard(getKioskPackingUrl()!)}
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+                <Button variant="outline" size="icon" asChild>
+                  <a href={getKioskPackingUrl() || ''} target="_blank" rel="noopener noreferrer">
+                    <ExternalLink className="h-4 w-4" />
+                  </a>
+                </Button>
+              </div>
             </div>
           )}
         </CardContent>
