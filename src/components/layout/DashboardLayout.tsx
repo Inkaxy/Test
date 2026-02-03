@@ -212,7 +212,7 @@ export function DashboardLayout() {
   );
   
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="min-h-screen bg-background">
       {/* Mobile overlay */}
       {isMobile && sidebarOpen && (
         <div
@@ -221,19 +221,21 @@ export function DashboardLayout() {
         />
       )}
       
-      {/* Sidebar */}
+      {/* Sidebar - always fixed */}
       <aside
         className={cn(
           'fixed inset-y-0 left-0 z-50 w-64 border-r bg-card transition-transform duration-300',
-          isMobile && !sidebarOpen && '-translate-x-full',
-          !isMobile && 'relative translate-x-0'
+          isMobile && !sidebarOpen && '-translate-x-full'
         )}
       >
         <SidebarContent />
       </aside>
       
-      {/* Main content */}
-      <main className={cn('flex-1', !isMobile && 'ml-0')}>
+      {/* Main content - offset by sidebar width on desktop */}
+      <main className={cn(
+        'min-h-screen',
+        !isMobile && 'ml-64' // offset for fixed sidebar
+      )}>
         {/* Mobile header */}
         {isMobile && (
           <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background px-4">
