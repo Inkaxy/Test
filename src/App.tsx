@@ -53,6 +53,9 @@ function AppRoutes() {
       <Route path="/display/shared/:bakeryShortId" element={<SharedDisplay />} />
       <Route path="/display/customer/:displayToken" element={<CustomerDisplay />} />
       
+      {/* Short display URLs - /d/{token} */}
+      <Route path="/d/:displayToken" element={<CustomerDisplay />} />
+      
       {/* Public kiosk packing routes - customer-based (no auth required) */}
       <Route path="/kiosk/packing/:bakeryShortId/:categoryId" element={<KioskPackingView />} />
       <Route path="/kiosk/packing/:bakeryShortId" element={<KioskPackingView />} />
