@@ -54,25 +54,52 @@ export function useUpdateBakerySettings() {
       if (!bakeryId) throw new Error('Ingen bakeri valgt');
       
       // First get current settings
-      const { data: current } = await supabase
+      const { data: current, error: fetchError } = await supabase
         .from('bakeries')
         .select('settings')
         .eq('id', bakeryId)
         .single();
       
+      if (fetchError) throw fetchError;
+      
       const currentSettings = (current?.settings as BakerySettings) || {};
       const newSettings = { ...currentSettings, ...settings };
       
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('bakeries')
         .update({ settings: newSettings as unknown as Json })
-        .eq('id', bakeryId);
+        .eq('id', bakeryId)
+        .select('settings')
+        .single();
       
       if (error) throw error;
-      return newSettings;
+      return data?.settings as BakerySettings;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['bakery-settings'] });
+    onMutate: async (newSettings) => {
+      const bakeryId = getCurrentBakeryId();
+      await queryClient.cancelQueries({ queryKey: ['bakery-settings', bakeryId] });
+      
+      const previousSettings = queryClient.getQueryData<BakerySettings>(['bakery-settings', bakeryId]);
+      
+      queryClient.setQueryData<BakerySettings>(['bakery-settings', bakeryId], (old) => ({
+        ...old,
+        ...newSettings,
+      }));
+      
+      return { previousSettings, bakeryId };
+    },
+    onError: (err, newSettings, context) => {
+      if (context?.previousSettings && context?.bakeryId) {
+        queryClient.setQueryData(['bakery-settings', context.bakeryId], context.previousSettings);
+      }
+    },
+    onSuccess: (data) => {
+      const bakeryId = getCurrentBakeryId();
+      queryClient.setQueryData(['bakery-settings', bakeryId], data);
+    },
+    onSettled: () => {
+      const bakeryId = getCurrentBakeryId();
+      queryClient.invalidateQueries({ queryKey: ['bakery-settings', bakeryId] });
     },
   });
 }
