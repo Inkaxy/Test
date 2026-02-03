@@ -15,6 +15,10 @@ interface DeleteImportBatchParams {
   batchId: string;
 }
 
+interface DeleteOrphanedOrdersParams {
+  forDate?: Date;
+}
+
 export function useDeleteOrdersBeforeDate() {
   const queryClient = useQueryClient();
   const { getCurrentBakeryId } = useAuthStore();
@@ -157,6 +161,60 @@ export function useDeleteImportBatch() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['orders'] });
       queryClient.invalidateQueries({ queryKey: ['import-batches'] });
+      queryClient.invalidateQueries({ queryKey: ['packing-status'] });
+    },
+  });
+}
+
+export function useDeleteOrphanedOrders() {
+  const queryClient = useQueryClient();
+  const { getCurrentBakeryId } = useAuthStore();
+  
+  return useMutation({
+    mutationFn: async ({ forDate }: DeleteOrphanedOrdersParams): Promise<number> => {
+      const bakeryId = getCurrentBakeryId();
+      if (!bakeryId) throw new Error('Ingen bakeri valgt');
+      
+      // Build query for orphaned orders (category_id IS NULL)
+      let query = supabase
+        .from('orders')
+        .select('id')
+        .eq('bakery_id', bakeryId)
+        .is('category_id', null);
+      
+      if (forDate) {
+        const dateStr = forDate.toISOString().split('T')[0];
+        query = query.eq('delivery_date', dateStr);
+      }
+      
+      const { data: ordersToDelete, error: fetchError } = await query;
+      
+      if (fetchError) throw fetchError;
+      if (!ordersToDelete || ordersToDelete.length === 0) return 0;
+      
+      const orderIds = ordersToDelete.map(o => o.id);
+      
+      // Delete packing_status entries first (foreign key constraint)
+      const { error: packingError } = await supabase
+        .from('packing_status')
+        .delete()
+        .in('order_id', orderIds);
+      
+      if (packingError) throw packingError;
+      
+      // Delete the orders
+      const { error: ordersError } = await supabase
+        .from('orders')
+        .delete()
+        .in('id', orderIds);
+      
+      if (ordersError) throw ordersError;
+      
+      return orderIds.length;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      queryClient.invalidateQueries({ queryKey: ['orphaned-orders'] });
       queryClient.invalidateQueries({ queryKey: ['packing-status'] });
     },
   });
