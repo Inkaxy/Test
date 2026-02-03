@@ -1254,6 +1254,105 @@ export default function DisplaySettingsPage() {
                   </div>
                 </AccordionContent>
               </AccordionItem>
+              
+              {/* Produktbasert pakking */}
+              <AccordionItem value="product-packing" className="border rounded-lg px-4">
+                <AccordionTrigger className="hover:no-underline">
+                  <div className="flex items-center gap-3">
+                    <Package className="h-5 w-5 text-muted-foreground" />
+                    <span className="font-medium">Produktbasert pakking</span>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="space-y-4 pt-2">
+                  <p className="text-sm text-muted-foreground">
+                    Innstillinger som gjelder både kundedisplay og felles display når produkter er valgt for pakking.
+                  </p>
+                  
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label>Aktiver produktlinjefarger</Label>
+                      <p className="text-xs text-muted-foreground">Hver produktlinje får unik farge</p>
+                    </div>
+                    <Switch
+                      checked={settings.product_line_colors_enabled}
+                      onCheckedChange={(v) => updateSetting('product_line_colors_enabled', v)}
+                    />
+                  </div>
+                  
+                  {settings.product_line_colors_enabled && (
+                    <div className="border-t pt-4 space-y-4">
+                      <h4 className="text-sm font-medium">Produktlinjefarger</h4>
+                      <p className="text-xs text-muted-foreground">
+                        Fargene brukes i rekkefølge for hver produktlinje. Samme produkt får alltid samme farge.
+                      </p>
+                      
+                      <div className="grid grid-cols-4 gap-2">
+                        {(settings.product_line_colors_palette || []).map((color, index) => (
+                          <div key={index} className="space-y-1">
+                            <div className="flex gap-1">
+                              <Input
+                                type="color"
+                                value={color}
+                                onChange={(e) => {
+                                  const newPalette = [...(settings.product_line_colors_palette || [])];
+                                  newPalette[index] = e.target.value;
+                                  updateSetting('product_line_colors_palette', newPalette);
+                                }}
+                                className="w-full h-10 p-1 cursor-pointer"
+                              />
+                            </div>
+                            <p className="text-xs text-center text-muted-foreground">{index + 1}</p>
+                          </div>
+                        ))}
+                      </div>
+                      
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const newPalette = [...(settings.product_line_colors_palette || []), '#E5E7EB'];
+                            updateSetting('product_line_colors_palette', newPalette);
+                          }}
+                        >
+                          + Legg til farge
+                        </Button>
+                        {(settings.product_line_colors_palette || []).length > 3 && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              const newPalette = (settings.product_line_colors_palette || []).slice(0, -1);
+                              updateSetting('product_line_colors_palette', newPalette);
+                            }}
+                          >
+                            Fjern siste
+                          </Button>
+                        )}
+                      </div>
+                      
+                      {/* Preview of colors */}
+                      <div className="border-t pt-4">
+                        <h4 className="text-sm font-medium mb-2">Forhåndsvisning</h4>
+                        <div className="space-y-2">
+                          {['Horten', 'Loff', 'Formloff'].map((name, index) => (
+                            <div
+                              key={name}
+                              className="p-3 rounded-lg border flex items-center justify-between"
+                              style={{
+                                backgroundColor: (settings.product_line_colors_palette || [])[index % (settings.product_line_colors_palette || []).length] || '#E5E7EB',
+                              }}
+                            >
+                              <span className="font-medium text-foreground">{name}</span>
+                              <span className="text-xl font-bold text-foreground">{10 - index * 3} stk</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </AccordionContent>
+              </AccordionItem>
             </Accordion>
           </div>
           

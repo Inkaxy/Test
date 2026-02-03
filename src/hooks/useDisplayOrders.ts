@@ -301,6 +301,10 @@ export interface DisplaySettings {
   realtime_flash_on_update: boolean;
   realtime_status_font_size: string;
   
+  // Produktbasert pakking (Product-based packing)
+  product_line_colors_enabled: boolean;
+  product_line_colors_palette: string[];
+  
   // Legacy support
   show_progress_bar: boolean;
   progress_bar_style: string;
@@ -376,6 +380,19 @@ export function getDefaultDisplaySettings(): DisplaySettings {
     realtime_sound_on_complete: false,
     realtime_flash_on_update: true,
     realtime_status_font_size: '0.875rem',
+    
+    // Produktbasert pakking
+    product_line_colors_enabled: true,
+    product_line_colors_palette: [
+      '#DBEAFE', // Lys blå (Horten-stil)
+      '#D1FAE5', // Lys grønn (Loff-stil)
+      '#FEF3C7', // Lys gul/beige (Formloff-stil)
+      '#FCE7F3', // Lys rosa
+      '#E0E7FF', // Lys indigo
+      '#CCFBF1', // Lys teal
+      '#FED7AA', // Lys oransje
+      '#DDD6FE', // Lys lilla
+    ],
     
     // Legacy
     show_progress_bar: true,
