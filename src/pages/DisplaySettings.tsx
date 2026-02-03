@@ -342,22 +342,80 @@ export default function DisplaySettingsPage() {
                     />
                   </div>
                   
-                  <div className="space-y-2">
-                    <Label>Fontstørrelse bakerinavn</Label>
-                    <Select 
-                      value={settings.header_bakery_font_size} 
-                      onValueChange={(v) => updateSetting('header_bakery_font_size', v)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="1.5rem">Liten</SelectItem>
-                        <SelectItem value="1.875rem">Normal</SelectItem>
-                        <SelectItem value="2.25rem">Stor</SelectItem>
-                        <SelectItem value="3rem">Ekstra stor</SelectItem>
-                      </SelectContent>
-                    </Select>
+                  <div className="border-t pt-4 space-y-4">
+                    <h4 className="text-sm font-medium">Fontstørrelser</h4>
+                    
+                    <div className="space-y-2">
+                      <Label>Bakerinavn</Label>
+                      <Select 
+                        value={settings.header_bakery_font_size} 
+                        onValueChange={(v) => updateSetting('header_bakery_font_size', v)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="1.5rem">Liten</SelectItem>
+                          <SelectItem value="1.875rem">Normal</SelectItem>
+                          <SelectItem value="2.25rem">Stor</SelectItem>
+                          <SelectItem value="3rem">Ekstra stor</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label>Kategorinavn</Label>
+                      <Select 
+                        value={settings.header_category_font_size} 
+                        onValueChange={(v) => updateSetting('header_category_font_size', v)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="1rem">Liten</SelectItem>
+                          <SelectItem value="1.25rem">Normal</SelectItem>
+                          <SelectItem value="1.5rem">Stor</SelectItem>
+                          <SelectItem value="2rem">Ekstra stor</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label>Klokke</Label>
+                      <Select 
+                        value={settings.header_clock_font_size} 
+                        onValueChange={(v) => updateSetting('header_clock_font_size', v)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="1rem">Liten</SelectItem>
+                          <SelectItem value="1.5rem">Normal</SelectItem>
+                          <SelectItem value="2rem">Stor</SelectItem>
+                          <SelectItem value="2.5rem">Ekstra stor</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label>Dato</Label>
+                      <Select 
+                        value={settings.header_date_font_size} 
+                        onValueChange={(v) => updateSetting('header_date_font_size', v)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="1rem">Liten</SelectItem>
+                          <SelectItem value="1.25rem">Normal</SelectItem>
+                          <SelectItem value="1.5rem">Stor</SelectItem>
+                          <SelectItem value="2rem">Ekstra stor</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                 </AccordionContent>
               </AccordionItem>
@@ -437,6 +495,46 @@ export default function DisplaySettingsPage() {
                       </SelectContent>
                     </Select>
                   </div>
+                  
+                  <div className="border-t pt-4 space-y-4">
+                    <h4 className="text-sm font-medium">Fontstørrelser</h4>
+                    
+                    <div className="space-y-2">
+                      <Label>Tekstetikett</Label>
+                      <Select 
+                        value={settings.stats_label_font_size} 
+                        onValueChange={(v) => updateSetting('stats_label_font_size', v)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="0.875rem">Liten</SelectItem>
+                          <SelectItem value="1rem">Normal</SelectItem>
+                          <SelectItem value="1.25rem">Stor</SelectItem>
+                          <SelectItem value="1.5rem">Ekstra stor</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label>Verdier</Label>
+                      <Select 
+                        value={settings.stats_value_font_size} 
+                        onValueChange={(v) => updateSetting('stats_value_font_size', v)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="1.25rem">Liten</SelectItem>
+                          <SelectItem value="1.5rem">Normal</SelectItem>
+                          <SelectItem value="2rem">Stor</SelectItem>
+                          <SelectItem value="2.5rem">Ekstra stor</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
                 </AccordionContent>
               </AccordionItem>
               
@@ -513,6 +611,82 @@ export default function DisplaySettingsPage() {
                       checked={settings.card_compact_mode}
                       onCheckedChange={(v) => updateSetting('card_compact_mode', v)}
                     />
+                  </div>
+                  
+                  <div className="border-t pt-4 space-y-4">
+                    <h4 className="text-sm font-medium">Fontstørrelser</h4>
+                    
+                    <div className="space-y-2">
+                      <Label>Kundenavn</Label>
+                      <Select 
+                        value={settings.card_customer_name_font_size} 
+                        onValueChange={(v) => updateSetting('card_customer_name_font_size', v)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="1.25rem">Liten</SelectItem>
+                          <SelectItem value="1.5rem">Normal</SelectItem>
+                          <SelectItem value="2rem">Stor</SelectItem>
+                          <SelectItem value="2.5rem">Ekstra stor</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label>Produktnavn</Label>
+                      <Select 
+                        value={settings.card_product_font_size} 
+                        onValueChange={(v) => updateSetting('card_product_font_size', v)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="0.875rem">Liten</SelectItem>
+                          <SelectItem value="1rem">Normal</SelectItem>
+                          <SelectItem value="1.25rem">Stor</SelectItem>
+                          <SelectItem value="1.5rem">Ekstra stor</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label>Antall/mengde</Label>
+                      <Select 
+                        value={settings.card_quantity_font_size} 
+                        onValueChange={(v) => updateSetting('card_quantity_font_size', v)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="0.875rem">Liten</SelectItem>
+                          <SelectItem value="1rem">Normal</SelectItem>
+                          <SelectItem value="1.25rem">Stor</SelectItem>
+                          <SelectItem value="1.5rem">Ekstra stor</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label>Fremdriftstekst</Label>
+                      <Select 
+                        value={settings.card_progress_font_size} 
+                        onValueChange={(v) => updateSetting('card_progress_font_size', v)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="0.75rem">Liten</SelectItem>
+                          <SelectItem value="0.875rem">Normal</SelectItem>
+                          <SelectItem value="1rem">Stor</SelectItem>
+                          <SelectItem value="1.25rem">Ekstra stor</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                 </AccordionContent>
               </AccordionItem>
@@ -867,6 +1041,28 @@ export default function DisplaySettingsPage() {
                       checked={settings.realtime_flash_on_update}
                       onCheckedChange={(v) => updateSetting('realtime_flash_on_update', v)}
                     />
+                  </div>
+                  
+                  <div className="border-t pt-4 space-y-4">
+                    <h4 className="text-sm font-medium">Fontstørrelser</h4>
+                    
+                    <div className="space-y-2">
+                      <Label>Statustekst</Label>
+                      <Select 
+                        value={settings.realtime_status_font_size} 
+                        onValueChange={(v) => updateSetting('realtime_status_font_size', v)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="0.75rem">Liten</SelectItem>
+                          <SelectItem value="0.875rem">Normal</SelectItem>
+                          <SelectItem value="1rem">Stor</SelectItem>
+                          <SelectItem value="1.25rem">Ekstra stor</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                 </AccordionContent>
               </AccordionItem>
