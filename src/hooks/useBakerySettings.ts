@@ -1,10 +1,26 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuthStore } from '@/stores/authStore';
+import type { Json } from '@/integrations/supabase/types';
+
+export interface DeviationTypeConfig {
+  id: string;
+  label: string;
+  color?: string;
+}
+
+export type DeviationInputMode = 'number' | 'text' | 'predefined';
+
+export interface DeviationConfig {
+  types: DeviationTypeConfig[];
+  inputMode: DeviationInputMode;
+  predefinedValues?: string[];
+}
 
 export interface BakerySettings {
   auto_delete_enabled?: boolean;
   auto_delete_days?: number;
+  deviation_config?: DeviationConfig;
 }
 
 export function useBakerySettings() {
@@ -49,7 +65,7 @@ export function useUpdateBakerySettings() {
       
       const { error } = await supabase
         .from('bakeries')
-        .update({ settings: newSettings })
+        .update({ settings: newSettings as unknown as Json })
         .eq('id', bakeryId);
       
       if (error) throw error;
