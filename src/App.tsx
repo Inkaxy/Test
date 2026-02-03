@@ -12,6 +12,7 @@ import Auth from './pages/Auth';
 import Dashboard from './pages/Dashboard';
 import Packing from './pages/Packing';
 import CustomerPacking from './pages/CustomerPacking';
+import CategoryCalendarView from './pages/packing/CategoryCalendarView';
 import CustomerPackingView from './pages/packing/CustomerPackingView';
 import ProductPackingView from './pages/packing/ProductPackingView';
 import KioskPackingView from './pages/packing/KioskPackingView';
@@ -80,6 +81,7 @@ function AppRoutes() {
       >
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/packing" element={<Packing />} />
+        <Route path="/packing/calendar/:categoryId" element={<CategoryCalendarView />} />
         <Route path="/packing/customer" element={<CustomerPacking />} />
         <Route path="/packing/customer/:categoryId/:date" element={<CustomerPackingView />} />
         <Route path="/packing/product/:categoryId/:date" element={<ProductPackingView />} />

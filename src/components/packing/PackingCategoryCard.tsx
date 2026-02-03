@@ -86,11 +86,8 @@ export function PackingCategoryCard({
   const colorConfig = CARD_COLORS.find(c => c.id === (category.card_color || 'primary')) || CARD_COLORS[0];
   
   const handleCardClick = () => {
-    if (category.packing_mode === 'product_based') {
-      navigate(`/packing?category=${category.id}`);
-    } else {
-      navigate(`/packing/customer?category=${category.id}`);
-    }
+    // Navigate to calendar view for this category
+    navigate(`/packing/calendar/${category.id}`);
   };
   
   const handleEditSave = async () => {
