@@ -4,11 +4,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { Upload, File, CheckCircle2, AlertCircle, X, CalendarIcon, Package, Users, ShoppingCart, Cloud } from 'lucide-react';
+import { Upload, File, CheckCircle2, AlertCircle, X, Package, Users, ShoppingCart, Cloud, CalendarDays, FolderOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useImport } from '@/hooks/useImport';
@@ -43,13 +41,13 @@ export default function Import() {
   const [isDragging, setIsDragging] = useState(false);
   const [parsedData, setParsedData] = useState<ParsedData | null>(null);
   const [parseErrors, setParseErrors] = useState<string[]>([]);
-  const [deliveryDate, setDeliveryDate] = useState<Date | undefined>();
   const [uploadProgress, setUploadProgress] = useState(0);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | undefined>();
   
   const activeCategories = categories.filter(c => c.is_active);
   const selectedCategory = categories.find(c => c.id === selectedCategoryId);
   const categoryOneDriveConfig = oneDriveConfigs.find(c => c.category_id === selectedCategoryId);
+
   const getFileType = (filename: string): FileWithPreview['type'] => {
     const ext = filename.split('.').pop()?.toLowerCase();
     if (ext === 'prd') return 'prd';
@@ -82,16 +80,11 @@ export default function Import() {
         const { data, errors } = await parseFiles(validFiles);
         setParsedData(data);
         setParseErrors(errors);
-        
-        // Auto-set delivery date from filename if found
-        if (data.deliveryDate && !deliveryDate) {
-          setDeliveryDate(data.deliveryDate);
-        }
       } catch (error) {
         console.error('Parse error:', error);
       }
     }
-  }, [files, parseFiles, t, deliveryDate]);
+  }, [files, parseFiles, t]);
   
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -106,14 +99,16 @@ export default function Import() {
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
-    handleFiles(e.dataTransfer.files);
-  }, [handleFiles]);
+    if (selectedCategoryId) {
+      handleFiles(e.dataTransfer.files);
+    }
+  }, [handleFiles, selectedCategoryId]);
   
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
+    if (e.target.files && selectedCategoryId) {
       handleFiles(e.target.files);
     }
-  }, [handleFiles]);
+  }, [handleFiles, selectedCategoryId]);
   
   const removeFile = async (index: number) => {
     const newFiles = files.filter((_, i) => i !== index);
@@ -135,11 +130,15 @@ export default function Import() {
   };
   
   const handleUpload = async () => {
-    if (!parsedData || !deliveryDate || !selectedCategoryId) {
+    if (!parsedData || !parsedData.deliveryDate || !selectedCategoryId) {
       toast({
         variant: 'destructive',
         title: t('common.error'),
-        description: !selectedCategoryId ? 'Velg en kategori' : !deliveryDate ? 'Velg en leveringsdato' : t('import.invalidFormat'),
+        description: !selectedCategoryId 
+          ? 'Velg en kategori' 
+          : !parsedData?.deliveryDate 
+            ? 'Kunne ikke hente leveringsdato fra filene. Sjekk at .OD0-filen har riktig format.' 
+            : t('import.invalidFormat'),
       });
       return;
     }
@@ -151,7 +150,7 @@ export default function Import() {
         products: parsedData.products,
         customers: parsedData.customers,
         orders: parsedData.orders,
-        deliveryDate,
+        deliveryDate: parsedData.deliveryDate,
         categoryId: selectedCategoryId,
       });
       
@@ -166,7 +165,6 @@ export default function Import() {
       setFiles([]);
       setParsedData(null);
       setParseErrors([]);
-      setDeliveryDate(undefined);
       setUploadProgress(0);
     } catch (error) {
       setUploadProgress(0);
@@ -195,7 +193,7 @@ export default function Import() {
   const hasCus = files.some(f => f.type === 'cus' && f.status === 'valid');
   const hasOd0 = files.some(f => f.type === 'od0' && f.status === 'valid');
   
-  const canImport = parsedData && deliveryDate && selectedCategoryId && (
+  const canImport = parsedData && parsedData.deliveryDate && selectedCategoryId && (
     parsedData.products.length > 0 ||
     parsedData.customers.length > 0 ||
     parsedData.orders.length > 0
@@ -208,37 +206,100 @@ export default function Import() {
         <p className="text-muted-foreground">{t('import.supportedFormats')}</p>
       </div>
       
-      {/* Drop zone */}
+      {/* Step 1: Select category */}
       <Card>
-        <CardContent className="pt-6">
-          <div
-            className={cn(
-              'relative flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-12 transition-colors',
-              isDragging && 'border-primary bg-primary/5',
-              !isDragging && 'border-muted-foreground/25 hover:border-primary/50'
-            )}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-          >
-            <Upload className="h-12 w-12 text-muted-foreground mb-4" />
-            <p className="text-lg font-medium">{t('import.dropzone')}</p>
-            <p className="text-sm text-muted-foreground mt-1">{t('import.supportedFormats')}</p>
-            
-            <input
-              type="file"
-              multiple
-              accept=".prd,.cus,.od0,.PRD,.CUS,.OD0"
-              onChange={handleInputChange}
-              className="absolute inset-0 cursor-pointer opacity-0"
-            />
-            
-            <Button variant="outline" className="mt-4">
-              {t('import.selectFiles')}
-            </Button>
-          </div>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FolderOpen className="h-5 w-5" />
+            1. Velg kategori
+          </CardTitle>
+          <CardDescription>
+            Velg hvilken kategori ordrene skal importeres til
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Select value={selectedCategoryId} onValueChange={setSelectedCategoryId}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Velg kategori..." />
+            </SelectTrigger>
+            <SelectContent>
+              {activeCategories.map((category) => (
+                <SelectItem key={category.id} value={category.id}>
+                  <div className="flex items-center gap-2">
+                    <span>{category.name}</span>
+                    <Badge variant="outline" className="text-xs">
+                      {category.packing_mode === 'product_based' ? 'Produktbasert' : 'Kundebasert'}
+                    </Badge>
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          
+          {selectedCategory && (
+            <div className="flex items-center gap-2">
+              {categoryOneDriveConfig?.sync_status === 'configured' ? (
+                <Badge variant="outline" className="gap-1 text-success border-success/30">
+                  <Cloud className="h-3 w-3" />
+                  OneDrive koblet
+                </Badge>
+              ) : (
+                <Badge variant="secondary" className="gap-1">
+                  <Cloud className="h-3 w-3" />
+                  OneDrive ikke koblet
+                </Badge>
+              )}
+            </div>
+          )}
+          
+          <p className="text-xs text-muted-foreground">
+            Produkter og kunder deles på tvers av kategorier. Ordrer (.OD0) knyttes til valgt kategori.
+          </p>
         </CardContent>
       </Card>
+      
+      {/* Step 2: Upload files (only shown when category is selected) */}
+      {selectedCategoryId && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Upload className="h-5 w-5" />
+              2. Last opp filer
+            </CardTitle>
+            <CardDescription>
+              Dra og slipp filer eller klikk for å velge. Leveringsdato hentes automatisk fra filene.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div
+              className={cn(
+                'relative flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-12 transition-colors',
+                isDragging && 'border-primary bg-primary/5',
+                !isDragging && 'border-muted-foreground/25 hover:border-primary/50'
+              )}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+            >
+              <Upload className="h-12 w-12 text-muted-foreground mb-4" />
+              <p className="text-lg font-medium">{t('import.dropzone')}</p>
+              <p className="text-sm text-muted-foreground mt-1">{t('import.supportedFormats')}</p>
+              
+              <input
+                type="file"
+                multiple
+                accept=".prd,.cus,.od0,.PRD,.CUS,.OD0"
+                onChange={handleInputChange}
+                className="absolute inset-0 cursor-pointer opacity-0"
+              />
+              
+              <Button variant="outline" className="mt-4">
+                {t('import.selectFiles')}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
       
       {/* File list and parsed summary */}
       {files.length > 0 && (
@@ -262,7 +323,7 @@ export default function Import() {
           <CardContent className="space-y-4">
             {/* Parsed data summary */}
             {parsedData && (
-              <div className="grid grid-cols-3 gap-4 p-4 bg-muted/50 rounded-lg">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-muted/50 rounded-lg">
                 <div className="flex items-center gap-2">
                   <Package className="h-5 w-5 text-primary" />
                   <div>
@@ -284,77 +345,33 @@ export default function Import() {
                     <p className="text-lg font-semibold">{parsedData.orders.length}</p>
                   </div>
                 </div>
+                <div className="flex items-center gap-2">
+                  <CalendarDays className="h-5 w-5 text-primary" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">Leveringsdato</p>
+                    <p className="text-lg font-semibold">
+                      {parsedData.deliveryDate 
+                        ? format(parsedData.deliveryDate, 'd. MMM yyyy', { locale: nb })
+                        : <span className="text-destructive text-sm">Ikke funnet</span>
+                      }
+                    </p>
+                  </div>
+                </div>
               </div>
             )}
             
-            {/* Category selector */}
-            <div className="space-y-2">
-              <Label>Kategori for ordrer</Label>
-              <Select value={selectedCategoryId} onValueChange={setSelectedCategoryId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Velg kategori..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {activeCategories.map((category) => (
-                    <SelectItem key={category.id} value={category.id}>
-                      <div className="flex items-center gap-2">
-                        <span>{category.name}</span>
-                        <Badge variant="outline" className="text-xs">
-                          {category.packing_mode === 'product_based' ? 'Produkt' : 'Kunde'}
-                        </Badge>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                Produkter og kunder deles på tvers av kategorier. Ordrer (.OD0) knyttes til valgt kategori.
-              </p>
-              
-              {/* OneDrive status indicator */}
-              {selectedCategory && (
-                <div className="flex items-center gap-2 mt-2">
-                  {categoryOneDriveConfig?.sync_status === 'configured' ? (
-                    <Badge variant="outline" className="gap-1 text-success border-success/30">
-                      <Cloud className="h-3 w-3" />
-                      OneDrive koblet
-                    </Badge>
-                  ) : (
-                    <Badge variant="secondary" className="gap-1">
-                      <Cloud className="h-3 w-3" />
-                      OneDrive ikke koblet
-                    </Badge>
-                  )}
-                </div>
-              )}
-            </div>
-            
-            {/* Delivery date picker */}
-            <div className="flex items-center gap-4">
-              <span className="text-sm font-medium">{t('import.deliveryDate')}:</span>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      'justify-start text-left font-normal',
-                      !deliveryDate && 'text-muted-foreground'
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {deliveryDate ? format(deliveryDate, 'PPP', { locale: nb }) : 'Velg dato'}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={deliveryDate}
-                    onSelect={setDeliveryDate}
-                    locale={nb}
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
+            {/* Category info */}
+            {selectedCategory && (
+              <div className="flex items-center gap-2 p-3 bg-primary/5 rounded-lg border border-primary/20">
+                <FolderOpen className="h-4 w-4 text-primary" />
+                <span className="text-sm">
+                  Importeres til: <strong>{selectedCategory.name}</strong>
+                </span>
+                <Badge variant="outline" className="text-xs ml-auto">
+                  {selectedCategory.packing_mode === 'product_based' ? 'Produktbasert' : 'Kundebasert'}
+                </Badge>
+              </div>
+            )}
             
             {/* Parse errors */}
             {parseErrors.length > 0 && (
@@ -424,6 +441,12 @@ export default function Import() {
             >
               {isImporting ? t('import.uploading') : t('import.uploadFiles')}
             </Button>
+            
+            {!parsedData?.deliveryDate && hasOd0 && (
+              <p className="text-sm text-destructive text-center">
+                Kunne ikke hente leveringsdato fra filene. Sjekk at .OD0-filen har riktig format.
+              </p>
+            )}
           </CardContent>
         </Card>
       )}
