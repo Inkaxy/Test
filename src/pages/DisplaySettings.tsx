@@ -888,23 +888,69 @@ export default function DisplaySettingsPage() {
                   </div>
                 </AccordionTrigger>
                 <AccordionContent className="space-y-4 pt-2">
-                  <div className="grid grid-cols-2 gap-4">
-                    <ColorInput 
-                      label="Bakgrunnsfarge" 
-                      value={settings.background_color}
-                      onChange={(v) => updateSetting('background_color', v)}
-                    />
-                    <ColorInput 
-                      label="Kortbakgrunn" 
-                      value={settings.card_background_color}
-                      onChange={(v) => updateSetting('card_background_color', v)}
-                    />
-                    <ColorInput 
-                      label="Tekstfarge" 
-                      value={settings.text_color}
-                      onChange={(v) => updateSetting('text_color', v)}
-                    />
+                  {/* Theme presets */}
+                  <div className="space-y-3">
+                    <Label className="text-sm font-medium">Tema-forhåndsvalg</Label>
+                    <div className="grid grid-cols-4 gap-2">
+                      {[
+                        { id: 'dark', label: 'Mørk', bg: '#1a1a2e', card: '#16213e', text: '#ffffff' },
+                        { id: 'light', label: 'Lys', bg: '#f8fafc', card: '#ffffff', text: '#0f172a' },
+                        { id: 'high-contrast', label: 'Høy kontrast', bg: '#000000', card: '#1a1a1a', text: '#ffffff' },
+                        { id: 'custom', label: 'Egendefinert', bg: settings.background_color, card: settings.card_background_color, text: settings.text_color },
+                      ].map((theme) => (
+                        <button
+                          key={theme.id}
+                          type="button"
+                          onClick={() => {
+                            if (theme.id !== 'custom') {
+                              updateSetting('background_color', theme.bg);
+                              updateSetting('card_background_color', theme.card);
+                              updateSetting('text_color', theme.text);
+                              updateSetting('theme_preset', theme.id as 'dark' | 'light' | 'high-contrast' | 'custom');
+                            } else {
+                              updateSetting('theme_preset', 'custom');
+                            }
+                          }}
+                          className={`p-3 rounded-lg border-2 transition-all ${
+                            (settings.theme_preset || 'dark') === theme.id 
+                              ? 'border-primary ring-2 ring-primary/20' 
+                              : 'border-border hover:border-primary/50'
+                          }`}
+                        >
+                          <div 
+                            className="h-8 rounded mb-2 flex items-center justify-center"
+                            style={{ backgroundColor: theme.bg }}
+                          >
+                            <div 
+                              className="h-4 w-8 rounded"
+                              style={{ backgroundColor: theme.card }}
+                            />
+                          </div>
+                          <span className="text-xs font-medium">{theme.label}</span>
+                        </button>
+                      ))}
+                    </div>
                   </div>
+                  
+                  {(settings.theme_preset === 'custom' || !settings.theme_preset) && (
+                    <div className="grid grid-cols-2 gap-4">
+                      <ColorInput 
+                        label="Bakgrunnsfarge" 
+                        value={settings.background_color}
+                        onChange={(v) => updateSetting('background_color', v)}
+                      />
+                      <ColorInput 
+                        label="Kortbakgrunn" 
+                        value={settings.card_background_color}
+                        onChange={(v) => updateSetting('card_background_color', v)}
+                      />
+                      <ColorInput 
+                        label="Tekstfarge" 
+                        value={settings.text_color}
+                        onChange={(v) => updateSetting('text_color', v)}
+                      />
+                    </div>
+                  )}
                   
                   <div className="border-t pt-4">
                     <h4 className="text-sm font-medium mb-3">Statusfarger</h4>
@@ -1041,10 +1087,11 @@ export default function DisplaySettingsPage() {
                     </Select>
                   </div>
                   
-                  <div className="border-t pt-4">
+                  <div className="border-t pt-4 space-y-4">
+                    <h4 className="text-sm font-medium">Auto-scroll</h4>
                     <div className="flex items-center justify-between">
                       <div>
-                        <Label>Auto-scroll</Label>
+                        <Label>Aktiver auto-scroll</Label>
                         <p className="text-xs text-muted-foreground">Rull automatisk gjennom innhold</p>
                       </div>
                       <Switch
@@ -1055,7 +1102,7 @@ export default function DisplaySettingsPage() {
                     
                     {settings.auto_scroll_enabled && (
                       <>
-                        <div className="space-y-2 mt-4">
+                        <div className="space-y-2">
                           <Label>Scroll-hastighet</Label>
                           <Select 
                             value={settings.auto_scroll_speed} 
@@ -1072,7 +1119,7 @@ export default function DisplaySettingsPage() {
                           </Select>
                         </div>
                         
-                        <div className="flex items-center justify-between mt-4">
+                        <div className="flex items-center justify-between">
                           <div>
                             <Label>Pause ved hover</Label>
                             <p className="text-xs text-muted-foreground">Stopp scroll når mus er over</p>
@@ -1084,6 +1131,82 @@ export default function DisplaySettingsPage() {
                         </div>
                       </>
                     )}
+                  </div>
+                  
+                  {/* Sortering */}
+                  <div className="border-t pt-4 space-y-4">
+                    <h4 className="text-sm font-medium">Sortering av kunder</h4>
+                    
+                    <div className="space-y-2">
+                      <Label>Sorter etter</Label>
+                      <Select 
+                        value={settings.customer_sort_mode || 'name'} 
+                        onValueChange={(v) => updateSetting('customer_sort_mode', v as 'name' | 'progress' | 'customer_number')}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="name">Kundenavn</SelectItem>
+                          <SelectItem value="progress">Fremdrift (%)</SelectItem>
+                          <SelectItem value="customer_number">Kundenummer</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label>Sorteringsrekkefølge</Label>
+                      <Select 
+                        value={settings.customer_sort_direction || 'asc'} 
+                        onValueChange={(v) => updateSetting('customer_sort_direction', v as 'asc' | 'desc')}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="asc">Stigende (A-Å, 0-100)</SelectItem>
+                          <SelectItem value="desc">Synkende (Å-A, 100-0)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label>Ferdige kunder nederst</Label>
+                        <p className="text-xs text-muted-foreground">Flytt kunder med 100% til bunnen</p>
+                      </div>
+                      <Switch
+                        checked={settings.customer_sort_completed_last ?? true}
+                        onCheckedChange={(v) => updateSetting('customer_sort_completed_last', v)}
+                      />
+                    </div>
+                  </div>
+                  
+                  {/* Fullskjerm & Wake Lock */}
+                  <div className="border-t pt-4 space-y-4">
+                    <h4 className="text-sm font-medium">Skjermkontroll</h4>
+                    
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label>Vis fullskjerm-knapp</Label>
+                        <p className="text-xs text-muted-foreground">Tillat fullskjermmodus på displayet</p>
+                      </div>
+                      <Switch
+                        checked={settings.fullscreen_button_visible ?? true}
+                        onCheckedChange={(v) => updateSetting('fullscreen_button_visible', v)}
+                      />
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label>Hold skjermen våken</Label>
+                        <p className="text-xs text-muted-foreground">Forhindrer at skjermen slår seg av</p>
+                      </div>
+                      <Switch
+                        checked={settings.wake_lock_enabled ?? true}
+                        onCheckedChange={(v) => updateSetting('wake_lock_enabled', v)}
+                      />
+                    </div>
                   </div>
                 </AccordionContent>
               </AccordionItem>
