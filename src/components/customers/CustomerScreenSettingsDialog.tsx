@@ -1,0 +1,189 @@
+import { useTranslation } from 'react-i18next';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent } from '@/components/ui/card';
+import { Copy, ExternalLink, QrCode, Monitor, Loader2 } from 'lucide-react';
+import { useState } from 'react';
+import { useToast } from '@/hooks/use-toast';
+import { useUpdateCustomer, Customer } from '@/hooks/useCustomers';
+import { QRCodeSVG } from 'qrcode.react';
+
+interface CustomerScreenSettingsDialogProps {
+  customer: Customer | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
+export function CustomerScreenSettingsDialog({
+  customer,
+  open,
+  onOpenChange,
+}: CustomerScreenSettingsDialogProps) {
+  const { t } = useTranslation();
+  const { toast } = useToast();
+  const updateCustomer = useUpdateCustomer();
+  const [showQrCode, setShowQrCode] = useState(false);
+
+  if (!customer) return null;
+
+  const displayUrl = customer.display_token
+    ? `${window.location.origin}/display/customer/${customer.display_token}`
+    : '';
+
+  const hasDedicatedDisplay = customer.has_dedicated_display ?? false;
+
+  const handleToggleDedicatedDisplay = async (enabled: boolean) => {
+    try {
+      const updateData: Partial<Customer> & { id: string } = {
+        id: customer.id,
+        has_dedicated_display: enabled,
+      };
+
+      // Generate display_token if enabling and none exists
+      if (enabled && !customer.display_token) {
+        updateData.display_token = crypto.randomUUID();
+      }
+
+      await updateCustomer.mutateAsync(updateData);
+      toast({
+        title: t('common.success'),
+        description: enabled
+          ? 'Dedikert skjerm aktivert'
+          : 'Dedikert skjerm deaktivert',
+      });
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: t('common.error'),
+        description: error instanceof Error ? error.message : 'Noe gikk galt',
+      });
+    }
+  };
+
+  const handleCopyUrl = async () => {
+    if (!displayUrl) return;
+    await navigator.clipboard.writeText(displayUrl);
+    toast({
+      title: 'Kopiert',
+      description: 'URL kopiert til utklippstavlen',
+    });
+  };
+
+  const handleOpenScreen = () => {
+    if (!displayUrl) return;
+    window.open(displayUrl, '_blank');
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Monitor className="h-5 w-5" />
+            Skjerminnstillinger for {customer.name}
+          </DialogTitle>
+          <DialogDescription>
+            Administrer dedikert skjerm for kunde #{customer.customer_number}
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-6 py-4">
+          {/* Toggle for dedicated display */}
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <Label className="text-base font-medium">Dedikert skjerm</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Aktiver individuell skjerm for denne kunden
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">
+                    {hasDedicatedDisplay ? 'Aktiv' : 'Inaktiv'}
+                  </span>
+                  <Switch
+                    checked={hasDedicatedDisplay}
+                    onCheckedChange={handleToggleDedicatedDisplay}
+                    disabled={updateCustomer.isPending}
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Display URL section - only shown when dedicated display is enabled */}
+          {hasDedicatedDisplay && displayUrl && (
+            <>
+              <div className="space-y-2">
+                <Label>Skjerm URL</Label>
+                <div className="flex gap-2">
+                  <Input
+                    value={displayUrl}
+                    readOnly
+                    className="font-mono text-sm"
+                  />
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={handleCopyUrl}
+                    title="Kopier URL"
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <Button variant="outline" className="gap-2" onClick={handleCopyUrl}>
+                  <Copy className="h-4 w-4" />
+                  Kopier URL
+                </Button>
+                <Button variant="outline" className="gap-2" onClick={handleOpenScreen}>
+                  <ExternalLink className="h-4 w-4" />
+                  Åpne skjerm
+                </Button>
+              </div>
+
+              <Button
+                variant="outline"
+                className="w-full gap-2"
+                onClick={() => setShowQrCode(!showQrCode)}
+              >
+                <QrCode className="h-4 w-4" />
+                {showQrCode ? 'Skjul QR-kode' : 'Vis QR-kode'}
+              </Button>
+
+              {showQrCode && (
+                <div className="flex justify-center p-4 bg-white rounded-lg">
+                  <QRCodeSVG value={displayUrl} size={200} />
+                </div>
+              )}
+
+              <Card className="bg-muted/50">
+                <CardContent className="pt-4">
+                  <p className="text-sm font-medium mb-2">Tips:</p>
+                  <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                    <li>QR-koden kan skannes for enkel tilgang</li>
+                    <li>Skjermen viser real-time status for kundens ordrer</li>
+                    <li>URL kan deles direkte med kunden</li>
+                    <li>Automatisk oppdatering hvert 30. sekund</li>
+                  </ul>
+                </CardContent>
+              </Card>
+            </>
+          )}
+
+          {updateCustomer.isPending && (
+            <div className="flex items-center justify-center py-4">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}

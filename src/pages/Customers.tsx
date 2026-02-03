@@ -8,10 +8,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Plus, Search, Edit, Trash2, Loader2 } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Loader2, Settings } from 'lucide-react';
 import { useState } from 'react';
 import { useCustomers, useCreateCustomer, useUpdateCustomer, useDeleteCustomer, Customer } from '@/hooks/useCustomers';
 import { useToast } from '@/hooks/use-toast';
+import { CustomerScreenSettingsDialog } from '@/components/customers/CustomerScreenSettingsDialog';
 
 interface CustomerFormData {
   customer_number: string;
@@ -35,6 +36,7 @@ export default function Customers() {
   const [editCustomer, setEditCustomer] = useState<Customer | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [deleteCustomer, setDeleteCustomer] = useState<Customer | null>(null);
+  const [screenSettingsCustomer, setScreenSettingsCustomer] = useState<Customer | null>(null);
   const [formData, setFormData] = useState<CustomerFormData>(emptyForm);
   
   const { data: customers = [], isLoading } = useCustomers();
@@ -69,7 +71,11 @@ export default function Customers() {
         await updateCustomer.mutateAsync({ id: editCustomer.id, ...formData });
         toast({ title: t('common.success'), description: 'Kunde oppdatert' });
       } else {
-        await createCustomer.mutateAsync(formData);
+        await createCustomer.mutateAsync({
+          ...formData,
+          has_dedicated_display: false,
+          display_token: null,
+        });
         toast({ title: t('common.success'), description: 'Kunde opprettet' });
       }
       setIsDialogOpen(false);
@@ -141,6 +147,7 @@ export default function Customers() {
                   <TableHead>{t('customers.customerNumber')}</TableHead>
                   <TableHead>{t('customers.customerName')}</TableHead>
                   <TableHead>{t('customers.address')}</TableHead>
+                  <TableHead>Skjerm</TableHead>
                   <TableHead>{t('common.status')}</TableHead>
                   <TableHead className="text-right">{t('common.actions')}</TableHead>
                 </TableRow>
@@ -148,7 +155,7 @@ export default function Customers() {
               <TableBody>
                 {filteredCustomers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                       {t('customers.noCustomers')}
                     </TableCell>
                   </TableRow>
@@ -159,12 +166,23 @@ export default function Customers() {
                       <TableCell className="font-medium">{customer.name}</TableCell>
                       <TableCell className="text-muted-foreground">{customer.address || '-'}</TableCell>
                       <TableCell>
+                        <Badge 
+                          variant={customer.has_dedicated_display ? 'default' : 'secondary'}
+                          className={customer.has_dedicated_display ? 'bg-orange-500 hover:bg-orange-600' : ''}
+                        >
+                          {customer.has_dedicated_display ? 'Egen' : 'Felles'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
                         <Badge variant={customer.is_active ? 'default' : 'secondary'}>
                           {customer.is_active ? t('customers.active') : t('customers.inactive')}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
+                          <Button variant="ghost" size="icon" onClick={() => setScreenSettingsCustomer(customer)} title="Skjerminnstillinger">
+                            <Settings className="h-4 w-4" />
+                          </Button>
                           <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(customer)}>
                             <Edit className="h-4 w-4" />
                           </Button>
@@ -257,6 +275,13 @@ export default function Customers() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      
+      {/* Screen settings dialog */}
+      <CustomerScreenSettingsDialog
+        customer={screenSettingsCustomer}
+        open={!!screenSettingsCustomer}
+        onOpenChange={(open) => !open && setScreenSettingsCustomer(null)}
+      />
     </div>
   );
 }
