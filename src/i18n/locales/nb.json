@@ -157,7 +157,7 @@
     "productNumber": "Varenummer",
     "productName": "Produktnavn",
     "category": "Kategori",
-    "piecesPerTray": "Stk per brett",
+    "piecesPerTray": "Stk pr brett eller kurv",
     "active": "Aktiv",
     "inactive": "Inaktiv",
     "noProducts": "Ingen produkter funnet",

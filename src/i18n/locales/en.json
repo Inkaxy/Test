@@ -157,7 +157,7 @@
     "productNumber": "Product number",
     "productName": "Product name",
     "category": "Category",
-    "piecesPerTray": "Pieces per tray",
+    "piecesPerTray": "Pcs per tray or basket",
     "active": "Active",
     "inactive": "Inactive",
     "noProducts": "No products found",
