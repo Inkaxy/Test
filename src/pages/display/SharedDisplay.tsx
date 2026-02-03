@@ -14,11 +14,13 @@ import {
   DisplaySettings,
 } from '@/hooks/useDisplayOrders';
 import { useRealtimeDisplay } from '@/hooks/useRealtimeDisplay';
+import { useQueryClient } from '@tanstack/react-query';
 
 export default function SharedDisplay() {
   const { bakeryShortId, categoryId } = useParams();
   const [searchParams] = useSearchParams();
   const dateParam = searchParams.get('date');
+  const queryClient = useQueryClient();
   
   const [currentTime, setCurrentTime] = useState(new Date());
   const deliveryDate = dateParam || format(new Date(), 'yyyy-MM-dd');
@@ -38,12 +40,20 @@ export default function SharedDisplay() {
   );
 
   // Subscribe to realtime updates
-  const { isConnected } = useRealtimeDisplay({
+  const { isConnected, lastUpdate } = useRealtimeDisplay({
     bakeryId: bakery?.id || null,
     categoryId: categoryId || null,
     deliveryDate,
     enabled: !!bakery?.id,
   });
+
+  // Refetch data when packing status changes via broadcast
+  useEffect(() => {
+    if (lastUpdate) {
+      // Force refetch of customer display data on any packing update
+      queryClient.invalidateQueries({ queryKey: ['customer-display-data'] });
+    }
+  }, [lastUpdate, queryClient]);
 
   // Update clock every second
   useEffect(() => {
