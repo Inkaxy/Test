@@ -1,124 +1,119 @@
 
-# Plan: Fiks manglende pakkedato ved filimport
 
-## Problemanalyse
+# Plan: Oppdater Kundesiden med pakkeskjerm-lenker
 
-Etter grundig undersøkelse har jeg funnet at pakkedatoen **ikke vises i kalenderen** på grunn av:
+## Oversikt
 
-1. **Alle importerte produkter mangler kategori** (`category_id = null`)
-2. **Pakkekalenderen filtrerer alltid på kategori** - ordrer med produkter uten kategori vises aldri
+Kundesiden skal oppdateres for å vise hvilken skjermtype hver kunde har (dedikert eller felles), samt en innstillingsdialog for å administrere dedikert skjerm per kunde.
 
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│                    ROTÅRSAK                                     │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  products-tabell:                                               │
-│  ┌──────────────────────────────────────┐                       │
-│  │ name: "Kneipp"                       │                       │
-│  │ category_id: null  ← MANGLER!        │                       │
-│  └──────────────────────────────────────┘                       │
-│                                                                 │
-│  PackingCalendar spørring:                                      │
-│  ┌──────────────────────────────────────────────────────────┐   │
-│  │ .eq('product.category_id', categoryId)  ← FILTRERER UT! │   │
-│  └──────────────────────────────────────────────────────────┘   │
-│                                                                 │
-│  Resultat: 0 ordrer vises selv om det finnes 345               │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
-```
+## Funksjonelle krav (basert på bildene)
 
-## Løsning
+### Ny tabell-kolonne "Skjerm"
+- Viser **"Egen"** (oransje badge) hvis kunden har `has_dedicated_display = true`
+- Viser **"Felles"** (grå badge) hvis kunden bruker felles display
 
-### Tilnærming: Automatisk kategori-tilordning ved import
+### Ny innstillingsdialog per kunde
+- **Tittel**: "Skjerminnstillinger for [Kundenavn]"
+- **Undertittel**: "Administrer dedikert skjerm for kunde #[kundenummer]"
+- **Toggle**: "Dedikert skjerm" med "Aktiv/Inaktiv" label
+- **Skjerm URL**: Viser URL til kundens dedikerte display
+- **Knapper**: "Kopier URL", "Åpne skjerm", "Vis QR-kode"
+- **Tips-seksjon** med informasjon om bruk
 
-Ved import skal produkter automatisk få den **første aktive kategorien** for bakeriet som standard. Dette sikrer at:
-- Alle importerte produkter vises i kalenderen umiddelbart
-- Brukeren kan endre kategori senere om ønskelig
+### Handlinger-kolonne
+- Ny **tannhjul-ikon** (Settings) for å åpne skjerminnstillingene
+- Eksisterende rediger og slett-knapper beholdes
 
 ## Teknisk implementasjon
 
-### Steg 1: Oppdater useImport.ts
-
-**Endring**: Ved produkt-import, hent standard-kategori og tilordne den.
+### 1. Oppdater Customer interface
+Legg til de manglende feltene fra databasen:
 
 ```typescript
-// Hent standard-kategori (første aktive kategori)
-const { data: defaultCategory } = await supabase
-  .from('categories')
-  .select('id')
-  .eq('bakery_id', bakeryId)
-  .eq('is_active', true)
-  .order('sort_order', { ascending: true })
-  .limit(1)
-  .maybeSingle();
-
-const defaultCategoryId = defaultCategory?.id || null;
-
-// Ved insert av produkt
-.insert({
-  bakery_id: bakeryId,
-  product_number: product.productNumber,
-  name: product.name,
-  category_id: defaultCategoryId,  // ← Ny linje
-})
+// src/hooks/useCustomers.ts
+export interface Customer {
+  id: string;
+  bakery_id: string;
+  customer_number: string;
+  name: string;
+  address: string | null;
+  is_active: boolean;
+  has_dedicated_display: boolean | null;  // NY
+  display_token: string | null;           // NY
+}
 ```
 
-### Steg 2: Oppdater eksisterende produkter (engangs-fix)
+### 2. Oppdater useUpdateCustomer
+Tillat oppdatering av `has_dedicated_display` og `display_token`.
 
-Kjør SQL for å sette kategori på eksisterende produkter uten kategori.
-
-## Flyt etter endring
+### 3. Ny komponent: CustomerScreenSettingsDialog
 
 ```text
-┌─────────────────────────────────────────────────────────────────┐
-│                    NY IMPORTFLYT                                │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  1. Last opp .PRD fil                                           │
-│        ↓                                                        │
-│  2. Hent standard-kategori for bakeriet                         │
-│        ↓                                                        │
-│  3. Opprett produkt MED category_id                             │
-│        ↓                                                        │
-│  4. Ordrer vises i kalenderen umiddelbart ✓                     │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│  ⊞ Skjerminnstillinger for [Kundenavn]                    X  │
+│    Administrer dedikert skjerm for kunde #[nummer]           │
+├──────────────────────────────────────────────────────────────┤
+│  ┌────────────────────────────────────────────────────────┐  │
+│  │  Dedikert skjerm                          Aktiv [●━━]  │  │
+│  │  Aktiver individuell skjerm for denne kunden           │  │
+│  └────────────────────────────────────────────────────────┘  │
+│                                                              │
+│  Skjerm URL                                                  │
+│  ┌──────────────────────────────────────────────────┐  [📋] │
+│  │ https://xxx.lovable.app/display/customer/abc123 │       │
+│  └──────────────────────────────────────────────────┘       │
+│                                                              │
+│  [📋 Kopier URL]  [↗ Åpne skjerm]                           │
+│                                                              │
+│  [⊞ Vis QR-kode]                                            │
+│                                                              │
+│  Tips:                                                       │
+│  • QR-koden kan skannes for enkel tilgang                   │
+│  • Skjermen viser real-time status for kundens ordrer       │
+│  • URL kan deles direkte med kunden                         │
+│  • Automatisk oppdatering hvert 30. sekund                  │
+└──────────────────────────────────────────────────────────────┘
 ```
 
-## Endringer
+### 4. Oppdater Customers.tsx
+
+Endringer i tabellen:
+- Legg til "Skjerm"-kolonne med badge
+- Legg til tannhjul-ikon i handlinger-kolonnen
+- Integrer CustomerScreenSettingsDialog
+
+### 5. Logikk for display_token
+
+Ved aktivering av dedikert skjerm:
+- Generer unik `display_token` (UUID) hvis den ikke finnes
+- Sett `has_dedicated_display = true`
+
+Ved deaktivering:
+- Sett `has_dedicated_display = false`
+- Behold `display_token` (slik at URL forblir den samme hvis aktivert igjen)
+
+## Filer som endres
 
 | Fil | Endring |
 |-----|---------|
-| `src/hooks/useImport.ts` | Legg til automatisk kategori-tilordning ved produkt-import |
+| `src/hooks/useCustomers.ts` | Legg til `has_dedicated_display` og `display_token` i interface |
+| `src/pages/Customers.tsx` | Legg til Skjerm-kolonne, Settings-ikon og CustomerScreenSettingsDialog |
 
-## Database-oppdatering
+## QR-kode
 
-For eksisterende produkter uten kategori:
+For QR-kode-funksjonaliteten kan vi enten:
+1. Bruke en QR-kode generator bibliotek (som `qrcode.react`)
+2. Bruke en online QR API (f.eks. Google Charts API)
 
-```sql
--- Sett standard-kategori på alle produkter uten kategori
-UPDATE products 
-SET category_id = (
-  SELECT id FROM categories 
-  WHERE bakery_id = products.bakery_id 
-  AND is_active = true 
-  ORDER BY sort_order 
-  LIMIT 1
-)
-WHERE category_id IS NULL;
-```
+Anbefaler å bruke Google Charts API for enkelhet, eller installere `qrcode.react` for en mer robust løsning.
 
-## Risiko
+## Forventet resultat
 
-- **Lav risiko** - Endringen påvirker kun nye produkter
-- Eksisterende produkter oppdateres via egen SQL
-- Brukeren kan alltid endre kategori manuelt
+Etter implementasjon vil brukeren kunne:
+1. Se i tabellen hvilke kunder som har dedikert skjerm
+2. Klikke på tannhjul-ikonet for å åpne innstillinger
+3. Aktivere/deaktivere dedikert skjerm
+4. Kopiere URL til kundens display
+5. Åpne displayet i ny fane
+6. Vise QR-kode for enkel skanning
 
-## Testing
-
-Etter implementasjon:
-1. Importer nye filer
-2. Verifiser at produkter får kategori automatisk
-3. Sjekk at pakkekalenderen viser datoer med ordrer
