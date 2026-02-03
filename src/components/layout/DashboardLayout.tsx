@@ -84,9 +84,9 @@ export function DashboardLayout() {
   });
   
   const SidebarContent = () => (
-    <div className="flex h-full flex-col">
-      {/* Logo */}
-      <div className="flex h-16 items-center justify-between border-b px-4">
+    <div className="flex h-full flex-col overflow-hidden">
+      {/* Logo - sticky at top */}
+      <div className="flex h-16 shrink-0 items-center justify-between border-b px-4 bg-card">
         <div className="flex items-center gap-2">
           <img src={logoIcon} alt="Loaf & Load" className="h-10 w-10 object-contain" />
           <span className="text-lg font-semibold text-bakery-700">Loaf & Load</span>
@@ -98,8 +98,8 @@ export function DashboardLayout() {
         )}
       </div>
       
-      {/* Navigation */}
-      <ScrollArea className="flex-1 px-3 py-4">
+      {/* Navigation - scrollable middle section */}
+      <div className="flex-1 overflow-y-auto px-3 py-4">
         <nav className="space-y-1">
           {filteredNavItems.map((item) => {
             const Icon = item.icon;
@@ -173,10 +173,10 @@ export function DashboardLayout() {
             );
           })}
         </nav>
-      </ScrollArea>
+      </div>
       
-      {/* Footer */}
-      <div className="border-t p-4">
+      {/* Footer - sticky at bottom */}
+      <div className="shrink-0 border-t p-4 bg-card">
         <LanguageSwitcher />
         <Separator className="my-3" />
         <DropdownMenu>
