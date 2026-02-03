@@ -21,16 +21,32 @@ import { useImport } from '@/hooks/useImport';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
-// Available card colors
+// Available card colors - bakery-inspired palette
 export const CARD_COLORS = [
+  // Warm bakery tones
   { id: 'primary', name: 'Bakery Gold', class: 'bg-primary', textClass: 'text-primary-foreground' },
-  { id: 'blue', name: 'Blå', class: 'bg-blue-500', textClass: 'text-white' },
-  { id: 'green', name: 'Grønn', class: 'bg-emerald-500', textClass: 'text-white' },
-  { id: 'purple', name: 'Lilla', class: 'bg-purple-500', textClass: 'text-white' },
-  { id: 'rose', name: 'Rosa', class: 'bg-rose-500', textClass: 'text-white' },
-  { id: 'orange', name: 'Oransje', class: 'bg-orange-500', textClass: 'text-white' },
-  { id: 'teal', name: 'Turkis', class: 'bg-teal-500', textClass: 'text-white' },
-  { id: 'slate', name: 'Grå', class: 'bg-slate-600', textClass: 'text-white' },
+  { id: 'wheat', name: 'Hvete', class: 'bg-amber-600', textClass: 'text-white' },
+  { id: 'sourdough', name: 'Surdeigsbrød', class: 'bg-amber-800', textClass: 'text-white' },
+  { id: 'crust', name: 'Brødskorpe', class: 'bg-yellow-700', textClass: 'text-white' },
+  { id: 'honey', name: 'Honning', class: 'bg-amber-500', textClass: 'text-amber-950' },
+  
+  // Earthy tones
+  { id: 'terracotta', name: 'Terrakotta', class: 'bg-orange-700', textClass: 'text-white' },
+  { id: 'cinnamon', name: 'Kanel', class: 'bg-orange-800', textClass: 'text-white' },
+  { id: 'cocoa', name: 'Kakao', class: 'bg-stone-700', textClass: 'text-white' },
+  { id: 'espresso', name: 'Espresso', class: 'bg-stone-800', textClass: 'text-white' },
+  
+  // Fresh accents
+  { id: 'sage', name: 'Salvie', class: 'bg-emerald-700', textClass: 'text-white' },
+  { id: 'olive', name: 'Oliven', class: 'bg-lime-800', textClass: 'text-white' },
+  { id: 'berry', name: 'Bær', class: 'bg-rose-700', textClass: 'text-white' },
+  { id: 'plum', name: 'Plomme', class: 'bg-purple-800', textClass: 'text-white' },
+  
+  // Cool tones
+  { id: 'slate', name: 'Skifer', class: 'bg-slate-700', textClass: 'text-white' },
+  { id: 'steel', name: 'Stål', class: 'bg-zinc-600', textClass: 'text-white' },
+  { id: 'ocean', name: 'Hav', class: 'bg-blue-700', textClass: 'text-white' },
+  { id: 'teal', name: 'Turkis', class: 'bg-teal-700', textClass: 'text-white' },
 ];
 
 interface PackingCategoryCardProps {
@@ -342,13 +358,13 @@ export function PackingCategoryCard({
                 <Palette className="h-4 w-4" />
                 Kortfarge
               </Label>
-              <div className="flex flex-wrap gap-2">
+              <div className="grid grid-cols-6 gap-2">
                 {CARD_COLORS.map((color) => (
                   <button
                     key={color.id}
                     type="button"
                     className={cn(
-                      "w-10 h-10 rounded-lg transition-all",
+                      "w-9 h-9 rounded-lg transition-all hover:scale-110",
                       color.class,
                       editColor === color.id && "ring-2 ring-offset-2 ring-foreground scale-110"
                     )}
