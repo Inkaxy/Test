@@ -17,10 +17,16 @@ export interface DeviationConfig {
   predefinedValues?: string[];
 }
 
+export interface PackingRowStyleSettings {
+  alternateRowsEnabled?: boolean;
+  alternateRowColor?: string;
+}
+
 export interface BakerySettings {
   auto_delete_enabled?: boolean;
   auto_delete_days?: number;
   deviation_config?: DeviationConfig;
+  packing_row_style?: PackingRowStyleSettings;
 }
 
 export function useBakerySettings() {

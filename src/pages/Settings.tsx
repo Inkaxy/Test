@@ -7,9 +7,10 @@ import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
-import { useBakerySettings, useUpdateBakerySettings } from '@/hooks/useBakerySettings';
+import { useBakerySettings, useUpdateBakerySettings, type PackingRowStyleSettings } from '@/hooks/useBakerySettings';
 import { useToast } from '@/hooks/use-toast';
 import { DeviationSettingsCard } from '@/components/settings/DeviationSettingsCard';
+import { PackingRowStyleSettings as PackingRowStyleSettingsCard } from '@/components/packing/PackingRowStyleSettings';
 
 export default function Settings() {
   const { t, i18n } = useTranslation();
@@ -20,13 +21,50 @@ export default function Settings() {
   
   const [autoDeleteEnabled, setAutoDeleteEnabled] = useState(false);
   const [autoDeleteDays, setAutoDeleteDays] = useState(30);
+  const [alternateRowsEnabled, setAlternateRowsEnabled] = useState(false);
+  const [alternateRowColor, setAlternateRowColor] = useState('amber');
   
   useEffect(() => {
     if (settings) {
       setAutoDeleteEnabled(settings.auto_delete_enabled || false);
       setAutoDeleteDays(settings.auto_delete_days || 30);
+      setAlternateRowsEnabled(settings.packing_row_style?.alternateRowsEnabled || false);
+      setAlternateRowColor(settings.packing_row_style?.alternateRowColor || 'amber');
     }
   }, [settings]);
+  
+  const handleSaveRowStyle = async (enabled: boolean, color: string) => {
+    try {
+      await updateSettings.mutateAsync({
+        packing_row_style: {
+          alternateRowsEnabled: enabled,
+          alternateRowColor: color,
+        },
+      });
+      toast({
+        title: i18n.language === 'nb' ? 'Innstillinger lagret' : 'Settings saved',
+        description: i18n.language === 'nb' 
+          ? 'Radstil-innstillinger ble oppdatert.'
+          : 'Row style settings were updated.',
+      });
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: i18n.language === 'nb' ? 'Feil' : 'Error',
+        description: error instanceof Error ? error.message : 'Could not save settings',
+      });
+    }
+  };
+  
+  const handleAlternateRowsChange = (enabled: boolean) => {
+    setAlternateRowsEnabled(enabled);
+    handleSaveRowStyle(enabled, alternateRowColor);
+  };
+  
+  const handleAlternateRowColorChange = (color: string) => {
+    setAlternateRowColor(color);
+    handleSaveRowStyle(alternateRowsEnabled, color);
+  };
   
   const handleSaveAutoDelete = async () => {
     try {
@@ -96,6 +134,14 @@ export default function Settings() {
       
       {/* Deviation settings */}
       <DeviationSettingsCard />
+      
+      {/* Packing row style settings */}
+      <PackingRowStyleSettingsCard
+        alternateRowsEnabled={alternateRowsEnabled}
+        onAlternateRowsChange={handleAlternateRowsChange}
+        alternateRowColor={alternateRowColor}
+        onAlternateRowColorChange={handleAlternateRowColorChange}
+      />
       
       {/* Auto-delete settings */}
       <Card>
