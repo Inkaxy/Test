@@ -367,6 +367,8 @@ export function useUndoPacking() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['orders'] });
       queryClient.invalidateQueries({ queryKey: ['orders-by-product'] });
+      queryClient.invalidateQueries({ queryKey: ['customers-for-date'] });
+      queryClient.invalidateQueries({ queryKey: ['display-orders'] });
     },
   });
 }
