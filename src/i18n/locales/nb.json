@@ -236,6 +236,8 @@
   "superAdmin": {
     "title": "Super Admin",
     "selectBakery": "Velg bakeri",
+    "selected": "Valgt",
+    "active": "Aktiv",
     "activeBakery": "Aktivt bakeri",
     "allBakeries": "Alle bakerier",
     "impersonating": "Jobber som",
