@@ -68,9 +68,9 @@ export function CustomerScreenSettingsDialog({
     ? `${window.location.origin}/d/${localDisplayToken}`
     : '';
 
-  // Short URL format for shared: /display/shared/{shortId} (TODO: add /s/{shortId} route later)
+  // Short URL format for shared: /display/{shortId}
   const sharedDisplayUrl = bakery?.short_id
-    ? `${window.location.origin}/display/shared/${bakery.short_id}`
+    ? `${window.location.origin}/display/${bakery.short_id}`
     : '';
 
   const hasDedicatedDisplay = localHasDedicatedDisplay;

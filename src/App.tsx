@@ -51,6 +51,9 @@ function AppRoutes() {
       {/* Public display routes (no auth required) */}
       <Route path="/display/shared/:bakeryShortId/:categoryId" element={<SharedDisplay />} />
       <Route path="/display/shared/:bakeryShortId" element={<SharedDisplay />} />
+      
+      {/* Short display URL - /display/{bakeryShortId} */}
+      <Route path="/display/:bakeryShortId" element={<SharedDisplay />} />
       <Route path="/display/customer/:displayToken" element={<CustomerDisplay />} />
       
       {/* Short display URLs - /d/{token} */}
