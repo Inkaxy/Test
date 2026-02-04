@@ -130,43 +130,51 @@ export function CustomerOrderCard({
       >
         <CardContent className="p-5">
           <div className="flex items-center gap-4">
-            {/* Quantity - Large and prominent */}
-            <div 
-              className={cn(
-                'flex-shrink-0 min-w-[100px] h-[100px] rounded-2xl flex flex-col items-center justify-center',
-                status === 'packed' && 'bg-success/20',
-                status === 'deviation' && 'bg-destructive/20',
-                status === 'pending' && 'bg-primary/10'
-              )}
-            >
-              <span className="text-4xl font-bold tabular-nums leading-none">
-                {quantityInfo.total}
-              </span>
-              <span className="text-sm text-muted-foreground mt-1">
-                {t('packing.pieces', { count: quantityInfo.total }).replace(String(quantityInfo.total), '').trim()}
-              </span>
-              
-              {quantityInfo.hasTrays && quantityInfo.trays > 0 && (
-                <div className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-                  <span className="font-medium">{quantityInfo.trays}</span>
-                  <span>×</span>
-                  <span>{order.product.pieces_per_tray}</span>
-                  {quantityInfo.pieces > 0 && (
-                    <>
-                      <span>+</span>
-                      <span className="font-medium">{quantityInfo.pieces}</span>
-                    </>
-                  )}
-                </div>
-              )}
-            </div>
-            
-            {/* Product info */}
+            {/* Product info - First */}
             <div className="flex-1 min-w-0">
               <h3 className="text-xl font-semibold truncate">{order.product.name}</h3>
               <p className="text-sm text-muted-foreground font-mono mt-0.5">
                 {order.product.product_number}
               </p>
+            </div>
+            
+            {/* Quantity display - Large and prominent */}
+            <div 
+              className={cn(
+                'flex-shrink-0 min-w-[120px] h-[100px] rounded-2xl flex flex-col items-center justify-center px-4',
+                status === 'packed' && 'bg-success/20',
+                status === 'deviation' && 'bg-destructive/20',
+                status === 'pending' && 'bg-primary/10'
+              )}
+            >
+              {quantityInfo.hasTrays && quantityInfo.trays > 0 ? (
+                <>
+                  {/* Tray format: 2pl+3 */}
+                  <div className="flex items-baseline gap-0.5">
+                    <span className="text-3xl font-bold tabular-nums">{quantityInfo.trays}</span>
+                    <span className="text-lg font-medium text-muted-foreground">pl</span>
+                    {quantityInfo.pieces > 0 && (
+                      <>
+                        <span className="text-2xl font-bold">+</span>
+                        <span className="text-3xl font-bold tabular-nums">{quantityInfo.pieces}</span>
+                      </>
+                    )}
+                  </div>
+                  {/* Total pieces below */}
+                  <span className="text-sm text-muted-foreground mt-1">
+                    = {quantityInfo.total} stk
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span className="text-4xl font-bold tabular-nums leading-none">
+                    {quantityInfo.total}
+                  </span>
+                  <span className="text-sm text-muted-foreground mt-1">
+                    stk
+                  </span>
+                </>
+              )}
             </div>
             
             {/* Status and actions */}
