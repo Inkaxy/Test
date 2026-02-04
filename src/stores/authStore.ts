@@ -57,6 +57,8 @@ interface AuthState {
   fetchRoles: () => Promise<void>;
 }
 
+const SUPER_ADMIN_BAKERY_KEY = 'superAdminSelectedBakeryId';
+
 export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   session: null,
@@ -64,7 +66,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   roles: [],
   loading: true,
   initialized: false,
-  selectedBakeryId: null,
+  selectedBakeryId: localStorage.getItem(SUPER_ADMIN_BAKERY_KEY) || null,
   
   // Setters
   setUser: (user) => set({ user }),
@@ -73,7 +75,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   setRoles: (roles) => set({ roles }),
   setLoading: (loading) => set({ loading }),
   setInitialized: (initialized) => set({ initialized }),
-  setSelectedBakeryId: (bakeryId) => set({ selectedBakeryId: bakeryId }),
+  setSelectedBakeryId: (bakeryId) => {
+    if (bakeryId) {
+      localStorage.setItem(SUPER_ADMIN_BAKERY_KEY, bakeryId);
+    } else {
+      localStorage.removeItem(SUPER_ADMIN_BAKERY_KEY);
+    }
+    set({ selectedBakeryId: bakeryId });
+  },
   
   // Role helpers
   isSuperAdmin: () => {
@@ -148,6 +157,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   signOut: async () => {
     set({ loading: true });
     await supabase.auth.signOut();
+    localStorage.removeItem(SUPER_ADMIN_BAKERY_KEY);
     set({ user: null, session: null, profile: null, roles: [], selectedBakeryId: null, loading: false });
   },
   
