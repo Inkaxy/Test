@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { DeviationDialog } from '@/components/packing/DeviationDialog';
+import { useDisplaySettings, getDefaultDisplaySettings } from '@/hooks/useDisplayOrders';
 
 interface DeviationOrderInfo {
   id: string;
@@ -272,11 +273,40 @@ export default function KioskPackingView() {
   
   const { data: bakery, isLoading: bakeryLoading } = useBakeryByShortId(bakeryShortId || null);
   const { data: category } = useCategoryById(categoryId || null);
-  const { data: customers = [], isLoading: customersLoading } = useKioskCustomersForDate(
+  const { data: customersData = [], isLoading: customersLoading } = useKioskCustomersForDate(
     bakery?.id || null, 
     dateStr, 
     categoryId
   );
+  const { data: displaySettings } = useDisplaySettings(bakery?.id || null, categoryId, 'shared');
+  const settings = displaySettings || getDefaultDisplaySettings();
+  
+  // Apply sorting based on display settings
+  const customers = useMemo(() => {
+    return [...customersData].sort((a, b) => {
+      // Handle completed customers last if enabled
+      const completedLast = settings.customer_sort_completed_last ?? true;
+      if (completedLast) {
+        if (a.progress === 100 && b.progress !== 100) return 1;
+        if (a.progress !== 100 && b.progress === 100) return -1;
+      }
+      
+      // Then sort by selected mode
+      const sortMode = settings.customer_sort_mode || 'name';
+      const sortDirection = settings.customer_sort_direction || 'asc';
+      const multiplier = sortDirection === 'desc' ? -1 : 1;
+      
+      switch (sortMode) {
+        case 'progress':
+          return (a.progress - b.progress) * multiplier;
+        case 'customer_number':
+          return a.customer_number.localeCompare(b.customer_number, 'nb', { numeric: true }) * multiplier;
+        case 'name':
+        default:
+          return a.name.localeCompare(b.name, 'nb') * multiplier;
+      }
+    });
+  }, [customersData, settings.customer_sort_completed_last, settings.customer_sort_mode, settings.customer_sort_direction]);
   
   const markAsPacked = useKioskMarkAsPacked();
   const undoPacking = useKioskUndoPacking();
