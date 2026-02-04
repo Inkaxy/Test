@@ -232,6 +232,20 @@
     "noBakeries": "Ingen bakerier funnet",
     "deleteConfirm": "Er du sikker på at du vil slette dette bakeriet?"
   },
+  "superAdmin": {
+    "title": "Super Admin",
+    "selectBakery": "Velg bakeri",
+    "activeBakery": "Aktivt bakeri",
+    "allBakeries": "Alle bakerier",
+    "impersonating": "Jobber som",
+    "backToOverview": "Tilbake til oversikt",
+    "noBakerySelected": "Velg et bakeri for å se data",
+    "selectBakeryToStart": "Velg et bakeri...",
+    "systemStats": "Systemstatistikk",
+    "totalBakeries": "Totalt antall bakerier",
+    "totalUsers": "Totalt antall brukere",
+    "totalOrders": "Totalt antall ordrer"
+  },
   "settings": {
     "title": "Innstillinger",
     "general": "Generelt",

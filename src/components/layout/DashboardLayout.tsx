@@ -40,6 +40,7 @@ import {
 } from '@/components/ui/collapsible';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
+import { SuperAdminBakerySelector } from '@/components/admin/SuperAdminBakerySelector';
 
 interface NavItem {
   key: string;
@@ -96,6 +97,11 @@ export function DashboardLayout() {
             <X className="h-5 w-5" />
           </Button>
         )}
+      </div>
+      
+      {/* Super Admin Bakery Selector */}
+      <div className="shrink-0 px-3 pt-3">
+        <SuperAdminBakerySelector />
       </div>
       
       {/* Navigation - scrollable middle section */}
