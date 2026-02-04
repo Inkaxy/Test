@@ -179,6 +179,13 @@ export function UserRoleDialog({ open, onOpenChange, user, bakeries }: UserRoleD
     }
   };
 
+  const handleBakeryChange = (bakeryId: string) => {
+    if (!user) return;
+    const newBakeryIdValue = bakeryId === 'none' ? null : bakeryId;
+    setSelectedBakeryId(bakeryId);
+    updateBakeryMutation.mutate({ userId: user.user_id, bakeryId: newBakeryIdValue });
+  };
+
   const getRoleIcon = (role: AppRole) => {
     switch (role) {
       case 'super_admin':
