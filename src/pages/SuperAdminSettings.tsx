@@ -7,12 +7,12 @@ import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuthStore } from '@/stores/authStore';
 import { toast } from 'sonner';
+import { UsersOverviewSection } from '@/components/admin/UsersOverviewSection';
 import { 
   Building2, 
   Users, 
   Package, 
   Activity,
-  TrendingUp,
   Database,
   Shield,
   Zap
