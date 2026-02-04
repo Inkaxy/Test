@@ -232,6 +232,20 @@
     "noBakeries": "No bakeries found",
     "deleteConfirm": "Are you sure you want to delete this bakery?"
   },
+  "superAdmin": {
+    "title": "Super Admin",
+    "selectBakery": "Select bakery",
+    "activeBakery": "Active bakery",
+    "allBakeries": "All bakeries",
+    "impersonating": "Working as",
+    "backToOverview": "Back to overview",
+    "noBakerySelected": "Select a bakery to view data",
+    "selectBakeryToStart": "Select a bakery...",
+    "systemStats": "System statistics",
+    "totalBakeries": "Total bakeries",
+    "totalUsers": "Total users",
+    "totalOrders": "Total orders"
+  },
   "settings": {
     "title": "Settings",
     "general": "General",

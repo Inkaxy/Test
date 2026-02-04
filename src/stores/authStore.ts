@@ -26,6 +26,9 @@ interface AuthState {
   loading: boolean;
   initialized: boolean;
   
+  // Super Admin bakery context
+  selectedBakeryId: string | null;
+  
   // Actions
   setUser: (user: User | null) => void;
   setSession: (session: Session | null) => void;
@@ -33,6 +36,7 @@ interface AuthState {
   setRoles: (roles: UserRole[]) => void;
   setLoading: (loading: boolean) => void;
   setInitialized: (initialized: boolean) => void;
+  setSelectedBakeryId: (bakeryId: string | null) => void;
   
   // Helpers
   isSuperAdmin: () => boolean;
@@ -40,6 +44,7 @@ interface AuthState {
   isBakeryUser: (bakeryId?: string) => boolean;
   hasAnyRole: () => boolean;
   getCurrentBakeryId: () => string | null;
+  getActiveBakeryId: () => string | null;
   
   // Auth methods
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
@@ -59,6 +64,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   roles: [],
   loading: true,
   initialized: false,
+  selectedBakeryId: null,
   
   // Setters
   setUser: (user) => set({ user }),
@@ -67,6 +73,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   setRoles: (roles) => set({ roles }),
   setLoading: (loading) => set({ loading }),
   setInitialized: (initialized) => set({ initialized }),
+  setSelectedBakeryId: (bakeryId) => set({ selectedBakeryId: bakeryId }),
   
   // Role helpers
   isSuperAdmin: () => {
@@ -104,6 +111,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     return bakeryRole?.bakery_id || null;
   },
   
+  getActiveBakeryId: () => {
+    const state = get();
+    // Super admin can select any bakery
+    if (state.isSuperAdmin() && state.selectedBakeryId) {
+      return state.selectedBakeryId;
+    }
+    // For regular users, use their bakery from profile/roles
+    return state.getCurrentBakeryId();
+  },
+  
   // Auth methods
   signIn: async (email, password) => {
     set({ loading: true });
@@ -131,7 +148,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   signOut: async () => {
     set({ loading: true });
     await supabase.auth.signOut();
-    set({ user: null, session: null, profile: null, roles: [], loading: false });
+    set({ user: null, session: null, profile: null, roles: [], selectedBakeryId: null, loading: false });
   },
   
   resetPassword: async (email) => {
