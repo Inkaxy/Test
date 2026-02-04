@@ -100,6 +100,7 @@ export function DeviationDialog({
     const selectedTypeConfig = deviationTypes.find(t => t.id === selectedType);
     let note = '';
     
+    // Build the note based on input mode
     if (inputMode === 'number') {
       note = `Bestilt: ${orderedQty}, Faktisk: ${actualQuantity}, Avvik: ${difference}`;
     } else if (inputMode === 'text') {
@@ -108,8 +109,20 @@ export function DeviationDialog({
       note = selectedPredefined || '';
     }
     
+    // Add custom type label to note if using a non-standard type
+    const dbEnumTypes = ['shortage', 'damaged', 'wrong_product', 'other'];
+    const isStandardType = dbEnumTypes.includes(selectedType);
+    
+    if (!isStandardType && selectedTypeConfig) {
+      // Prepend the custom type label to the note
+      note = `[${selectedTypeConfig.label}] ${note}`;
+    }
+    
+    // Map custom types to 'other' for database compatibility
+    const dbDeviationType = isStandardType ? selectedType : 'other';
+    
     onConfirm({
-      deviationType: selectedType,
+      deviationType: dbDeviationType,
       deviationNote: note,
       actualQuantity: inputMode === 'number' ? actualQuantity : undefined,
     });
