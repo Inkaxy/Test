@@ -62,6 +62,7 @@ const navItems: NavItem[] = [
   { key: 'import', icon: Upload, href: '/import', requiresAdmin: true },
   { key: 'displaySettings', icon: Monitor, href: '/display-settings', requiresAdmin: true },
   { key: 'bakeries', icon: Building2, href: '/bakeries', requiresSuperAdmin: true },
+  { key: 'superAdmin', icon: Settings, href: '/super-admin', requiresSuperAdmin: true },
   { key: 'settings', icon: Settings, href: '/settings' },
 ];
 
