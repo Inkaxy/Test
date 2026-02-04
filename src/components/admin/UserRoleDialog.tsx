@@ -128,6 +128,24 @@ export function UserRoleDialog({ open, onOpenChange, user, bakeries }: UserRoleD
     }
   });
 
+  const updateBakeryMutation = useMutation({
+    mutationFn: async ({ userId, bakeryId }: { userId: string; bakeryId: string | null }) => {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ bakery_id: bakeryId })
+        .eq('user_id', userId);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['super-admin-all-users'] });
+      toast.success(t('superAdmin.bakeryUpdated'));
+    },
+    onError: () => {
+      toast.error(t('errors.generic'));
+    }
+  });
+
   const handleAddRole = () => {
     if (!user || !newRole) return;
     
