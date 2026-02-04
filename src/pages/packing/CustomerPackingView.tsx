@@ -40,14 +40,14 @@ export default function CustomerPackingView() {
   const { toast } = useToast();
   const navigate = useNavigate();
   const { categoryId, date } = useParams<{ categoryId: string; date: string }>();
-  const { user, getCurrentBakeryId } = useAuthStore();
+  const { user, getActiveBakeryId } = useAuthStore();
   const locale = i18n.language === 'nb' ? nb : enUS;
   
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerWithOrders | null>(null);
   const [deviationOrder, setDeviationOrder] = useState<DeviationOrderInfo | null>(null);
   
   const dateStr = date || format(new Date(), 'yyyy-MM-dd');
-  const bakeryId = getCurrentBakeryId();
+  const bakeryId = getActiveBakeryId();
   
   // Get display settings for sorting
   const { data: displaySettings } = useDisplaySettings(bakeryId || null, categoryId, 'shared');

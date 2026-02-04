@@ -39,12 +39,12 @@ interface ProductOrder {
 }
 
 function useProductsForDate(date: string, categoryId?: string) {
-  const { getCurrentBakeryId } = useAuthStore();
+  const { getActiveBakeryId } = useAuthStore();
   
   return useQuery({
-    queryKey: ['products-for-date', getCurrentBakeryId(), date, categoryId],
+    queryKey: ['products-for-date', getActiveBakeryId(), date, categoryId],
     queryFn: async () => {
-      const bakeryId = getCurrentBakeryId();
+      const bakeryId = getActiveBakeryId();
       if (!bakeryId) return [];
       
       let query = supabase
@@ -123,7 +123,7 @@ export default function ProductPackingView() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { categoryId, date } = useParams<{ categoryId: string; date: string }>();
-  const { getCurrentBakeryId } = useAuthStore();
+  const { getActiveBakeryId } = useAuthStore();
   const locale = i18n.language === 'nb' ? nb : enUS;
   
   const [selectedProduct, setSelectedProduct] = useState<ProductWithOrders | null>(null);
@@ -133,7 +133,7 @@ export default function ProductPackingView() {
   const [deviationNote, setDeviationNote] = useState('');
   
   const dateStr = date || format(new Date(), 'yyyy-MM-dd');
-  const bakeryId = getCurrentBakeryId();
+  const bakeryId = getActiveBakeryId();
   
   const { data: products = [], isLoading: productsLoading } = useProductsForDate(dateStr, categoryId);
   

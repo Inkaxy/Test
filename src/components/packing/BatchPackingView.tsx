@@ -41,8 +41,8 @@ export function BatchPackingView({
 }: BatchPackingViewProps) {
   const { t, i18n } = useTranslation();
   const locale = i18n.language === 'nb' ? nb : enUS;
-  const { getCurrentBakeryId } = useAuthStore();
-  const bakeryId = getCurrentBakeryId();
+  const { getActiveBakeryId } = useAuthStore();
+  const bakeryId = getActiveBakeryId();
   
   const [activeProductIndex, setActiveProductIndex] = useState(0);
   const [completedProducts, setCompletedProducts] = useState<Set<string>>(new Set());
