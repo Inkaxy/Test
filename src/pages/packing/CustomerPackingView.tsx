@@ -1,12 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Lock, Users, Package, Loader2, ArrowLeft, Check, AlertTriangle, Undo2 } from 'lucide-react';
+import { Lock, Users, Package, Loader2, ArrowLeft, Check, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
 import { nb, enUS } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -23,7 +22,9 @@ import {
 import { useMarkAsPacked, useReportDeviation, useUndoPacking } from '@/hooks/useOrders';
 import { useAuthStore } from '@/stores/authStore';
 import { useToast } from '@/hooks/use-toast';
+import { useBakerySettings } from '@/hooks/useBakerySettings';
 import { DeviationDialog } from '@/components/packing/DeviationDialog';
+import { CustomerOrderCard } from '@/components/packing/CustomerOrderCard';
 
 interface DeviationOrderInfo {
   id: string;
@@ -48,6 +49,7 @@ export default function CustomerPackingView() {
   
   const { data: customers = [], isLoading: customersLoading } = useCustomersForDate(dateStr, categoryId);
   const { data: locks = [] } = useCustomerLocks(dateStr);
+  const { data: bakerySettings } = useBakerySettings();
   useRealtimeCustomerLocks(dateStr);
   
   const acquireLock = useAcquireCustomerLock();
@@ -158,27 +160,9 @@ export default function CustomerPackingView() {
   const packedOrders = customers.reduce((sum, c) => sum + c.packedOrders, 0);
   const overallProgress = totalOrders > 0 ? Math.round((packedOrders / totalOrders) * 100) : 0;
   
-  const getQuantityDisplay = (quantity: number, piecesPerTray?: number | null) => {
-    if (!piecesPerTray) return t('packing.pieces', { count: quantity });
-    
-    const trays = Math.floor(quantity / piecesPerTray);
-    const pieces = quantity % piecesPerTray;
-    
-    if (trays === 0) return t('packing.pieces', { count: pieces });
-    if (pieces === 0) return t('packing.trays', { count: trays });
-    return t('packing.traysAndPieces', { trays: t('packing.trays', { count: trays }), pieces });
-  };
-  
-  const getStatusBadge = (status?: string) => {
-    switch (status) {
-      case 'packed':
-        return <Badge className="bg-success text-success-foreground">{t('packing.packed')}</Badge>;
-      case 'deviation':
-        return <Badge variant="destructive">{t('packing.deviation')}</Badge>;
-      default:
-        return <Badge variant="secondary">{t('packing.pending')}</Badge>;
-    }
-  };
+  // Get row style settings
+  const alternateRowsEnabled = bakerySettings?.packing_row_style?.alternateRowsEnabled || false;
+  const alternateRowColor = bakerySettings?.packing_row_style?.alternateRowColor || 'amber';
   
   // Customer packing view
   if (selectedCustomer) {
@@ -222,83 +206,28 @@ export default function CustomerPackingView() {
           </CardContent>
         </Card>
         
-        {/* Products - touch optimized */}
+        {/* Products - touch optimized with alternating colors */}
         <div className="space-y-3">
-          {currentCustomer.orders.map((order) => {
-            const status = order.packing_status?.status || 'pending';
-            
-            return (
-              <Card
-                key={order.id}
-                className={cn(
-                  'transition-all',
-                  status === 'packed' && 'bg-success/10 border-success/30',
-                  status === 'deviation' && 'bg-destructive/10 border-destructive/30'
-                )}
-              >
-                <CardContent className="p-4">
-                  <div className="flex items-start gap-4">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xl font-medium">{order.product.name}</p>
-                      <div className="flex items-center gap-2 mt-1 text-muted-foreground">
-                        <span>{order.product.product_number}</span>
-                        <span>•</span>
-                        <span className="font-mono text-lg">
-                          {getQuantityDisplay(order.quantity, order.product.pieces_per_tray)}
-                        </span>
-                      </div>
-                    </div>
-                    
-                    <div className="flex flex-col items-end gap-2">
-                      {getStatusBadge(status)}
-                      
-                      {status === 'pending' && (
-                        <div className="flex gap-2">
-                          <Button
-                            size="lg"
-                            onClick={() => handleMarkPacked(order.id, order.packing_status?.id, order.product.id, order.product.category_id)}
-                            disabled={markAsPacked.isPending}
-                            className="h-14 px-6 text-lg gap-2"
-                          >
-                            <Check className="h-5 w-5" />
-                            {t('packing.markAsPacked')}
-                          </Button>
-                          
-                          <Button
-                            size="lg"
-                            variant="outline"
-                            onClick={() => setDeviationOrder({ 
-                              id: order.id, 
-                              packingStatusId: order.packing_status?.id,
-                              productName: order.product.name,
-                              customerName: currentCustomer.name,
-                              quantity: order.quantity,
-                            })}
-                            className="h-14 w-14"
-                          >
-                            <AlertTriangle className="h-5 w-5" />
-                          </Button>
-                        </div>
-                      )}
-                      
-                      {(status === 'packed' || status === 'deviation') && order.packing_status?.id && (
-                        <Button
-                          size="lg"
-                          variant="ghost"
-                          onClick={() => handleUndo(order.packing_status!.id)}
-                          disabled={undoPacking.isPending}
-                          className="h-12"
-                        >
-                          <Undo2 className="h-5 w-5 mr-2" />
-                          {t('packing.undoPacked')}
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+          {currentCustomer.orders.map((order, index) => (
+            <CustomerOrderCard
+              key={order.id}
+              order={order}
+              index={index}
+              isAlternate={alternateRowsEnabled && index % 2 === 1}
+              alternateRowColor={alternateRowColor}
+              onMarkPacked={handleMarkPacked}
+              onReportDeviation={(o) => setDeviationOrder({ 
+                id: o.id, 
+                packingStatusId: o.packing_status?.id,
+                productName: o.product.name,
+                customerName: currentCustomer.name,
+                quantity: o.quantity,
+              })}
+              onUndo={handleUndo}
+              isMarkingPacked={markAsPacked.isPending}
+              isUndoing={undoPacking.isPending}
+            />
+          ))}
         </div>
         
         {/* Deviation dialog */}
