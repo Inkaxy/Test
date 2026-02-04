@@ -23,6 +23,7 @@ import { useMarkAsPacked, useReportDeviation, useUndoPacking } from '@/hooks/use
 import { useAuthStore } from '@/stores/authStore';
 import { useToast } from '@/hooks/use-toast';
 import { useBakerySettings } from '@/hooks/useBakerySettings';
+import { useDisplaySettings, getDefaultDisplaySettings } from '@/hooks/useDisplayOrders';
 import { DeviationDialog } from '@/components/packing/DeviationDialog';
 import { CustomerOrderCard } from '@/components/packing/CustomerOrderCard';
 
@@ -39,15 +40,29 @@ export default function CustomerPackingView() {
   const { toast } = useToast();
   const navigate = useNavigate();
   const { categoryId, date } = useParams<{ categoryId: string; date: string }>();
-  const { user } = useAuthStore();
+  const { user, getCurrentBakeryId } = useAuthStore();
   const locale = i18n.language === 'nb' ? nb : enUS;
   
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerWithOrders | null>(null);
   const [deviationOrder, setDeviationOrder] = useState<DeviationOrderInfo | null>(null);
   
   const dateStr = date || format(new Date(), 'yyyy-MM-dd');
+  const bakeryId = getCurrentBakeryId();
   
-  const { data: customers = [], isLoading: customersLoading } = useCustomersForDate(dateStr, categoryId);
+  // Get display settings for sorting
+  const { data: displaySettings } = useDisplaySettings(bakeryId || null, categoryId, 'shared');
+  const settings = displaySettings || getDefaultDisplaySettings();
+  
+  // Build sort options from display settings
+  const sortOptions = {
+    completedLast: settings.customer_sort_completed_last ?? true,
+    sortMode: settings.customer_sort_mode === 'progress' ? 'progress' as const : 
+              settings.customer_sort_mode === 'customer_number' ? 'customer_number' as const : 
+              settings.customer_sort_mode === 'name' ? 'name' as const : 'priority' as const,
+    sortDirection: settings.customer_sort_direction || 'asc',
+  };
+  
+  const { data: customers = [], isLoading: customersLoading } = useCustomersForDate(dateStr, categoryId, sortOptions);
   const { data: locks = [] } = useCustomerLocks(dateStr);
   const { data: bakerySettings } = useBakerySettings();
   useRealtimeCustomerLocks(dateStr);
