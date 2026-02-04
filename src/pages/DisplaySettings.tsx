@@ -1567,9 +1567,6 @@ export default function DisplaySettingsPage() {
                                 </span>
                                 <span className="text-sm text-muted-foreground">stk</span>
                               </div>
-                              <span className="text-xs text-muted-foreground">
-                                {product.packed ? '1/1' : '0/1'}
-                              </span>
                               <span 
                                 className="px-2 py-0.5 rounded text-xs font-medium"
                                 style={{

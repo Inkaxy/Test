@@ -359,16 +359,6 @@ export default function PackingDisplay() {
                               <span className="text-xs opacity-60">stk</span>
                             </div>
 
-                            {/* Progress indicator */}
-                            <div 
-                              className="text-center min-w-[40px]"
-                              style={{ fontSize: displaySettings.card_progress_font_size || '0.875rem' }}
-                            >
-                              <span className="font-mono opacity-80">
-                                {isPacked ? '1/1' : '0/1'}
-                              </span>
-                            </div>
-
                             {/* Status badge */}
                             <Badge
                               variant={isPacked ? 'default' : 'outline'}
