@@ -1,54 +1,88 @@
 
 
-## Mål
-Fjerne den unødvendige “0/1” / “1/1”-teksten som fortsatt vises under/ved siden av antall “stk” på enkelte visninger. Statusen vises allerede tydelig med “Ferdig/Venter”-badge og gjennomstreking, så denne ekstra linjen skaper bare støy.
+# Plan: Kategori-spesifikke innstillinger for alle display-typer
 
-## Hva jeg fant (årsaken til at den fortsatt vises)
-Selv om “0/1 / 1/1” er fjernet fra **CustomerDisplay**, finnes teksten fortsatt hardkodet i andre filer:
+## Bakgrunn
+Du vil kunne tilpasse hvordan varer vises ulikt avhengig av kategori (f.eks. "Brød" vs "Kaker"). Backend-støtten er allerede på plass - det er kun admin-grensesnittet som begrenser kategori-valget til "Felles Display".
 
-- `src/pages/display/SharedDisplay.tsx` (Felles display) – produktlinjene har en egen “Progress indicator” som viser `{isPacked ? '1/1' : '0/1'}`.
-- `src/pages/display/PackingDisplay.tsx` (Pakkedisplay) – samme “Progress indicator” som over.
-- `src/pages/DisplaySettings.tsx` (admin-forhåndsvisning av displaykort) – forhåndsvisningen viser `{product.packed ? '1/1' : '0/1'}`.
+## Hva som allerede fungerer
+- Databasen har `category_id` i `display_settings`-tabellen
+- `useDisplaySettings(bakeryId, categoryId, displayType)` støtter kategori-filter
+- Alle tre display-typer sender med `categoryId` når de henter innstillinger
 
-Derfor vil “0/1 / 1/1” fortsatt dukke opp i disse skjermene selv etter at CustomerDisplay ble ryddet.
+## Endringer
 
-## Endringer som skal gjøres
+### Fil: `src/pages/DisplaySettings.tsx`
 
-### 1) Felles display: fjern progress-indikatoren fra produktlinjene
-**Fil:** `src/pages/display/SharedDisplay.tsx`  
-**Endring:** Slette blokken under kommentaren `/* Progress indicator */` (linjene rundt 512–520 i utsnittet jeg leste).
+**Endring 1** - Vis kategori-velger for alle display-typer (linje 366):
 
-- Fjern hele `<div ...><span className="font-mono ...">{isPacked ? '1/1' : '0/1'}</span></div>`
-- La resten stå: produktnavn + antall (“stk”) + badge (“Ferdig/Venter”)
+```tsx
+// FRA:
+{selectedDisplayType === 'shared' && (
 
-**Resultat:** Ingen “0/1 / 1/1” i Felles display, og layouten blir renere.
+// TIL:
+{categories.length > 0 && (
+```
 
-### 2) Pakkedisplay: fjern progress-indikatoren fra produktlinjene
-**Fil:** `src/pages/display/PackingDisplay.tsx`  
-**Endring:** Slette blokken under `/* Progress indicator */` (rundt linjene 362–370 i utsnittet jeg leste).
+**Endring 2** - Tilpass beskrivelsen basert på display-type:
 
-- Samme fjerning som i SharedDisplay.
+```tsx
+<p className="text-xs text-muted-foreground mb-2">
+  {selectedDisplayType === 'customer' 
+    ? 'Tilpass visning per produktkategori. Produkter arver innstillinger fra sin kategori.'
+    : 'Tilpass visning per produktkategori (f.eks. ulik fontstørrelse for brød vs kaker)'
+  }
+</p>
+```
 
-### 3) Display-innstillinger (forhåndsvisning): fjern “0/1 / 1/1” i preview-kortet
-**Fil:** `src/pages/DisplaySettings.tsx`  
-**Endring:** Fjerne `span`-linjen som viser `{product.packed ? '1/1' : '0/1'}` (rundt linje 1570–1572).
+**Endring 3** - Skjul Kiosk-URL-er på "Kunde Display"-fanen (linje 390):
 
-Dette påvirker bare forhåndsvisningen i adminpanelet, men hindrer forvirring når man justerer innstillinger.
+Kiosk-URL-er bruker bakeriets `short_id`, mens Kunde Display bruker unike tokens per kunde. Derfor er de ikke relevante å vise på den fanen.
 
-## Kontroll / test (viktig)
-1. Åpne Felles display (`/display/...`) og verifiser at ingen produktlinjer viser “0/1” eller “1/1”.
-2. Åpne Pakkedisplay (`/display/packing`) og verifiser det samme.
-3. Gå til “Display settings” (admin) og sjekk at preview-kortet ikke viser “0/1 / 1/1”.
-4. Bekreft at status fortsatt er tydelig via:
-   - gjennomstreking/opacity på pakket produkt
-   - badge (“Ferdig”/“Venter”)
+```tsx
+// FRA:
+{bakery?.short_id && (
 
-## Risiko / bivirkninger
-- Minimal risiko: vi fjerner kun en tekstindikator, ingen endring i logikk for hva som regnes som pakket.
-- Layout kan bli litt “luftigere” (en kolonne mindre). Hvis det ser for tett/feiljustert ut etterpå, justerer vi `gap` i høyre seksjon (f.eks. fra `gap-3` til `gap-4` eller motsatt) – men kun ved behov etter visuell sjekk.
+// TIL:
+{bakery?.short_id && selectedDisplayType !== 'customer' && (
+```
 
-## Ferdigkriterier
-- Søk i kodebasen etter “1/1” og “0/1” gir ingen treff i display-rendring.
-- Ingen skjerm viser “0/1 / 1/1” ved siden av antall “stk”.
-- “Ferdig/Venter”-badge og gjennomstreking fungerer fortsatt som før.
+**Endring 4** - Legg til forklarende overskrift for Kiosk-seksjonen:
+
+```tsx
+<div className="pt-4 border-t mt-4 space-y-4">
+  <div className="mb-2">
+    <h4 className="text-sm font-semibold flex items-center gap-2">
+      Pakkestasjoner (Kiosk)
+    </h4>
+    <p className="text-xs text-muted-foreground">
+      Touch-optimaliserte lenker for pakkere. Krever ikke innlogging.
+    </p>
+  </div>
+  {/* Eksisterende Kiosk-URLer */}
+</div>
+```
+
+## Tekniske detaljer
+
+### Hvordan kategori-innstillinger fungerer
+
+Når en display henter innstillinger skjer følgende:
+
+1. Først søkes det etter innstillinger med matchende `(bakery_id, display_type, category_id)`
+2. Hvis ingen finnes, returneres standard-innstillinger
+
+For **Felles Display** og **Pakkedisplay**: Kategori-ID kommer fra URL-en, så hver skjerm kan vise innstillinger for én kategori.
+
+For **Kunde Display**: En kunde kan ha produkter fra flere kategorier. For nå brukes innstillingene der `category_id = null` (standard). I fremtiden kan dette utvides til å arve per produkt-linje.
+
+## Resultat
+
+- Kategori-velger synlig for alle tre display-typer
+- Kiosk-URL-er skjult på "Kunde Display" (ikke relevant der)
+- Tydeligere forklaring på hva Kiosk-lenkene er til
+
+## Filer som endres
+
+1. `src/pages/DisplaySettings.tsx` - Alle endringer over
 
