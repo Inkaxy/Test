@@ -363,11 +363,14 @@ export default function DisplaySettingsPage() {
             </p>
           </div>
           
-          {selectedDisplayType === 'shared' && (
+          {categories.length > 0 && (
             <div className="pt-2 border-t">
               <Label className="text-sm font-medium">Kategori-spesifikke innstillinger</Label>
               <p className="text-xs text-muted-foreground mb-2">
-                Du kan tilpasse innstillinger per produktkategori
+                {selectedDisplayType === 'customer' 
+                  ? 'Tilpass visning per produktkategori. Produkter arver innstillinger fra sin kategori.'
+                  : 'Tilpass visning per produktkategori (f.eks. ulik fontstørrelse for brød vs kaker)'
+                }
               </p>
               <Select 
                 value={selectedCategoryId || 'all'} 
@@ -386,17 +389,26 @@ export default function DisplaySettingsPage() {
             </div>
           )}
           
-          {/* Kiosk Packing URLs */}
-          {bakery?.short_id && (
+          {/* Kiosk Packing URLs - only show for shared and packing display types */}
+          {bakery?.short_id && selectedDisplayType !== 'customer' && (
             <div className="pt-4 border-t mt-4 space-y-4">
+              <div className="mb-2">
+                <h4 className="text-sm font-semibold flex items-center gap-2">
+                  Pakkestasjoner (Kiosk)
+                </h4>
+                <p className="text-xs text-muted-foreground">
+                  Touch-optimaliserte lenker for pakkere. Krever ikke innlogging.
+                </p>
+              </div>
+              
               {/* Customer-based kiosk */}
               <div>
                 <Label className="text-sm font-medium flex items-center gap-2">
                   <Users className="h-4 w-4" />
-                  Kiosk pakke-URL - Kundebasert
+                  Kundebasert pakking
                 </Label>
                 <p className="text-xs text-muted-foreground mb-2">
-                  Pakk per kunde - velg kunde, så pakk alle produkter for den kunden
+                  Velg kunde, så pakk alle produkter for den kunden
                 </p>
                 <div className="flex gap-2 items-center">
                   <Input 
@@ -423,10 +435,10 @@ export default function DisplaySettingsPage() {
               <div>
                 <Label className="text-sm font-medium flex items-center gap-2">
                   <Package className="h-4 w-4" />
-                  Kiosk pakke-URL - Produktbasert
+                  Produktbasert pakking
                 </Label>
                 <p className="text-xs text-muted-foreground mb-2">
-                  Pakk per produkt - velg produkt, så pakk alle kundeordrer for det produktet
+                  Velg produkt, så pakk alle kundeordrer for det produktet
                 </p>
                 <div className="flex gap-2 items-center">
                   <Input 
