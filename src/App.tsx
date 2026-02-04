@@ -25,6 +25,7 @@ import Import from './pages/Import';
 import Settings from './pages/Settings';
 import DisplaySettings from './pages/DisplaySettings';
 import Bakeries from './pages/Bakeries';
+import SuperAdminSettings from './pages/SuperAdminSettings';
 import NotFound from './pages/NotFound';
 
 // Display pages (public)
@@ -148,6 +149,14 @@ function AppRoutes() {
           element={
             <ProtectedRoute requireRole="super_admin">
               <Bakeries />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/super-admin"
+          element={
+            <ProtectedRoute requireRole="super_admin">
+              <SuperAdminSettings />
             </ProtectedRoute>
           }
         />

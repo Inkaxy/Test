@@ -76,7 +76,8 @@
     "import": "Import",
     "displaySettings": "Display",
     "settings": "Settings",
-    "bakeries": "Bakeries"
+    "bakeries": "Bakeries",
+    "superAdmin": "Super Admin"
   },
   "dashboard": {
     "title": "Dashboard",
