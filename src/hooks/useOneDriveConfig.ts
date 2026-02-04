@@ -11,6 +11,10 @@ export interface OneDriveConfig {
   last_sync_at: string | null;
   sync_status: string;
   sync_error: string | null;
+  sync_enabled: boolean;
+  sync_time: string | null;
+  sync_days: string[] | null;
+  delete_after_import: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -63,10 +67,18 @@ export function useUpsertOneDriveConfig() {
   return useMutation({
     mutationFn: async ({ 
       categoryId, 
-      onedriveFolderUrl 
+      onedriveFolderUrl,
+      syncEnabled,
+      syncTime,
+      syncDays,
+      deleteAfterImport
     }: { 
       categoryId: string; 
       onedriveFolderUrl: string;
+      syncEnabled?: boolean;
+      syncTime?: string;
+      syncDays?: string[];
+      deleteAfterImport?: boolean;
     }) => {
       const bakeryId = getCurrentBakeryId();
       if (!bakeryId) throw new Error('Ingen bakeri valgt');
@@ -78,6 +90,10 @@ export function useUpsertOneDriveConfig() {
           category_id: categoryId,
           onedrive_folder_url: onedriveFolderUrl,
           sync_status: 'configured',
+          sync_enabled: syncEnabled ?? false,
+          sync_time: syncTime ?? '05:00',
+          sync_days: syncDays ?? ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
+          delete_after_import: deleteAfterImport ?? false,
         }, {
           onConflict: 'category_id',
         })
