@@ -232,6 +232,33 @@ export function UserRoleDialog({ open, onOpenChange, user, bakeries }: UserRoleD
           </DialogHeader>
 
           <div className="space-y-4">
+            {/* Bakery Assignment */}
+            <div>
+              <h4 className="text-sm font-medium mb-2">{t('superAdmin.assignedBakery')}</h4>
+              <Select 
+                value={selectedBakeryId || 'none'} 
+                onValueChange={handleBakeryChange}
+                disabled={updateBakeryMutation.isPending}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={t('superAdmin.selectBakeryToAssign')} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">{t('superAdmin.noBakeryAssigned')}</SelectItem>
+                  {bakeries.map((bakery) => (
+                    <SelectItem key={bakery.id} value={bakery.id}>
+                      {bakery.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground mt-1">
+                {t('superAdmin.assignedBakeryDescription')}
+              </p>
+            </div>
+
+            <Separator />
+
             {/* Current Roles */}
             <div>
               <h4 className="text-sm font-medium mb-2">{t('superAdmin.currentRoles')}</h4>

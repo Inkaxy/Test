@@ -266,7 +266,12 @@
     "cannotRemoveOwnRole": "Du kan ikke fjerne din egen super admin-rolle",
     "searchUsers": "Søk etter brukere...",
     "filterByBakery": "Filtrer etter bakeri",
-    "allBakeriesFilter": "Alle bakerier"
+    "allBakeriesFilter": "Alle bakerier",
+    "assignedBakery": "Tilknyttet bakeri",
+    "selectBakeryToAssign": "Velg bakeri å tilknytte",
+    "noBakeryAssigned": "Ingen bakeri tilknyttet",
+    "assignedBakeryDescription": "Dette er brukerens primære bakeri for innlogging",
+    "bakeryUpdated": "Bakeri oppdatert"
   },
   "settings": {
     "title": "Innstillinger",
