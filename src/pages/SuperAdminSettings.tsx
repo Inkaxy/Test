@@ -3,8 +3,10 @@ import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuthStore } from '@/stores/authStore';
+import { toast } from 'sonner';
 import { 
   Building2, 
   Users, 
@@ -18,7 +20,12 @@ import {
 
 export default function SuperAdminSettings() {
   const { t } = useTranslation();
-  const { isSuperAdmin } = useAuthStore();
+  const { isSuperAdmin, selectedBakeryId, setSelectedBakeryId } = useAuthStore();
+
+  const handleSelectBakery = (bakeryId: string, bakeryName: string) => {
+    setSelectedBakeryId(bakeryId);
+    toast.success(`${t('superAdmin.impersonating')}: ${bakeryName}`);
+  };
 
   // Fetch system-wide statistics
   const { data: stats, isLoading: statsLoading } = useQuery({
@@ -236,7 +243,9 @@ export default function SuperAdminSettings() {
               {bakeries.map((bakery) => (
                 <div
                   key={bakery.id}
-                  className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
+                  className={`flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-muted/50 transition-colors ${
+                    selectedBakeryId === bakery.id ? 'ring-2 ring-primary border-primary' : ''
+                  }`}
                 >
                   <div className="flex items-center gap-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
@@ -245,6 +254,11 @@ export default function SuperAdminSettings() {
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="font-medium">{bakery.name}</span>
+                        {selectedBakeryId === bakery.id && (
+                          <Badge variant="default" className="text-xs">
+                            {t('superAdmin.active')}
+                          </Badge>
+                        )}
                         {!bakery.is_active && (
                           <Badge variant="secondary" className="text-xs">
                             Inaktiv
@@ -256,15 +270,25 @@ export default function SuperAdminSettings() {
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-6 text-sm">
-                    <div className="text-right">
-                      <div className="font-medium">{bakery.userCount}</div>
-                      <div className="text-muted-foreground">brukere</div>
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-6 text-sm">
+                      <div className="text-right">
+                        <div className="font-medium">{bakery.userCount}</div>
+                        <div className="text-muted-foreground">brukere</div>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-medium">{bakery.orderCount.toLocaleString()}</div>
+                        <div className="text-muted-foreground">ordrer</div>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <div className="font-medium">{bakery.orderCount.toLocaleString()}</div>
-                      <div className="text-muted-foreground">ordrer</div>
-                    </div>
+                    <Button
+                      variant={selectedBakeryId === bakery.id ? "outline" : "default"}
+                      size="sm"
+                      onClick={() => handleSelectBakery(bakery.id, bakery.name)}
+                      disabled={selectedBakeryId === bakery.id}
+                    >
+                      {selectedBakeryId === bakery.id ? t('superAdmin.selected') : t('superAdmin.selectBakery')}
+                    </Button>
                   </div>
                 </div>
               ))}

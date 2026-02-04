@@ -236,6 +236,8 @@
   "superAdmin": {
     "title": "Super Admin",
     "selectBakery": "Select bakery",
+    "selected": "Selected",
+    "active": "Active",
     "activeBakery": "Active bakery",
     "allBakeries": "All bakeries",
     "impersonating": "Working as",
