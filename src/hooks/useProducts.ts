@@ -17,12 +17,12 @@ export interface Product {
 }
 
 export function useProducts() {
-  const { getCurrentBakeryId } = useAuthStore();
+  const { getActiveBakeryId } = useAuthStore();
   
   return useQuery({
-    queryKey: ['products', getCurrentBakeryId()],
+    queryKey: ['products', getActiveBakeryId()],
     queryFn: async () => {
-      const bakeryId = getCurrentBakeryId();
+      const bakeryId = getActiveBakeryId();
       if (!bakeryId) return [];
       
       const { data, error } = await supabase
@@ -41,12 +41,12 @@ export function useProducts() {
 }
 
 export function useProductsForDate(deliveryDate: string) {
-  const { getCurrentBakeryId } = useAuthStore();
+  const { getActiveBakeryId } = useAuthStore();
   
   return useQuery({
-    queryKey: ['products-for-date', deliveryDate, getCurrentBakeryId()],
+    queryKey: ['products-for-date', deliveryDate, getActiveBakeryId()],
     queryFn: async () => {
-      const bakeryId = getCurrentBakeryId();
+      const bakeryId = getActiveBakeryId();
       if (!bakeryId) return [];
       
       // Get distinct product IDs that have orders for this date
@@ -79,11 +79,11 @@ export function useProductsForDate(deliveryDate: string) {
 
 export function useCreateProduct() {
   const queryClient = useQueryClient();
-  const { getCurrentBakeryId } = useAuthStore();
+  const { getActiveBakeryId } = useAuthStore();
   
   return useMutation({
     mutationFn: async (product: Omit<Product, 'id' | 'bakery_id' | 'category'>) => {
-      const bakeryId = getCurrentBakeryId();
+      const bakeryId = getActiveBakeryId();
       if (!bakeryId) throw new Error('Ingen bakeri valgt');
       
       const { data, error } = await supabase

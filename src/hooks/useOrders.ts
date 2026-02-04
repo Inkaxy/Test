@@ -34,12 +34,12 @@ export interface Order {
 }
 
 export function useOrders(deliveryDate: string) {
-  const { getCurrentBakeryId } = useAuthStore();
+  const { getActiveBakeryId } = useAuthStore();
   
   return useQuery({
-    queryKey: ['orders', deliveryDate, getCurrentBakeryId()],
+    queryKey: ['orders', deliveryDate, getActiveBakeryId()],
     queryFn: async () => {
-      const bakeryId = getCurrentBakeryId();
+      const bakeryId = getActiveBakeryId();
       if (!bakeryId) return [];
       
       const { data, error } = await supabase
@@ -67,12 +67,12 @@ export function useOrders(deliveryDate: string) {
 }
 
 export function useOrdersByProduct(deliveryDate: string, productIds: string[]) {
-  const { getCurrentBakeryId } = useAuthStore();
+  const { getActiveBakeryId } = useAuthStore();
   
   return useQuery({
-    queryKey: ['orders-by-product', deliveryDate, productIds, getCurrentBakeryId()],
+    queryKey: ['orders-by-product', deliveryDate, productIds, getActiveBakeryId()],
     queryFn: async () => {
-      const bakeryId = getCurrentBakeryId();
+      const bakeryId = getActiveBakeryId();
       if (!bakeryId || productIds.length === 0) return [];
       
       const { data, error } = await supabase
@@ -101,7 +101,7 @@ export function useOrdersByProduct(deliveryDate: string, productIds: string[]) {
 
 export function useMarkAsPacked() {
   const queryClient = useQueryClient();
-  const { user, getCurrentBakeryId } = useAuthStore();
+  const { user, getActiveBakeryId } = useAuthStore();
   
   return useMutation({
     mutationFn: async ({ orderId, packingStatusId, customerId, productId, categoryId, deliveryDate }: { 
@@ -112,7 +112,7 @@ export function useMarkAsPacked() {
       categoryId?: string | null;
       deliveryDate?: string;
     }) => {
-      const bakeryId = getCurrentBakeryId();
+      const bakeryId = getActiveBakeryId();
       const packedAt = new Date().toISOString();
       
       if (packingStatusId) {
@@ -188,7 +188,7 @@ export function useMarkAsPacked() {
 // Batch version for marking multiple orders at once - much faster!
 export function useBatchMarkAsPacked() {
   const queryClient = useQueryClient();
-  const { user, getCurrentBakeryId } = useAuthStore();
+  const { user, getActiveBakeryId } = useAuthStore();
   
   return useMutation({
     mutationFn: async ({ 
@@ -200,7 +200,7 @@ export function useBatchMarkAsPacked() {
       categoryId?: string | null;
       deliveryDate?: string;
     }) => {
-      const bakeryId = getCurrentBakeryId();
+      const bakeryId = getActiveBakeryId();
       const packedAt = new Date().toISOString();
       
       // Separate orders that need insert vs update

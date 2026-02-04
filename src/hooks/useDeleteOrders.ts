@@ -21,11 +21,11 @@ interface DeleteOrphanedOrdersParams {
 
 export function useDeleteOrdersBeforeDate() {
   const queryClient = useQueryClient();
-  const { getCurrentBakeryId } = useAuthStore();
+  const { getActiveBakeryId } = useAuthStore();
   
   return useMutation({
     mutationFn: async ({ beforeDate, categoryId }: DeleteOrdersBeforeDateParams): Promise<number> => {
-      const bakeryId = getCurrentBakeryId();
+      const bakeryId = getActiveBakeryId();
       if (!bakeryId) throw new Error('Ingen bakeri valgt');
       
       const beforeDateStr = beforeDate.toISOString().split('T')[0];
@@ -168,11 +168,11 @@ export function useDeleteImportBatch() {
 
 export function useDeleteOrphanedOrders() {
   const queryClient = useQueryClient();
-  const { getCurrentBakeryId } = useAuthStore();
+  const { getActiveBakeryId } = useAuthStore();
   
   return useMutation({
     mutationFn: async ({ forDate }: DeleteOrphanedOrdersParams): Promise<number> => {
-      const bakeryId = getCurrentBakeryId();
+      const bakeryId = getActiveBakeryId();
       if (!bakeryId) throw new Error('Ingen bakeri valgt');
       
       // Build query for orphaned orders (category_id IS NULL)

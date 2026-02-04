@@ -20,12 +20,12 @@ export interface OneDriveConfig {
 }
 
 export function useOneDriveConfigs() {
-  const { getCurrentBakeryId } = useAuthStore();
+  const { getActiveBakeryId } = useAuthStore();
   
   return useQuery({
-    queryKey: ['onedrive-configs', getCurrentBakeryId()],
+    queryKey: ['onedrive-configs', getActiveBakeryId()],
     queryFn: async () => {
-      const bakeryId = getCurrentBakeryId();
+      const bakeryId = getActiveBakeryId();
       if (!bakeryId) return [];
       
       const { data, error } = await supabase
@@ -40,7 +40,7 @@ export function useOneDriveConfigs() {
 }
 
 export function useOneDriveConfigForCategory(categoryId: string | null) {
-  const { getCurrentBakeryId } = useAuthStore();
+  const { getActiveBakeryId } = useAuthStore();
   
   return useQuery({
     queryKey: ['onedrive-config', categoryId],
@@ -62,7 +62,7 @@ export function useOneDriveConfigForCategory(categoryId: string | null) {
 
 export function useUpsertOneDriveConfig() {
   const queryClient = useQueryClient();
-  const { getCurrentBakeryId } = useAuthStore();
+  const { getActiveBakeryId } = useAuthStore();
   
   return useMutation({
     mutationFn: async ({ 
@@ -80,7 +80,7 @@ export function useUpsertOneDriveConfig() {
       syncDays?: string[];
       deleteAfterImport?: boolean;
     }) => {
-      const bakeryId = getCurrentBakeryId();
+      const bakeryId = getActiveBakeryId();
       if (!bakeryId) throw new Error('Ingen bakeri valgt');
       
       const { data, error } = await supabase

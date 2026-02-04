@@ -30,12 +30,12 @@ export interface BakerySettings {
 }
 
 export function useBakerySettings() {
-  const { getCurrentBakeryId } = useAuthStore();
+  const { getActiveBakeryId } = useAuthStore();
   
   return useQuery({
-    queryKey: ['bakery-settings', getCurrentBakeryId()],
+    queryKey: ['bakery-settings', getActiveBakeryId()],
     queryFn: async () => {
-      const bakeryId = getCurrentBakeryId();
+      const bakeryId = getActiveBakeryId();
       if (!bakeryId) return null;
       
       const { data, error } = await supabase
@@ -52,11 +52,11 @@ export function useBakerySettings() {
 
 export function useUpdateBakerySettings() {
   const queryClient = useQueryClient();
-  const { getCurrentBakeryId } = useAuthStore();
+  const { getActiveBakeryId } = useAuthStore();
   
   return useMutation({
     mutationFn: async (settings: Partial<BakerySettings>) => {
-      const bakeryId = getCurrentBakeryId();
+      const bakeryId = getActiveBakeryId();
       if (!bakeryId) throw new Error('Ingen bakeri valgt');
       
       // First get current settings
@@ -82,7 +82,7 @@ export function useUpdateBakerySettings() {
       return data?.settings as BakerySettings;
     },
     onMutate: async (newSettings) => {
-      const bakeryId = getCurrentBakeryId();
+      const bakeryId = getActiveBakeryId();
       await queryClient.cancelQueries({ queryKey: ['bakery-settings', bakeryId] });
       
       const previousSettings = queryClient.getQueryData<BakerySettings>(['bakery-settings', bakeryId]);
@@ -100,11 +100,11 @@ export function useUpdateBakerySettings() {
       }
     },
     onSuccess: (data) => {
-      const bakeryId = getCurrentBakeryId();
+      const bakeryId = getActiveBakeryId();
       queryClient.setQueryData(['bakery-settings', bakeryId], data);
     },
     onSettled: () => {
-      const bakeryId = getCurrentBakeryId();
+      const bakeryId = getActiveBakeryId();
       queryClient.invalidateQueries({ queryKey: ['bakery-settings', bakeryId] });
     },
   });

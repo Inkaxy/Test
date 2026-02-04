@@ -41,7 +41,7 @@ interface ImportResult {
 
 export function useImport() {
   const queryClient = useQueryClient();
-  const { getCurrentBakeryId } = useAuthStore();
+  const { getActiveBakeryId } = useAuthStore();
   
   const parseFiles = async (files: File[]): Promise<{
     data: Omit<ImportData, 'deliveryDate' | 'categoryId'> & { deliveryDate: Date | null };
@@ -99,7 +99,7 @@ export function useImport() {
   
   const importMutation = useMutation({
     mutationFn: async (data: ImportData): Promise<ImportResult> => {
-      const bakeryId = getCurrentBakeryId();
+      const bakeryId = getActiveBakeryId();
       if (!bakeryId) {
         throw new Error('Ingen bakeri valgt. Kontakt administrator.');
       }

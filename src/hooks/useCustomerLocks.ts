@@ -17,12 +17,12 @@ const LOCK_DURATION_MINUTES = 15;
 const LOCK_EXTEND_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 
 export function useCustomerLocks(deliveryDate: string) {
-  const { getCurrentBakeryId } = useAuthStore();
+  const { getActiveBakeryId } = useAuthStore();
   
   return useQuery({
-    queryKey: ['customer-locks', deliveryDate, getCurrentBakeryId()],
+    queryKey: ['customer-locks', deliveryDate, getActiveBakeryId()],
     queryFn: async () => {
-      const bakeryId = getCurrentBakeryId();
+      const bakeryId = getActiveBakeryId();
       if (!bakeryId) return [];
       
       const { data, error } = await supabase
@@ -42,8 +42,8 @@ export function useCustomerLocks(deliveryDate: string) {
 
 export function useRealtimeCustomerLocks(deliveryDate: string) {
   const queryClient = useQueryClient();
-  const { getCurrentBakeryId } = useAuthStore();
-  const bakeryId = getCurrentBakeryId();
+  const { getActiveBakeryId } = useAuthStore();
+  const bakeryId = getActiveBakeryId();
   
   useEffect(() => {
     if (!bakeryId || !deliveryDate) return;
@@ -75,7 +75,7 @@ export function useRealtimeCustomerLocks(deliveryDate: string) {
 
 export function useAcquireCustomerLock() {
   const queryClient = useQueryClient();
-  const { getCurrentBakeryId } = useAuthStore();
+  const { getActiveBakeryId } = useAuthStore();
   
   return useMutation({
     mutationFn: async ({ 
@@ -85,7 +85,7 @@ export function useAcquireCustomerLock() {
       customerId: string; 
       deliveryDate: string;
     }) => {
-      const bakeryId = getCurrentBakeryId();
+      const bakeryId = getActiveBakeryId();
       if (!bakeryId) throw new Error('No bakery selected');
       
       const { data, error } = await supabase.rpc('acquire_customer_lock', {
