@@ -1,6 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
+function normalizePackingStatus<T>(value: T | T[] | null | undefined): T | null {
+  if (!value) return null;
+  return Array.isArray(value) ? value[0] ?? null : value;
+}
+
 export interface DisplayOrder {
   id: string;
   quantity: number;
@@ -64,10 +69,10 @@ export function useDisplayOrders(
 
       if (error) throw error;
 
-      return (data || []).map((order) => ({
-        ...order,
-        packing_status: order.packing_status?.[0] || null,
-      })) as DisplayOrder[];
+       return (data || []).map((order) => ({
+         ...order,
+         packing_status: normalizePackingStatus(order.packing_status),
+       })) as DisplayOrder[];
     },
     enabled: !!bakeryId && !!deliveryDate,
     refetchInterval: 60000, // Fallback refetch every 60s
@@ -180,10 +185,10 @@ export function useCustomerDisplayOrders(
 
       if (error) throw error;
 
-      return (data || []).map((order) => ({
-        ...order,
-        packing_status: order.packing_status?.[0] || null,
-      })) as DisplayOrder[];
+       return (data || []).map((order) => ({
+         ...order,
+         packing_status: normalizePackingStatus(order.packing_status),
+       })) as DisplayOrder[];
     },
     enabled: !!customerId && !!bakeryId && !!deliveryDate,
     refetchInterval: 60000,
