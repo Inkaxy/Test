@@ -124,8 +124,11 @@ export default function DisplaySettingsPage() {
       }
     },
     onSuccess: () => {
+      // Invalidate all display settings queries to ensure all displays update
       queryClient.invalidateQueries({ queryKey: ['display-settings'] });
       queryClient.invalidateQueries({ queryKey: ['display-settings-admin'] });
+      // Force refetch for any open display pages
+      queryClient.refetchQueries({ queryKey: ['display-settings'] });
       toast({
         title: 'Innstillinger lagret',
         description: `${DISPLAY_TYPES[selectedDisplayType].label}-innstillingene ble oppdatert`,
