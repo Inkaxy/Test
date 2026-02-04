@@ -1,163 +1,91 @@
 
-# Plan: Super Admin-meny og Bakeri-bytter
+# Plan: Brukeradministrasjon for Super Admin
 
 ## Oversikt
-Implementere en dedikert super admin-meny med mulighet for å "impersonere" et bakeri for feilsøking og support. Super admin får tilgang til alle bakerier i systemet og kan midlertidig bytte til et annet bakeris kontekst.
+Legger til en ny seksjon i Super Admin-innstillingene som viser alle brukere i systemet, uavhengig av bakeri. Super Admin vil kunne se brukerens navn, tilknyttet bakeri, alle roller, og ha mulighet til å endre rolletilordninger.
 
-## Super Admin-funksjoner
-
-### 1. Egne funksjoner super admin bør ha:
-| Funksjon | Beskrivelse |
-|----------|-------------|
-| **Bakeri-bytter** | Velg hvilket bakeri du vil jobbe med |
-| **Se alle bakerier** | Liste over alle registrerte bakerier |
-| **Opprette nye bakerier** | Legge til nye bakerier i systemet |
-| **Aktivere/deaktivere bakerier** | Styre om et bakeri er aktivt |
-| **Se alle brukere på tvers** | Oversikt over alle brukere i alle bakerier |
-| **Systemstatistikk** | Totalt antall ordrer, brukere, bakerier |
-| **Impersoner bakeri** | Jobbe som om du er admin i valgt bakeri |
-
-### 2. Bakeri-bytter i header
-
-Når super admin er innlogget, vises en dropdown i headeren/sidebaren for å velge aktivt bakeri:
+## Dataflyt
 
 ```text
-+------------------------------------------+
-| 🏪 Aktivt bakeri                         |
-| +--------------------------------------+ |
-| | Test Bakeri AS                     ▼ | |
-| +--------------------------------------+ |
-|                                          |
-| [ ] Vis kun egne bakerier                |
-|                                          |
-| Bakerier:                                |
-| ● Test Bakeri AS                         |
-| ○ Godt Brød                              |
-| ○ Baker Hansen                           |
-| ○ Åpent Bakeri                           |
-+------------------------------------------+
++------------------+       +------------------+       +------------------+
+|    profiles      |       |   user_roles     |       |    bakeries      |
++------------------+       +------------------+       +------------------+
+| user_id          |<----->| user_id          |       | id               |
+| display_name     |       | role             |<----->| name             |
+| bakery_id        |------>| bakery_id        |------>|                  |
++------------------+       +------------------+       +------------------+
 ```
 
-## Tekniske endringer
+## Implementasjon
 
-### 1. Utvide AuthStore med bakeri-kontekst
+### Fase 1: Ny seksjon i SuperAdminSettings.tsx
 
-Legge til mulighet for super admin å velge aktivt bakeri:
+Legger til en ny Card-komponent under "Bakerioversikt" som viser alle brukere:
 
-```typescript
-interface AuthState {
-  // ... eksisterende felt
-  
-  // Nytt: Super admin kan overstyre bakeri-kontekst
-  selectedBakeryId: string | null;
-  setSelectedBakeryId: (bakeryId: string | null) => void;
-  getActiveBakeryId: () => string | null; // Erstatter getCurrentBakeryId for super admin
-}
+**Ny seksjon "Brukeroversikt":**
+- Tabell med kolonner: Navn, Bakeri, Rolle(r), Handlinger
+- Søkefelt for å filtrere på navn
+- Filter for å vise brukere per bakeri eller alle
+- Badge-visning av roller (Super Admin, Bakeri Admin, Bakeri Bruker)
+
+### Fase 2: Dialog for rolleadministrasjon
+
+Ny komponent: `src/components/admin/UserRoleDialog.tsx`
+
+**Funksjonalitet:**
+- Åpnes når man klikker "Rediger roller" på en bruker
+- Viser brukerens nåværende roller
+- Dropdown for å legge til ny rolle (super_admin, bakery_admin, bakery_user)
+- For bakery_admin og bakery_user: velg hvilket bakeri rollen gjelder for
+- Mulighet for å fjerne eksisterende roller
+- Bekreftelsesdialog ved sletting av roller
+
+### Fase 3: Databaseoperasjoner
+
+**Hent alle brukere:**
+```sql
+SELECT 
+  p.user_id, 
+  p.display_name, 
+  p.bakery_id,
+  b.name as bakery_name,
+  array_agg(ur.role) as roles
+FROM profiles p
+LEFT JOIN bakeries b ON b.id = p.bakery_id
+LEFT JOIN user_roles ur ON ur.user_id = p.user_id
+GROUP BY p.user_id, p.display_name, p.bakery_id, b.name
+ORDER BY p.display_name
 ```
 
-**Logikk:**
-- For vanlige brukere: `getActiveBakeryId()` returnerer deres `bakery_id` fra profil/roller
-- For super admin: `getActiveBakeryId()` returnerer `selectedBakeryId` hvis satt, ellers null
-
-### 2. Opprette SuperAdminBakerySelector-komponent
-
-Ny komponent som vises kun for super admin i sidebaren:
-
-```typescript
-// src/components/admin/SuperAdminBakerySelector.tsx
-export function SuperAdminBakerySelector() {
-  // Hent alle bakerier
-  // Vis dropdown for å velge aktivt bakeri
-  // Oppdater authStore.selectedBakeryId ved valg
-}
+**Legg til rolle:**
+```sql
+INSERT INTO user_roles (user_id, role, bakery_id) 
+VALUES ($1, $2, $3)
 ```
 
-### 3. Oppdatere DashboardLayout
-
-Legge til super admin-seksjon i sidebaren:
-- Bakeri-velger (dropdown)
-- Visuell indikator på at man er i "impersonate"-modus
-- Knapp for å gå tilbake til "normal" modus
-
-```text
-Sidebar:
-+------------------------------------------+
-| 🍞 Loaf & Load                           |
-+------------------------------------------+
-| ⚡ SUPER ADMIN MODUS                     |
-| +--------------------------------------+ |
-| | 🏪 Test Bakeri AS               ▼   | |
-| +--------------------------------------+ |
-| [Tilbake til oversikt]                   |
-+------------------------------------------+
-| 📊 Dashboard                             |
-| 📦 Pakking                               |
-| ... (vanlig navigasjon)                  |
-+------------------------------------------+
+**Fjern rolle:**
+```sql
+DELETE FROM user_roles WHERE id = $1
 ```
 
-### 4. Oppdatere alle hooks til å bruke getActiveBakeryId()
+### Fase 4: Oversettelser
 
-Alle eksisterende hooks som bruker `getCurrentBakeryId()` må oppdateres til å respektere super admin sin valgte bakeri-kontekst:
-
-- `useBakerySettings.ts`
-- `useCategories.ts`
-- `useCustomers.ts`
-- `useProducts.ts`
-- `useOrders.ts`
-- `useImport.ts`
-- `useDashboard.ts`
-- osv.
-
-### 5. Opprette hook for å hente alle bakerier
-
-```typescript
-// src/hooks/useBakeries.ts
-export function useBakeries() {
-  const { isSuperAdmin } = useAuthStore();
-  
-  return useQuery({
-    queryKey: ['bakeries'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('bakeries')
-        .select('*')
-        .order('name');
-      
-      if (error) throw error;
-      return data;
-    },
-    enabled: isSuperAdmin(),
-  });
-}
-```
-
-### 6. Oppdatere Bakeries-siden
-
-Gjøre Bakeries-siden funksjonell (erstatte mock-data):
-- Hente ekte bakerier fra databasen
-- Opprette/redigere/slette bakerier
-- Vise statistikk per bakeri (antall ordrer, brukere)
-
-### 7. Legge til oversettelser
-
-Nye oversettelser for super admin-funksjonalitet:
+Nye nøkler i `nb.json` og `en.json`:
 
 ```json
 {
   "superAdmin": {
-    "title": "Super Admin",
-    "selectBakery": "Velg bakeri",
-    "activeBakery": "Aktivt bakeri",
-    "allBakeries": "Alle bakerier",
-    "impersonating": "Du jobber nå som",
-    "backToOverview": "Tilbake til oversikt",
-    "noBakerySelected": "Ingen bakeri valgt",
-    "selectBakeryToStart": "Velg et bakeri for å starte",
-    "systemStats": "Systemstatistikk",
-    "totalBakeries": "Totalt antall bakerier",
-    "totalUsers": "Totalt antall brukere",
-    "totalOrders": "Totalt antall ordrer"
+    "allUsers": "Alle brukere",
+    "allUsersDescription": "Administrer brukere på tvers av alle bakerier",
+    "userRoles": "Brukerroller",
+    "editRoles": "Rediger roller",
+    "addRole": "Legg til rolle",
+    "removeRole": "Fjern rolle",
+    "confirmRemoveRole": "Er du sikker på at du vil fjerne denne rollen?",
+    "roleAdded": "Rolle lagt til",
+    "roleRemoved": "Rolle fjernet",
+    "selectBakeryForRole": "Velg bakeri for denne rollen",
+    "noBakery": "Ingen bakeri tilknyttet"
   }
 }
 ```
@@ -166,47 +94,101 @@ Nye oversettelser for super admin-funksjonalitet:
 
 | Fil | Endring |
 |-----|---------|
-| `src/stores/authStore.ts` | Legge til `selectedBakeryId` og `getActiveBakeryId()` |
-| `src/components/admin/SuperAdminBakerySelector.tsx` | Ny komponent for bakeri-valg |
-| `src/components/layout/DashboardLayout.tsx` | Integrere super admin-seksjon |
-| `src/hooks/useBakeries.ts` | Ny hook for å hente alle bakerier |
-| `src/pages/Bakeries.tsx` | Gjøre funksjonell med ekte data |
-| `src/i18n/locales/nb.json` | Legge til super admin-oversettelser |
-| `src/i18n/locales/en.json` | Legge til super admin-oversettelser |
-| Diverse hooks | Oppdatere til å bruke `getActiveBakeryId()` |
+| `src/pages/SuperAdminSettings.tsx` | Legger til brukeroversikt-seksjon og state for dialog |
+| `src/components/admin/UserRoleDialog.tsx` | Ny dialog for rolleadministrasjon |
+| `src/i18n/locales/nb.json` | Nye oversettelser |
+| `src/i18n/locales/en.json` | Nye oversettelser |
 
-## Brukerflyt
+## Sikkerhet
 
-```text
-1. Super admin logger inn
-   ↓
-2. Ser dashboard uten data (ingen bakeri valgt)
-   ↓
-3. Velger bakeri fra dropdown i sidebar
-   ↓
-4. Hele applikasjonen viser data for valgt bakeri
-   ↓
-5. Super admin kan bytte bakeri når som helst
-   ↓
-6. Ved utlogging nullstilles valgt bakeri
+- Alle operasjoner bruker eksisterende RLS-policies som krever `is_super_admin()`
+- Rolleendringer logges med `created_at` timestamp
+- Super Admin kan ikke fjerne sin egen super_admin-rolle (for å unngå å låse seg ute)
+
+## UI-komponenter brukt
+
+- `Table`, `TableRow`, `TableCell` for brukerliste
+- `Dialog` for rolleredigering
+- `Select` for rollevalg og bakeri-valg
+- `Badge` for rollevisning
+- `Button` for handlinger
+- `Input` for søk
+- `AlertDialog` for bekreftelse ved sletting
+
+---
+
+## Tekniske detaljer
+
+### Query for brukerliste (useQuery)
+
+```typescript
+const { data: allUsers = [], isLoading: usersLoading } = useQuery({
+  queryKey: ['super-admin-all-users'],
+  queryFn: async () => {
+    // Hent alle profiler
+    const { data: profiles, error: profilesError } = await supabase
+      .from('profiles')
+      .select('user_id, display_name, bakery_id')
+      .order('display_name');
+    
+    if (profilesError) throw profilesError;
+    
+    // Hent alle roller
+    const { data: roles, error: rolesError } = await supabase
+      .from('user_roles')
+      .select('id, user_id, role, bakery_id');
+    
+    if (rolesError) throw rolesError;
+    
+    // Hent alle bakerier for mapping
+    const { data: bakeries } = await supabase
+      .from('bakeries')
+      .select('id, name');
+    
+    // Kombiner data
+    return profiles.map(profile => ({
+      ...profile,
+      bakeryName: bakeries?.find(b => b.id === profile.bakery_id)?.name || null,
+      roles: roles?.filter(r => r.user_id === profile.user_id) || []
+    }));
+  },
+  enabled: isSuperAdmin(),
+});
 ```
 
-## Sikkerhetsaspekter
+### Mutasjon for å legge til rolle
 
-- Bakeri-velgeren vises KUN for super_admin-brukere
-- RLS-policies i databasen bør allerede tillate super admin tilgang til alle bakerier (må verifiseres)
-- Valgt bakeri lagres kun i client-state, ikke i databasen
-- Ved refresh av siden må super admin velge bakeri på nytt (bevisst design for sikkerhet)
-
-## Visuell indikator
-
-Når super admin jobber i et bakeri-kontekst, vises en tydelig banner:
-
-```text
-+--------------------------------------------------+
-| ⚡ Super Admin-modus: Jobber som "Test Bakeri AS" |
-| [Bytt bakeri] [Avslutt modus]                    |
-+--------------------------------------------------+
+```typescript
+const addRoleMutation = useMutation({
+  mutationFn: async ({ userId, role, bakeryId }: AddRoleParams) => {
+    const { error } = await supabase
+      .from('user_roles')
+      .insert({ user_id: userId, role, bakery_id: bakeryId });
+    
+    if (error) throw error;
+  },
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: ['super-admin-all-users'] });
+    toast.success(t('superAdmin.roleAdded'));
+  }
+});
 ```
 
-Dette sikrer at super admin alltid vet at de ser data for et spesifikt bakeri.
+### Mutasjon for å fjerne rolle
+
+```typescript
+const removeRoleMutation = useMutation({
+  mutationFn: async (roleId: string) => {
+    const { error } = await supabase
+      .from('user_roles')
+      .delete()
+      .eq('id', roleId);
+    
+    if (error) throw error;
+  },
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: ['super-admin-all-users'] });
+    toast.success(t('superAdmin.roleRemoved'));
+  }
+});
+```
