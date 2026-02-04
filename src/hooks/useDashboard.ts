@@ -11,13 +11,13 @@ export interface DashboardStats {
 }
 
 export function useDashboardStats(date: Date) {
-  const { getCurrentBakeryId } = useAuthStore();
+  const { getActiveBakeryId } = useAuthStore();
   const dateStr = format(date, 'yyyy-MM-dd');
   
   return useQuery({
-    queryKey: ['dashboard-stats', dateStr, getCurrentBakeryId()],
+    queryKey: ['dashboard-stats', dateStr, getActiveBakeryId()],
     queryFn: async (): Promise<DashboardStats> => {
-      const bakeryId = getCurrentBakeryId();
+      const bakeryId = getActiveBakeryId();
       if (!bakeryId) {
         return { totalOrders: 0, packedOrders: 0, pendingOrders: 0, deviations: 0 };
       }
@@ -58,12 +58,12 @@ export function useDashboardStats(date: Date) {
 }
 
 export function useRecentImports() {
-  const { getCurrentBakeryId } = useAuthStore();
+  const { getActiveBakeryId } = useAuthStore();
   
   return useQuery({
-    queryKey: ['recent-imports', getCurrentBakeryId()],
+    queryKey: ['recent-imports', getActiveBakeryId()],
     queryFn: async () => {
-      const bakeryId = getCurrentBakeryId();
+      const bakeryId = getActiveBakeryId();
       if (!bakeryId) return [];
       
       const { data, error } = await supabase

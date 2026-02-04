@@ -15,12 +15,12 @@ export interface Customer {
 }
 
 export function useCustomers() {
-  const { getCurrentBakeryId } = useAuthStore();
+  const { getActiveBakeryId } = useAuthStore();
   
   return useQuery({
-    queryKey: ['customers', getCurrentBakeryId()],
+    queryKey: ['customers', getActiveBakeryId()],
     queryFn: async () => {
-      const bakeryId = getCurrentBakeryId();
+      const bakeryId = getActiveBakeryId();
       if (!bakeryId) return [];
       
       const { data, error } = await supabase
@@ -37,11 +37,11 @@ export function useCustomers() {
 
 export function useCreateCustomer() {
   const queryClient = useQueryClient();
-  const { getCurrentBakeryId } = useAuthStore();
+  const { getActiveBakeryId } = useAuthStore();
   
   return useMutation({
     mutationFn: async (customer: Omit<Customer, 'id' | 'bakery_id'>) => {
-      const bakeryId = getCurrentBakeryId();
+      const bakeryId = getActiveBakeryId();
       if (!bakeryId) throw new Error('Ingen bakeri valgt');
       
       const { data, error } = await supabase

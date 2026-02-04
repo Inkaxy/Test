@@ -13,12 +13,12 @@ export interface Category {
 }
 
 export function useCategories() {
-  const { getCurrentBakeryId } = useAuthStore();
+  const { getActiveBakeryId } = useAuthStore();
   
   return useQuery({
-    queryKey: ['categories', getCurrentBakeryId()],
+    queryKey: ['categories', getActiveBakeryId()],
     queryFn: async () => {
-      const bakeryId = getCurrentBakeryId();
+      const bakeryId = getActiveBakeryId();
       if (!bakeryId) return [];
       
       const { data, error } = await supabase
@@ -35,11 +35,11 @@ export function useCategories() {
 
 export function useCreateCategory() {
   const queryClient = useQueryClient();
-  const { getCurrentBakeryId } = useAuthStore();
+  const { getActiveBakeryId } = useAuthStore();
   
   return useMutation({
     mutationFn: async (category: Omit<Category, 'id' | 'bakery_id'>) => {
-      const bakeryId = getCurrentBakeryId();
+      const bakeryId = getActiveBakeryId();
       if (!bakeryId) throw new Error('Ingen bakeri valgt');
       
       const { data, error } = await supabase

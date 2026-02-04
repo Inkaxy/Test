@@ -38,12 +38,12 @@ export interface CustomerSortOptions {
 }
 
 export function useCustomersForDate(deliveryDate: string, categoryId?: string, sortOptions?: CustomerSortOptions) {
-  const { getCurrentBakeryId } = useAuthStore();
+  const { getActiveBakeryId } = useAuthStore();
   
   return useQuery({
-    queryKey: ['customers-for-date', deliveryDate, getCurrentBakeryId(), categoryId, sortOptions],
+    queryKey: ['customers-for-date', deliveryDate, getActiveBakeryId(), categoryId, sortOptions],
     queryFn: async () => {
-      const bakeryId = getCurrentBakeryId();
+      const bakeryId = getActiveBakeryId();
       if (!bakeryId) return [];
       
       // Get all orders for this date with customer and product info
