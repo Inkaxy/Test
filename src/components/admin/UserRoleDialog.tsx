@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -77,6 +77,14 @@ export function UserRoleDialog({ open, onOpenChange, user, bakeries }: UserRoleD
   const [newRole, setNewRole] = useState<AppRole | ''>('');
   const [newBakeryId, setNewBakeryId] = useState<string>('');
   const [roleToDelete, setRoleToDelete] = useState<UserRole | null>(null);
+  const [selectedBakeryId, setSelectedBakeryId] = useState<string>('');
+
+  // Sync selected bakery when user changes
+  useEffect(() => {
+    if (user) {
+      setSelectedBakeryId(user.bakery_id || '');
+    }
+  }, [user]);
 
   const addRoleMutation = useMutation({
     mutationFn: async ({ userId, role, bakeryId }: { userId: string; role: AppRole; bakeryId: string | null }) => {
