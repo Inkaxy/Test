@@ -244,7 +244,8 @@
     "systemStats": "System statistics",
     "totalBakeries": "Total bakeries",
     "totalUsers": "Total users",
-    "totalOrders": "Total orders"
+    "totalOrders": "Total orders",
+    "exitMode": "Exit mode"
   },
   "settings": {
     "title": "Settings",

@@ -41,6 +41,7 @@ import {
 import { useIsMobile } from '@/hooks/use-mobile';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { SuperAdminBakerySelector } from '@/components/admin/SuperAdminBakerySelector';
+import { SuperAdminBanner } from '@/components/admin/SuperAdminBanner';
 
 interface NavItem {
   key: string;
@@ -252,6 +253,9 @@ export function DashboardLayout() {
             <span className="text-lg font-semibold text-bakery-700">Loaf & Load</span>
           </header>
         )}
+        
+        {/* Super Admin Banner */}
+        <SuperAdminBanner />
         
         {/* Page content */}
         <div className="p-4 md:p-6 lg:p-8">
