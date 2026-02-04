@@ -136,8 +136,8 @@ export default function CustomerDisplay() {
   const allTotalCount = allOrders.length;
   const allProgress = allTotalCount > 0 ? Math.round((allPackedCount / allTotalCount) * 100) : 0;
 
-  // Use overall progress when no selection, otherwise use selected progress
-  const displayProgress = selection?.productIds?.length ? progress : allProgress;
+  // Always use overall progress for status bar (all products customer should receive)
+  const displayProgress = allProgress;
 
   const isLoading = customerLoading || ordersLoading;
   const isTodayDate = isToday(parseISO(deliveryDate));
@@ -154,22 +154,12 @@ export default function CustomerDisplay() {
     }
   };
 
-  // Get status text and color based on whether products are selected
+  // Get status text and color - always based on all orders
   const getStatusInfo = () => {
-    const hasSelection = selection?.productIds?.length;
-    
-    if (!hasSelection) {
-      // No selection - use overall status
-      if (allTotalCount === 0) return { text: 'Ingen ordrer', color: 'bg-muted text-muted-foreground' };
-      if (allProgress === 100) return { text: 'Ferdig', color: 'bg-complete text-complete-foreground' };
-      if (allProgress > 0) return { text: 'Pågående', color: 'bg-packing text-packing-foreground' };
-      return { text: 'Venter', color: 'bg-pending text-pending-foreground' };
-    }
-    
-    // Has selection - use selection status
-    if (progress === 100) return { text: 'Ferdig', color: 'bg-complete text-complete-foreground' };
-    if (progress > 0) return { text: 'Pågående', color: 'bg-packing text-packing-foreground' };
-    return { text: 'Pågående', color: 'bg-packing text-packing-foreground' };
+    if (allTotalCount === 0) return { text: 'Ingen ordrer', color: 'bg-muted text-muted-foreground' };
+    if (allProgress === 100) return { text: 'Ferdig', color: 'bg-complete text-complete-foreground' };
+    if (allProgress > 0) return { text: 'Pågående', color: 'bg-packing text-packing-foreground' };
+    return { text: 'Venter', color: 'bg-pending text-pending-foreground' };
   };
 
   const statusInfo = getStatusInfo();
