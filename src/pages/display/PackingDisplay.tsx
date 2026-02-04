@@ -4,6 +4,8 @@ import { format } from 'date-fns';
 import { nb } from 'date-fns/locale';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Wifi, WifiOff, Clock, Package, CheckCircle2 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
 import {
   useCustomerDisplayData,
@@ -321,33 +323,67 @@ export default function PackingDisplay() {
                       }
                     }
 
-                    return (
-                      <div
-                        key={order.id}
-                        className="flex items-center justify-between py-1 px-2 rounded"
-                        style={{
-                          fontSize: displaySettings.card_product_font_size || displaySettings.product_font_size || '0.875rem',
-                          backgroundColor: isPacked
-                            ? `${displaySettings.completed_color}20`
-                            : 'transparent',
-                          textDecoration: isPacked ? 'line-through' : 'none',
-                          opacity: isPacked ? 0.5 : 1,
-                        }}
-                      >
-                        <span className="truncate flex-1">
-                          {displaySettings.card_show_product_numbers && (
-                            <span className="opacity-60 mr-2">#{order.product.product_number}</span>
-                          )}
-                          {order.product.name}
-                        </span>
-                        <span 
-                          className="font-mono ml-2 whitespace-nowrap"
-                          style={{ fontSize: displaySettings.card_quantity_font_size || '0.875rem' }}
+                      return (
+                        <div
+                          key={order.id}
+                          className="flex items-center gap-3 py-2 px-3 rounded-lg"
+                          style={{
+                            backgroundColor: isPacked
+                              ? `${displaySettings.completed_color}20`
+                              : `${displaySettings.pending_color}10`,
+                          }}
                         >
-                          {quantityDisplay}
-                        </span>
-                      </div>
-                    );
+                          {/* Product name */}
+                          <div className="flex-1 min-w-0">
+                            <span 
+                              className={cn("block truncate", isPacked && "line-through opacity-60")}
+                              style={{ fontSize: displaySettings.card_product_font_size || displaySettings.product_font_size || '0.875rem' }}
+                            >
+                              {displaySettings.card_show_product_numbers && (
+                                <span className="opacity-60 mr-2">#{order.product.product_number}</span>
+                              )}
+                              {order.product.name}
+                            </span>
+                          </div>
+
+                          {/* Right section: quantity, progress, badge */}
+                          <div className="flex items-center gap-3 shrink-0">
+                            {/* Quantity display */}
+                            <div className="text-right">
+                              <span 
+                                className="font-bold block"
+                                style={{ fontSize: displaySettings.card_quantity_font_size || '1.25rem' }}
+                              >
+                                {order.quantity}
+                              </span>
+                              <span className="text-xs opacity-60">stk</span>
+                            </div>
+
+                            {/* Progress indicator */}
+                            <div 
+                              className="text-center min-w-[40px]"
+                              style={{ fontSize: displaySettings.card_progress_font_size || '0.875rem' }}
+                            >
+                              <span className="font-mono opacity-80">
+                                {isPacked ? '1/1' : '0/1'}
+                              </span>
+                            </div>
+
+                            {/* Status badge */}
+                            <Badge
+                              variant={isPacked ? 'default' : 'outline'}
+                              className="min-w-[60px] justify-center"
+                              style={{
+                                backgroundColor: isPacked ? displaySettings.completed_color : 'transparent',
+                                borderColor: isPacked ? displaySettings.completed_color : displaySettings.pending_color,
+                                color: isPacked ? '#fff' : displaySettings.pending_color,
+                              }}
+                            >
+                              {isPacked ? 'Ferdig' : 'Venter'}
+                            </Badge>
+                          </div>
+                        </div>
+                      );
                   })}
                 </div>
               )}
