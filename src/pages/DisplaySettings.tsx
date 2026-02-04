@@ -32,8 +32,8 @@ export default function DisplaySettingsPage() {
   const { t } = useTranslation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { profile, getCurrentBakeryId } = useAuthStore();
-  const bakeryId = getCurrentBakeryId();
+  const { profile, getActiveBakeryId } = useAuthStore();
+  const bakeryId = getActiveBakeryId();
   
   const [selectedDisplayType, setSelectedDisplayType] = useState<DisplayType>('shared');
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);

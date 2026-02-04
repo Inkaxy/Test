@@ -31,12 +31,12 @@ function getStatus(total: number, packed: number): DateStatus['status'] {
 }
 
 export function useMonthOrderSummary(year: number, month: number, categoryId?: string) {
-  const { getCurrentBakeryId } = useAuthStore();
+  const { getActiveBakeryId } = useAuthStore();
   
   return useQuery({
-    queryKey: ['month-order-summary', getCurrentBakeryId(), year, month, categoryId],
+    queryKey: ['month-order-summary', getActiveBakeryId(), year, month, categoryId],
     queryFn: async () => {
-      const bakeryId = getCurrentBakeryId();
+      const bakeryId = getActiveBakeryId();
       if (!bakeryId) return new Map<string, DateStatus>();
       
       const startDate = startOfMonth(new Date(year, month));
@@ -99,12 +99,12 @@ export function useMonthOrderSummary(year: number, month: number, categoryId?: s
 }
 
 export function useDateOrderStats(date: string, categoryId?: string) {
-  const { getCurrentBakeryId } = useAuthStore();
+  const { getActiveBakeryId } = useAuthStore();
   
   return useQuery({
-    queryKey: ['date-order-stats', getCurrentBakeryId(), date, categoryId],
+    queryKey: ['date-order-stats', getActiveBakeryId(), date, categoryId],
     queryFn: async (): Promise<DateStats | null> => {
-      const bakeryId = getCurrentBakeryId();
+      const bakeryId = getActiveBakeryId();
       if (!bakeryId) return null;
       
       // Get orders with products for the date - filter by category_id on orders table

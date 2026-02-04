@@ -33,7 +33,7 @@ interface ImportBatch {
 export function OrderManagementCard() {
   const { t } = useTranslation();
   const { toast } = useToast();
-  const { getCurrentBakeryId } = useAuthStore();
+  const { getActiveBakeryId } = useAuthStore();
   
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('all');
   const [beforeDate, setBeforeDate] = useState<Date>();
@@ -50,9 +50,9 @@ export function OrderManagementCard() {
   
   // Fetch orphaned orders count
   const { data: orphanedOrdersData, isLoading: orphanedLoading } = useQuery({
-    queryKey: ['orphaned-orders', getCurrentBakeryId(), orphanDate],
+    queryKey: ['orphaned-orders', getActiveBakeryId(), orphanDate],
     queryFn: async () => {
-      const bakeryId = getCurrentBakeryId();
+      const bakeryId = getActiveBakeryId();
       if (!bakeryId) return { count: 0, dates: [] };
       
       // Get count of orphaned orders
@@ -87,9 +87,9 @@ export function OrderManagementCard() {
   
   // Fetch import batches
   const { data: importBatches = [], isLoading: batchesLoading } = useQuery({
-    queryKey: ['import-batches', getCurrentBakeryId(), selectedCategoryId],
+    queryKey: ['import-batches', getActiveBakeryId(), selectedCategoryId],
     queryFn: async () => {
-      const bakeryId = getCurrentBakeryId();
+      const bakeryId = getActiveBakeryId();
       if (!bakeryId) return [];
       
       let query = supabase

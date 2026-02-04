@@ -28,7 +28,7 @@ export default function CategoryCalendarView() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const { categoryId } = useParams();
-  const { getCurrentBakeryId } = useAuthStore();
+  const { getActiveBakeryId } = useAuthStore();
   const locale = i18n.language === 'nb' ? nb : enUS;
   
   const [currentMonth, setCurrentMonth] = useState(new Date());

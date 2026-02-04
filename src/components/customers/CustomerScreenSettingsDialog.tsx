@@ -28,13 +28,13 @@ export function CustomerScreenSettingsDialog({
   const { t } = useTranslation();
   const { toast } = useToast();
   const updateCustomer = useUpdateCustomer();
-  const { getCurrentBakeryId } = useAuthStore();
+  const { getActiveBakeryId } = useAuthStore();
   const [showQrCode, setShowQrCode] = useState(false);
   const [showSharedQrCode, setShowSharedQrCode] = useState(false);
   const [localHasDedicatedDisplay, setLocalHasDedicatedDisplay] = useState(false);
   const [localDisplayToken, setLocalDisplayToken] = useState<string | null>(null);
 
-  const bakeryId = getCurrentBakeryId();
+  const bakeryId = getActiveBakeryId();
 
   // Fetch bakery info for short_id
   const { data: bakery } = useQuery({
