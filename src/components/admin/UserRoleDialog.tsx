@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -77,6 +77,14 @@ export function UserRoleDialog({ open, onOpenChange, user, bakeries }: UserRoleD
   const [newRole, setNewRole] = useState<AppRole | ''>('');
   const [newBakeryId, setNewBakeryId] = useState<string>('');
   const [roleToDelete, setRoleToDelete] = useState<UserRole | null>(null);
+  const [selectedBakeryId, setSelectedBakeryId] = useState<string>('');
+
+  // Sync selected bakery when user changes
+  useEffect(() => {
+    if (user) {
+      setSelectedBakeryId(user.bakery_id || '');
+    }
+  }, [user]);
 
   const addRoleMutation = useMutation({
     mutationFn: async ({ userId, role, bakeryId }: { userId: string; role: AppRole; bakeryId: string | null }) => {
@@ -120,6 +128,24 @@ export function UserRoleDialog({ open, onOpenChange, user, bakeries }: UserRoleD
     }
   });
 
+  const updateBakeryMutation = useMutation({
+    mutationFn: async ({ userId, bakeryId }: { userId: string; bakeryId: string | null }) => {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ bakery_id: bakeryId })
+        .eq('user_id', userId);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['super-admin-all-users'] });
+      toast.success(t('superAdmin.bakeryUpdated'));
+    },
+    onError: () => {
+      toast.error(t('errors.generic'));
+    }
+  });
+
   const handleAddRole = () => {
     if (!user || !newRole) return;
     
@@ -151,6 +177,13 @@ export function UserRoleDialog({ open, onOpenChange, user, bakeries }: UserRoleD
     if (roleToDelete) {
       removeRoleMutation.mutate(roleToDelete.id);
     }
+  };
+
+  const handleBakeryChange = (bakeryId: string) => {
+    if (!user) return;
+    const newBakeryIdValue = bakeryId === 'none' ? null : bakeryId;
+    setSelectedBakeryId(bakeryId);
+    updateBakeryMutation.mutate({ userId: user.user_id, bakeryId: newBakeryIdValue });
   };
 
   const getRoleIcon = (role: AppRole) => {
@@ -199,6 +232,33 @@ export function UserRoleDialog({ open, onOpenChange, user, bakeries }: UserRoleD
           </DialogHeader>
 
           <div className="space-y-4">
+            {/* Bakery Assignment */}
+            <div>
+              <h4 className="text-sm font-medium mb-2">{t('superAdmin.assignedBakery')}</h4>
+              <Select 
+                value={selectedBakeryId || 'none'} 
+                onValueChange={handleBakeryChange}
+                disabled={updateBakeryMutation.isPending}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={t('superAdmin.selectBakeryToAssign')} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">{t('superAdmin.noBakeryAssigned')}</SelectItem>
+                  {bakeries.map((bakery) => (
+                    <SelectItem key={bakery.id} value={bakery.id}>
+                      {bakery.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground mt-1">
+                {t('superAdmin.assignedBakeryDescription')}
+              </p>
+            </div>
+
+            <Separator />
+
             {/* Current Roles */}
             <div>
               <h4 className="text-sm font-medium mb-2">{t('superAdmin.currentRoles')}</h4>

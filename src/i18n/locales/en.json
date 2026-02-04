@@ -266,7 +266,12 @@
     "cannotRemoveOwnRole": "You cannot remove your own super admin role",
     "searchUsers": "Search users...",
     "filterByBakery": "Filter by bakery",
-    "allBakeriesFilter": "All bakeries"
+    "allBakeriesFilter": "All bakeries",
+    "assignedBakery": "Assigned bakery",
+    "selectBakeryToAssign": "Select bakery to assign",
+    "noBakeryAssigned": "No bakery assigned",
+    "assignedBakeryDescription": "This is the user's primary bakery for login",
+    "bakeryUpdated": "Bakery updated"
   },
   "settings": {
     "title": "Settings",
