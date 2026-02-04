@@ -5,22 +5,79 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Plus, Search, Edit, Trash2 } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Loader2 } from 'lucide-react';
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuthStore } from '@/stores/authStore';
 
-// Mock data
-const mockUsers = [
-  { id: '1', displayName: 'Ola Nordmann', email: 'ola@bakeri.no', role: 'bakery_admin' as const },
-  { id: '2', displayName: 'Kari Hansen', email: 'kari@bakeri.no', role: 'bakery_user' as const },
-  { id: '3', displayName: 'Per Olsen', email: 'per@bakeri.no', role: 'bakery_user' as const },
-  { id: '4', displayName: 'Lisa Berg', email: 'lisa@bakeri.no', role: 'bakery_user' as const },
-];
+type AppRole = 'super_admin' | 'bakery_admin' | 'bakery_user';
+
+interface UserWithRole {
+  id: string;
+  displayName: string;
+  email: string;
+  role: AppRole;
+}
 
 export default function Users() {
   const { t } = useTranslation();
+  const { getActiveBakeryId } = useAuthStore();
   const [searchQuery, setSearchQuery] = useState('');
+  const bakeryId = getActiveBakeryId();
   
-  const filteredUsers = mockUsers.filter(user =>
+  const { data: users = [], isLoading } = useQuery({
+    queryKey: ['bakery-users', bakeryId],
+    queryFn: async (): Promise<UserWithRole[]> => {
+      if (!bakeryId) return [];
+      
+      // Get profiles for the bakery
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('user_id, display_name, bakery_id')
+        .eq('bakery_id', bakeryId);
+      
+      if (profilesError) throw profilesError;
+      if (!profiles || profiles.length === 0) return [];
+      
+      // Get roles for these users
+      const userIds = profiles.map(p => p.user_id);
+      const { data: roles, error: rolesError } = await supabase
+        .from('user_roles')
+        .select('user_id, role, bakery_id')
+        .in('user_id', userIds);
+      
+      if (rolesError) throw rolesError;
+      
+      // Get user emails from auth (via profiles - we don't have direct access)
+      // For now, we'll display the display_name and use user_id as identifier
+      // In production, you might want an edge function to fetch emails
+      
+      return profiles.map(profile => {
+        // Find the role for this user (prioritize bakery-specific roles)
+        const userRoles = roles?.filter(r => r.user_id === profile.user_id) || [];
+        const bakeryRole = userRoles.find(r => r.bakery_id === bakeryId);
+        const superAdminRole = userRoles.find(r => r.role === 'super_admin');
+        
+        let role: AppRole = 'bakery_user';
+        if (superAdminRole) {
+          role = 'super_admin';
+        } else if (bakeryRole) {
+          role = bakeryRole.role;
+        }
+        
+        return {
+          id: profile.user_id,
+          displayName: profile.display_name || 'Ukjent bruker',
+          email: '', // We can't access auth.users directly
+          role,
+        };
+      });
+    },
+    enabled: !!bakeryId,
+  });
+  
+  const filteredUsers = users.filter(user =>
     user.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
     user.email.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -35,6 +92,14 @@ export default function Users() {
         return <Badge variant="secondary">{t('users.roles.bakery_user')}</Badge>;
     }
   };
+  
+  if (!bakeryId) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+        <p>{t('superAdmin.noBakerySelected')}</p>
+      </div>
+    );
+  }
   
   return (
     <div className="space-y-6">
@@ -66,52 +131,56 @@ export default function Users() {
           </div>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t('common.name')}</TableHead>
-                <TableHead>{t('auth.email')}</TableHead>
-                <TableHead>{t('users.role')}</TableHead>
-                <TableHead className="text-right">{t('common.actions')}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredUsers.length === 0 ? (
+          {isLoading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                    {t('users.noUsers')}
-                  </TableCell>
+                  <TableHead>{t('common.name')}</TableHead>
+                  <TableHead>{t('users.role')}</TableHead>
+                  <TableHead className="text-right">{t('common.actions')}</TableHead>
                 </TableRow>
-              ) : (
-                filteredUsers.map((user) => (
-                  <TableRow key={user.id}>
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-8 w-8">
-                          <AvatarFallback>
-                            {user.displayName.charAt(0).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span className="font-medium">{user.displayName}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">{user.email}</TableCell>
-                    <TableCell>{getRoleBadge(user.role)}</TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button variant="ghost" size="icon">
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
+              </TableHeader>
+              <TableBody>
+                {filteredUsers.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-center py-8 text-muted-foreground">
+                      {t('users.noUsers')}
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                ) : (
+                  filteredUsers.map((user) => (
+                    <TableRow key={user.id}>
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-8 w-8">
+                            <AvatarFallback>
+                              {user.displayName.charAt(0).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="font-medium">{user.displayName}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>{getRoleBadge(user.role)}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button variant="ghost" size="icon">
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
     </div>
