@@ -244,7 +244,8 @@
     "systemStats": "Systemstatistikk",
     "totalBakeries": "Totalt antall bakerier",
     "totalUsers": "Totalt antall brukere",
-    "totalOrders": "Totalt antall ordrer"
+    "totalOrders": "Totalt antall ordrer",
+    "exitMode": "Avslutt modus"
   },
   "settings": {
     "title": "Innstillinger",
