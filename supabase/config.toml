@@ -2,3 +2,6 @@ project_id = "yivmfznclvbpbatritgf"
 
 [functions.sync-onedrive]
 verify_jwt = false
+
+[functions.sync-onedrive-cron]
+verify_jwt = false

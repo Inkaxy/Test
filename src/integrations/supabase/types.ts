@@ -93,36 +93,48 @@ export type Database = {
           bakery_id: string
           category_id: string
           created_at: string
+          delete_after_import: boolean | null
           id: string
           last_sync_at: string | null
           onedrive_folder_id: string | null
           onedrive_folder_url: string | null
+          sync_days: string[] | null
+          sync_enabled: boolean | null
           sync_error: string | null
           sync_status: string | null
+          sync_time: string | null
           updated_at: string
         }
         Insert: {
           bakery_id: string
           category_id: string
           created_at?: string
+          delete_after_import?: boolean | null
           id?: string
           last_sync_at?: string | null
           onedrive_folder_id?: string | null
           onedrive_folder_url?: string | null
+          sync_days?: string[] | null
+          sync_enabled?: boolean | null
           sync_error?: string | null
           sync_status?: string | null
+          sync_time?: string | null
           updated_at?: string
         }
         Update: {
           bakery_id?: string
           category_id?: string
           created_at?: string
+          delete_after_import?: boolean | null
           id?: string
           last_sync_at?: string | null
           onedrive_folder_id?: string | null
           onedrive_folder_url?: string | null
+          sync_days?: string[] | null
+          sync_enabled?: boolean | null
           sync_error?: string | null
           sync_status?: string | null
+          sync_time?: string | null
           updated_at?: string
         }
         Relationships: [
