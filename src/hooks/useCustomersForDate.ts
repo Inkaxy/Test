@@ -31,11 +31,17 @@ export interface CustomerWithOrders {
   progress: number;
 }
 
-export function useCustomersForDate(deliveryDate: string, categoryId?: string) {
+export interface CustomerSortOptions {
+  completedLast?: boolean;
+  sortMode?: 'name' | 'customer_number' | 'progress' | 'priority';
+  sortDirection?: 'asc' | 'desc';
+}
+
+export function useCustomersForDate(deliveryDate: string, categoryId?: string, sortOptions?: CustomerSortOptions) {
   const { getCurrentBakeryId } = useAuthStore();
   
   return useQuery({
-    queryKey: ['customers-for-date', deliveryDate, getCurrentBakeryId(), categoryId],
+    queryKey: ['customers-for-date', deliveryDate, getCurrentBakeryId(), categoryId, sortOptions],
     queryFn: async () => {
       const bakeryId = getCurrentBakeryId();
       if (!bakeryId) return [];
@@ -115,14 +121,37 @@ export function useCustomersForDate(deliveryDate: string, categoryId?: string) {
           : 0,
       }));
       
-      // Sort by priority first (lower = higher priority), then by customer number
+      // Apply sorting based on options
+      const completedLast = sortOptions?.completedLast ?? true;
+      const sortMode = sortOptions?.sortMode || 'priority';
+      const sortDirection = sortOptions?.sortDirection || 'asc';
+      const multiplier = sortDirection === 'desc' ? -1 : 1;
+      
       customers.sort((a, b) => {
-        const priorityA = a.priority ?? 50;
-        const priorityB = b.priority ?? 50;
-        if (priorityA !== priorityB) {
-          return priorityA - priorityB;
+        // Handle completed customers last if enabled
+        if (completedLast) {
+          if (a.progress === 100 && b.progress !== 100) return 1;
+          if (a.progress !== 100 && b.progress === 100) return -1;
         }
-        return a.customer_number.localeCompare(b.customer_number);
+        
+        // Then sort by selected mode
+        switch (sortMode) {
+          case 'progress':
+            return (a.progress - b.progress) * multiplier;
+          case 'name':
+            return a.name.localeCompare(b.name, 'nb') * multiplier;
+          case 'customer_number':
+            return a.customer_number.localeCompare(b.customer_number, 'nb', { numeric: true }) * multiplier;
+          case 'priority':
+          default:
+            // Sort by priority first (lower = higher priority), then by customer number
+            const priorityA = a.priority ?? 50;
+            const priorityB = b.priority ?? 50;
+            if (priorityA !== priorityB) {
+              return (priorityA - priorityB) * multiplier;
+            }
+            return a.customer_number.localeCompare(b.customer_number, 'nb', { numeric: true }) * multiplier;
+        }
       });
       
       return customers;
