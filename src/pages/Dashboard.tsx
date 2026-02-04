@@ -5,29 +5,31 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Package, Users, AlertTriangle, CheckCircle2, CalendarIcon, Upload, ArrowRight } from 'lucide-react';
 import { useState } from 'react';
 import { format } from 'date-fns';
 import { nb, enUS } from 'date-fns/locale';
-import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
+import { useDashboardStats } from '@/hooks/useDashboard';
 
 export default function Dashboard() {
   const { t, i18n } = useTranslation();
-  const { profile, isSuperAdmin, isBakeryAdmin } = useAuthStore();
+  const { profile, isSuperAdmin, isBakeryAdmin, getActiveBakeryId } = useAuthStore();
   const navigate = useNavigate();
   
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   
-  // Mock data - will be replaced with real data
-  const stats = {
-    totalOrders: 156,
-    packedOrders: 89,
-    pendingOrders: 62,
-    deviations: 5,
-  };
+  // Real data from database
+  const { data: stats, isLoading } = useDashboardStats(selectedDate);
+  const activeBakeryId = getActiveBakeryId();
   
-  const progress = Math.round((stats.packedOrders / stats.totalOrders) * 100);
+  const totalOrders = stats?.totalOrders || 0;
+  const packedOrders = stats?.packedOrders || 0;
+  const pendingOrders = stats?.pendingOrders || 0;
+  const deviations = stats?.deviations || 0;
+  
+  const progress = totalOrders > 0 ? Math.round((packedOrders / totalOrders) * 100) : 0;
   const locale = i18n.language === 'nb' ? nb : enUS;
   
   return (
@@ -68,7 +70,11 @@ export default function Dashboard() {
             <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalOrders}</div>
+            {isLoading ? (
+              <Skeleton className="h-8 w-16" />
+            ) : (
+              <div className="text-2xl font-bold">{totalOrders}</div>
+            )}
           </CardContent>
         </Card>
         
@@ -78,7 +84,11 @@ export default function Dashboard() {
             <CheckCircle2 className="h-4 w-4 text-success" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-success">{stats.packedOrders}</div>
+            {isLoading ? (
+              <Skeleton className="h-8 w-16" />
+            ) : (
+              <div className="text-2xl font-bold text-success">{packedOrders}</div>
+            )}
           </CardContent>
         </Card>
         
@@ -88,7 +98,11 @@ export default function Dashboard() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.pendingOrders}</div>
+            {isLoading ? (
+              <Skeleton className="h-8 w-16" />
+            ) : (
+              <div className="text-2xl font-bold">{pendingOrders}</div>
+            )}
           </CardContent>
         </Card>
         
@@ -98,7 +112,11 @@ export default function Dashboard() {
             <AlertTriangle className="h-4 w-4 text-destructive" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-destructive">{stats.deviations}</div>
+            {isLoading ? (
+              <Skeleton className="h-8 w-16" />
+            ) : (
+              <div className="text-2xl font-bold text-destructive">{deviations}</div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -108,12 +126,22 @@ export default function Dashboard() {
         <CardHeader>
           <CardTitle>{t('dashboard.todaysPacking')}</CardTitle>
           <CardDescription>
-            {t('packing.packingProgress', { packed: stats.packedOrders, total: stats.totalOrders })}
+            {isLoading ? (
+              <Skeleton className="h-4 w-32" />
+            ) : (
+              t('packing.packingProgress', { packed: packedOrders, total: totalOrders })
+            )}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Progress value={progress} className="h-3" />
-          <p className="mt-2 text-sm text-muted-foreground">{progress}% {t('dashboard.progress').toLowerCase()}</p>
+          {isLoading ? (
+            <Skeleton className="h-3 w-full" />
+          ) : (
+            <>
+              <Progress value={progress} className="h-3" />
+              <p className="mt-2 text-sm text-muted-foreground">{progress}% {t('dashboard.progress').toLowerCase()}</p>
+            </>
+          )}
         </CardContent>
       </Card>
       
