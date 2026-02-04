@@ -300,9 +300,6 @@ export default function CustomerDisplay() {
                         </span>
                         <span className="text-lg text-muted-foreground">stk</span>
                       </div>
-                      <div className="text-sm text-muted-foreground">
-                        {isPacked ? '1/1' : '0/1'}
-                      </div>
                       {getProductStatusBadge(order)}
                     </div>
                   </div>
