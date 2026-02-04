@@ -297,6 +297,9 @@ export default function SuperAdminSettings() {
         </CardContent>
       </Card>
 
+      {/* Users Overview Section */}
+      <UsersOverviewSection />
+
       {/* System Info */}
       <Card>
         <CardHeader>
@@ -317,7 +320,7 @@ export default function SuperAdminSettings() {
             </div>
             <div className="space-y-1">
               <p className="text-sm font-medium">Database</p>
-              <p className="text-sm text-muted-foreground">PostgreSQL (Supabase)</p>
+              <p className="text-sm text-muted-foreground">PostgreSQL (Lovable Cloud)</p>
             </div>
             <div className="space-y-1">
               <p className="text-sm font-medium">Total lagring</p>
