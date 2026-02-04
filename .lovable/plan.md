@@ -1,54 +1,40 @@
 
-# Plan: Forbedre produktvisning på Felles Display og Pakkedisplay
+# Plan: Statusbar skal alltid vise fremdrift for alle ordrer
 
-## Oversikt
-Når en vare markeres som pakket skal det tydelig vises på alle display-typer (Kundedisplay, Felles Display og Pakkedisplay) med:
-1. Produktnavn med gjennomstreking
-2. Fremdriftsindikator (f.eks. "1/1")
-3. "Ferdig"-badge på produktlinjen
+## Problem
+Statusbaren og progresjonsvisningen bytter mellom å vise fremdrift for kun de valgte produktene vs. alle produkter avhengig av om pakkeren har valgt spesifikke produkter. Brukeren ønsker at statusbaren **alltid skal vise prosent av ALLE varene** kunden skal ha, uavhengig av hva som vises på skjermen.
 
-Kundedisplay har allerede dette designet, men Felles Display og Pakkedisplay mangler det.
+## Løsning
+Endre `CustomerDisplay.tsx` til å alltid bruke `allProgress` (fremdrift for alle ordrer) i stedet for `displayProgress` (som kan være basert på kun de valgte produktene).
 
-## Nåværende tilstand
-- **CustomerDisplay**: Viser allerede gjennomstreking, fremdrift (1/1), og "Ferdig"-badge (linje 291-317)
-- **SharedDisplay**: Viser kun gjennomstreking og redusert opasitet (linje 476-501)
-- **PackingDisplay**: Viser kun gjennomstreking og redusert opasitet (linje 324-350)
+## Teknisk endring
 
-## Endringer
+### CustomerDisplay.tsx
+1. **Progresjonsbar**: Endre fra `displayProgress` til `allProgress` 
+2. **Status-tekst**: Endre `getStatusInfo()` til å alltid bruke `allProgress` for statusberegning
 
-### 1. SharedDisplay.tsx
-Oppdatere produktlisten i kundekortene for å vise:
-- Gjennomstreking på produktnavn når pakket
-- Antall til høyre med "stk"-enhet
-- Fremdriftsteller "1/1" (eller "0/1" hvis ikke pakket)
-- "Ferdig"-badge nederst når pakket
-
-Produktlinjen vil ha et mer fremtredende design med større padding og tydelig visuell status.
-
-### 2. PackingDisplay.tsx
-Samme oppdatering som SharedDisplay - legge til fremdriftsteller og "Ferdig"-badge på produktlinjene.
-
-## Teknisk implementering
-
-```text
-+-------------------------------------------+
-| Produktnavn (gjennomstreket hvis pakket)  |   2     |
-|                                           |  stk    |
-|                                           |  1/1    |
-|                                   [Ferdig]|         |
-+-------------------------------------------+
+### Før (linje 139-140):
+```typescript
+// Use overall progress when no selection, otherwise use selected progress
+const displayProgress = selection?.productIds?.length ? progress : allProgress;
 ```
 
-For hvert produkt i listen:
-- Behold bakgrunnsfarge basert på status (grønn tint for pakket)
-- Legg til en høyreseksjon med:
-  - Antall (stor skrift)
-  - "stk" label
-  - Fremdrift (1/1 eller 0/1)
-  - Badge med "Ferdig" eller "Venter"
+### Etter:
+```typescript
+// Always use overall progress for status bar (all products customer should receive)
+const displayProgress = allProgress;
+```
 
-## Filendringer
-1. **src/pages/display/SharedDisplay.tsx** - Oppdatere produktliste-rendering
-2. **src/pages/display/PackingDisplay.tsx** - Oppdatere produktliste-rendering
+### Endring i getStatusInfo():
+```typescript
+// Always use overall status regardless of selection
+if (allTotalCount === 0) return { text: 'Ingen ordrer', ... };
+if (allProgress === 100) return { text: 'Ferdig', ... };
+if (allProgress > 0) return { text: 'Pågående', ... };
+return { text: 'Venter', ... };
+```
 
-Begge filer vil få lignende endringer i produktliste-seksjonen der hver produktrad får et mer informativt og konsistent design som matcher CustomerDisplay.
+## Oppsummering
+Én fil endres: `src/pages/display/CustomerDisplay.tsx`
+
+Statusbaren og progresjonsvisningen vil alltid reflektere den totale fremdriften for alle produkter kunden skal ha, selv om skjermen kun viser et utvalg av produkter som pakkes akkurat nå.
