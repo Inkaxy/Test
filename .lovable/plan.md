@@ -1,40 +1,49 @@
 
-# Plan: Statusbar skal alltid vise fremdrift for alle ordrer
+# Plan: Fjerne 1/1 fremdriftsindikator fra CustomerDisplay
 
 ## Problem
-Statusbaren og progresjonsvisningen bytter mellom å vise fremdrift for kun de valgte produktene vs. alle produkter avhengig av om pakkeren har valgt spesifikke produkter. Brukeren ønsker at statusbaren **alltid skal vise prosent av ALLE varene** kunden skal ha, uavhengig av hva som vises på skjermen.
+På CustomerDisplay vises det "1/1" (eller "0/1") under antallet (f.eks. "2 stk"). Denne informasjonen er unødvendig fordi:
+- "Ferdig"-badgen viser allerede at produktet er pakket
+- "Venter"-badgen viser at produktet ikke er pakket ennå
+- Det skaper visuell støy uten å gi ekstra verdi
 
 ## Løsning
-Endre `CustomerDisplay.tsx` til å alltid bruke `allProgress` (fremdrift for alle ordrer) i stedet for `displayProgress` (som kan være basert på kun de valgte produktene).
+Fjerne div-elementet som viser fremdriftsindikatoren "1/1" eller "0/1" fra produktradene i CustomerDisplay.
 
 ## Teknisk endring
 
-### CustomerDisplay.tsx
-1. **Progresjonsbar**: Endre fra `displayProgress` til `allProgress` 
-2. **Status-tekst**: Endre `getStatusInfo()` til å alltid bruke `allProgress` for statusberegning
+### CustomerDisplay.tsx (linje 303-305)
 
-### Før (linje 139-140):
-```typescript
-// Use overall progress when no selection, otherwise use selected progress
-const displayProgress = selection?.productIds?.length ? progress : allProgress;
+**Før:**
+```tsx
+<div className="text-right flex flex-col items-end gap-2">
+  <div className="flex items-baseline gap-1">
+    <span className="text-4xl md:text-5xl font-bold">
+      {order.quantity}
+    </span>
+    <span className="text-lg text-muted-foreground">stk</span>
+  </div>
+  <div className="text-sm text-muted-foreground">
+    {isPacked ? '1/1' : '0/1'}
+  </div>
+  {getProductStatusBadge(order)}
+</div>
 ```
 
-### Etter:
-```typescript
-// Always use overall progress for status bar (all products customer should receive)
-const displayProgress = allProgress;
+**Etter:**
+```tsx
+<div className="text-right flex flex-col items-end gap-2">
+  <div className="flex items-baseline gap-1">
+    <span className="text-4xl md:text-5xl font-bold">
+      {order.quantity}
+    </span>
+    <span className="text-lg text-muted-foreground">stk</span>
+  </div>
+  {getProductStatusBadge(order)}
+</div>
 ```
 
-### Endring i getStatusInfo():
-```typescript
-// Always use overall status regardless of selection
-if (allTotalCount === 0) return { text: 'Ingen ordrer', ... };
-if (allProgress === 100) return { text: 'Ferdig', ... };
-if (allProgress > 0) return { text: 'Pågående', ... };
-return { text: 'Venter', ... };
-```
+## Filendringer
+1. **src/pages/display/CustomerDisplay.tsx** - Fjerne linje 303-305
 
-## Oppsummering
-Én fil endres: `src/pages/display/CustomerDisplay.tsx`
-
-Statusbaren og progresjonsvisningen vil alltid reflektere den totale fremdriften for alle produkter kunden skal ha, selv om skjermen kun viser et utvalg av produkter som pakkes akkurat nå.
+Resultatet blir en renere visning med kun antall, enhet (stk), og status-badge.
