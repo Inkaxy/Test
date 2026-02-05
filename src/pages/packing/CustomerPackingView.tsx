@@ -29,6 +29,7 @@ import { useCategories } from '@/hooks/useCategories';
 import { useBakeries } from '@/hooks/useBakeries';
 import { DeviationDialog } from '@/components/packing/DeviationDialog';
 import { CustomerOrderCard } from '@/components/packing/CustomerOrderCard';
+import { KioskCustomerTable } from '@/components/packing/KioskCustomerTable';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface DeviationOrderInfo {
