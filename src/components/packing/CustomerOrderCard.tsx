@@ -35,7 +35,7 @@ interface CustomerOrderCardProps {
   alternateRowColor?: string;
   onMarkPacked: (orderId: string, packingStatusId?: string, productId?: string, categoryId?: string | null) => void;
   onReportDeviation: (order: Order) => void;
-  onUndo: (packingStatusId: string) => void;
+  onUndo: (packingStatusId: string, orderId: string) => void;
   isMarkingPacked: boolean;
   isUndoing: boolean;
 }
@@ -219,7 +219,7 @@ export function CustomerOrderCard({
                 <Button
                   size="lg"
                   variant="ghost"
-                  onClick={() => onUndo(order.packing_status!.id)}
+                  onClick={() => onUndo(order.packing_status!.id, order.id)}
                   disabled={isUndoing}
                   className="h-12 touch-manipulation"
                 >

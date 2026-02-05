@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuthStore } from '@/stores/authStore';
+import type { CustomerWithOrders } from '@/hooks/useCustomersForDate';
 
 export interface Order {
   id: string;
@@ -31,6 +32,41 @@ export interface Order {
     deviation_type: string | null;
     deviation_note: string | null;
   };
+}
+
+// Helper function to optimistically update order status in customers cache
+export function updateOrderStatusInCustomersCache(
+  customers: CustomerWithOrders[],
+  orderId: string,
+  newStatus: 'packed' | 'pending' | 'deviation'
+): CustomerWithOrders[] {
+  return customers.map(customer => {
+    const orderIndex = customer.orders.findIndex(o => o.id === orderId);
+    if (orderIndex === -1) return customer;
+    
+    const updatedOrders = [...customer.orders];
+    updatedOrders[orderIndex] = {
+      ...updatedOrders[orderIndex],
+      packing_status: {
+        id: updatedOrders[orderIndex].packing_status?.id || `temp-${orderId}`,
+        status: newStatus,
+        packed_at: newStatus === 'pending' ? null : new Date().toISOString(),
+        deviation_type: null,
+        deviation_note: null,
+      },
+    };
+    
+    const packedCount = updatedOrders.filter(
+      o => o.packing_status?.status === 'packed' || o.packing_status?.status === 'deviation'
+    ).length;
+    
+    return {
+      ...customer,
+      orders: updatedOrders,
+      packedOrders: packedCount,
+      progress: Math.round((packedCount / customer.totalOrders) * 100),
+    };
+  });
 }
 
 export function useOrders(deliveryDate: string) {
@@ -175,12 +211,40 @@ export function useMarkAsPacked() {
           });
         }
       }
+      
+      return { orderId, deliveryDate, categoryId };
     },
-    onSuccess: () => {
+    onMutate: async ({ orderId, deliveryDate, categoryId }) => {
+      const bakeryId = getActiveBakeryId();
+      const queryKey = ['customers-for-date', deliveryDate, bakeryId, categoryId];
+      
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey });
+      
+      // Snapshot previous value
+      const previousData = queryClient.getQueryData(queryKey);
+      
+      // Optimistically update cache
+      queryClient.setQueryData(queryKey, (old: CustomerWithOrders[] | undefined) => {
+        if (!old) return old;
+        return updateOrderStatusInCustomersCache(old, orderId, 'packed');
+      });
+      
+      return { previousData, queryKey };
+    },
+    onError: (_err, _variables, context) => {
+      // Rollback on error
+      if (context?.previousData && context?.queryKey) {
+        queryClient.setQueryData(context.queryKey, context.previousData);
+      }
+    },
+    onSettled: (_data, _error, variables) => {
+      const bakeryId = getActiveBakeryId();
+      // Refetch to sync with server
+      queryClient.refetchQueries({ queryKey: ['customers-for-date', variables.deliveryDate, bakeryId, variables.categoryId] });
       queryClient.invalidateQueries({ queryKey: ['orders'] });
       queryClient.invalidateQueries({ queryKey: ['orders-by-product'] });
       queryClient.invalidateQueries({ queryKey: ['display-orders'] });
-      queryClient.invalidateQueries({ queryKey: ['customers-for-date'] });
     },
   });
 }
@@ -348,9 +412,15 @@ export function useReportDeviation() {
 
 export function useUndoPacking() {
   const queryClient = useQueryClient();
+  const { getActiveBakeryId } = useAuthStore();
   
   return useMutation({
-    mutationFn: async ({ packingStatusId }: { packingStatusId: string }) => {
+    mutationFn: async ({ packingStatusId, orderId, deliveryDate, categoryId }: { 
+      packingStatusId: string;
+      orderId?: string;
+      deliveryDate?: string;
+      categoryId?: string | null;
+    }) => {
       const { error } = await supabase
         .from('packing_status')
         .update({
@@ -363,11 +433,36 @@ export function useUndoPacking() {
         .eq('id', packingStatusId);
       
       if (error) throw error;
+      return { orderId, deliveryDate, categoryId };
     },
-    onSuccess: () => {
+    onMutate: async ({ orderId, deliveryDate, categoryId }) => {
+      if (!orderId) return {};
+      
+      const bakeryId = getActiveBakeryId();
+      const queryKey = ['customers-for-date', deliveryDate, bakeryId, categoryId];
+      
+      await queryClient.cancelQueries({ queryKey });
+      const previousData = queryClient.getQueryData(queryKey);
+      
+      queryClient.setQueryData(queryKey, (old: CustomerWithOrders[] | undefined) => {
+        if (!old) return old;
+        return updateOrderStatusInCustomersCache(old, orderId, 'pending');
+      });
+      
+      return { previousData, queryKey };
+    },
+    onError: (_err, _variables, context) => {
+      if (context?.previousData && context?.queryKey) {
+        queryClient.setQueryData(context.queryKey, context.previousData);
+      }
+    },
+    onSettled: (_data, _error, variables) => {
+      const bakeryId = getActiveBakeryId();
+      if (variables.deliveryDate) {
+        queryClient.refetchQueries({ queryKey: ['customers-for-date', variables.deliveryDate, bakeryId, variables.categoryId] });
+      }
       queryClient.invalidateQueries({ queryKey: ['orders'] });
       queryClient.invalidateQueries({ queryKey: ['orders-by-product'] });
-      queryClient.invalidateQueries({ queryKey: ['customers-for-date'] });
       queryClient.invalidateQueries({ queryKey: ['display-orders'] });
     },
   });

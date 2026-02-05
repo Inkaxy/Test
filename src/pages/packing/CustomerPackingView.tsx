@@ -188,9 +188,14 @@ export default function CustomerPackingView() {
     }
   };
   
-  const handleUndo = async (packingStatusId: string) => {
+  const handleUndo = async (packingStatusId: string, orderId?: string) => {
     try {
-      await undoPacking.mutateAsync({ packingStatusId });
+      await undoPacking.mutateAsync({ 
+        packingStatusId, 
+        orderId,
+        deliveryDate: dateStr,
+        categoryId,
+      });
     } catch (error) {
       toast({
         variant: 'destructive',
