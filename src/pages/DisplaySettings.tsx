@@ -110,6 +110,16 @@ export default function DisplaySettingsPage() {
     }
   }, [existingSettings]);
   
+  // Nullstill valgt kategori når display type endres (hvis kategorien ikke finnes i ny liste)
+  useEffect(() => {
+    if (selectedCategoryId) {
+      const categoryExists = filteredCategories.some(c => c.id === selectedCategoryId);
+      if (!categoryExists) {
+        setSelectedCategoryId(null);
+      }
+    }
+  }, [selectedDisplayType, filteredCategories, selectedCategoryId]);
+  
   // Save settings mutation
   const saveMutation = useMutation({
     mutationFn: async () => {
