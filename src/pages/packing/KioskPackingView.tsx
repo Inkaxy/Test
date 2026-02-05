@@ -262,6 +262,7 @@ export default function KioskPackingView() {
   const { bakeryShortId, categoryId } = useParams<{ bakeryShortId: string; categoryId?: string }>();
   const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
+  const containerRef = useRef<HTMLDivElement>(null);
   const locale = i18n.language === 'nb' ? nb : enUS;
   
   const dateParam = searchParams.get('date');
@@ -280,7 +281,7 @@ export default function KioskPackingView() {
     categoryId
   );
   const { data: displaySettings } = useDisplaySettings(bakery?.id || null, categoryId, 'shared');
-  const settings = displaySettings || getDefaultDisplaySettings();
+  const settings: DisplaySettings = displaySettings || getDefaultDisplaySettings();
   
   // Apply sorting based on display settings
   const customers = useMemo(() => {
