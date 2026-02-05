@@ -49,8 +49,8 @@ export default function CustomerPackingView() {
   const dateStr = date || format(new Date(), 'yyyy-MM-dd');
   const bakeryId = getActiveBakeryId();
   
-  // Get display settings for sorting
-  const { data: displaySettings } = useDisplaySettings(bakeryId || null, categoryId, 'shared');
+  // Get display settings for sorting (use 'packing' type to match kiosk view)
+  const { data: displaySettings } = useDisplaySettings(bakeryId || null, categoryId, 'packing');
   const settings = displaySettings || getDefaultDisplaySettings();
   
   // Build sort options from display settings
