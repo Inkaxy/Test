@@ -60,7 +60,8 @@ interface PackingCategoryCardProps {
 export function PackingCategoryCard({ 
   category, 
   onOneDriveConfig,
-  isEditMode = false
+  isEditMode = false,
+  bakeryShortId = ''
 }: PackingCategoryCardProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
