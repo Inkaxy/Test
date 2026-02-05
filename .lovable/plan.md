@@ -1,68 +1,80 @@
 
-# Plan: Kiosk bruker korrekt display-innstillinger
+# Plan: Filtrer kategorier basert på display-type
 
-## Problemanalyse
+## Problem
+I Display Settings-siden vises **alle** kategorier i dropdown-menyen uansett hvilken skjermtype (display type) som er valgt. Dette skaper forvirring fordi:
 
-Etter undersøkelse har jeg identifisert følgende:
+- **Produktbasert pakking** (product_based) → Bruker "Felles Display" og "Kunde Display"
+- **Kundebasert pakking** (customer_based) → Bruker "Pakkedisplay"
 
-### Nåværende status
-- Kiosk-visningen henter nå riktig innstillinger med `display_type='packing'` (fikset tidligere)
-- Koden anvender `settings`-verdiene korrekt i stylingen
+## Løsning
+Filtrer kategori-listen basert på valgt display-type:
 
-### Årsak til problemet
-I databasen finnes det **ingen lagrede innstillinger** for `display_type='packing'`. Det finnes kun:
-- `display_type='customer'` (global)
-- `display_type='shared'` (global)
+| Display Type | Viser kategorier med |
+|--------------|---------------------|
+| Felles Display | Alle kategorier |
+| Kunde Display | `packing_mode = 'product_based'` |
+| Pakkedisplay | `packing_mode = 'customer_based'` |
 
-Når brukeren konfigurerer "Pakkedisplay" i Display Settings-siden og justerer farger, må de **klikke "Lagre innstillinger"** for at disse skal lagres i databasen.
+## Tekniske endringer
 
-### Bekreftet oppførsel
-Koden i `KioskPackingView.tsx` er nå korrekt:
+### Fil: `src/pages/DisplaySettings.tsx`
+
+**Endring 1:** Legg til filtrert kategori-liste (rundt linje 42-43)
 ```typescript
-const { data: displaySettings } = useDisplaySettings(bakery?.id || null, categoryId, 'packing');
+const { data: categories = [] } = useCategories();
+
+// Filtrer kategorier basert på display type
+const filteredCategories = categories.filter(cat => {
+  if (selectedDisplayType === 'packing') {
+    // Pakkedisplay = kun kundebaserte kategorier
+    return cat.packing_mode === 'customer_based';
+  }
+  if (selectedDisplayType === 'customer') {
+    // Kundedisplay = kun produktbaserte kategorier
+    return cat.packing_mode === 'product_based';
+  }
+  // Felles display = alle kategorier
+  return true;
+});
 ```
 
-Dette henter innstillinger for:
-- `bakery_id` = aktivt bakeri
-- `category_id` = kategori fra URL
-- `display_type` = 'packing'
-
-## Løsning: Ingen kodeendringer nødvendig
-
-Koden er allerede korrekt. Problemet er at **innstillingene ikke er lagret i databasen**.
-
-### Brukerinstruksjoner
-
-For at kiosk-visningen skal vise de mørke fargene:
-
-1. **Gå til Display Settings** → Velg "Pakkedisplay"-fanen
-2. **Velg riktig kategori** fra dropdown (f.eks. "Brød")
-3. **Juster innstillingene** (bakgrunnsfarge, tekstfarge, etc.)
-4. **Klikk "Lagre innstillinger"** - dette er kritisk!
-5. **Åpne kiosk-lenken** på nytt
-
-### Verifisering
-
-Etter lagring vil databasen inneholde en ny rad:
-```
-display_type: 'packing'
-category_id: [valgt kategori]
-bakery_id: [ditt bakeri]
-settings: { background_color: '#1a1a2e', ... }
+**Endring 2:** Bruk `filteredCategories` i stedet for `categories` i dropdown (linje 366-389)
+```typescript
+{filteredCategories.length > 0 && (
+  // ... existing code
+  {filteredCategories.map((cat) => (
+    <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+  ))}
+)}
 ```
 
-## Teknisk detalj
+**Endring 3:** Oppdater beskrivelsestekst basert på display type
+```typescript
+<p className="text-xs text-muted-foreground mb-2">
+  {selectedDisplayType === 'packing'
+    ? 'Tilpass visning per kundebasert kategori'
+    : selectedDisplayType === 'customer'
+    ? 'Tilpass visning per produktbasert kategori'
+    : 'Tilpass visning per kategori'}
+</p>
+```
 
-Display Settings-siden viser en **forhåndsvisning** av innstillingene lokalt, men disse lagres først i databasen når brukeren klikker "Lagre innstillinger".
+**Endring 4:** Nullstill valgt kategori når display type endres (hvis kategorien ikke finnes i ny liste)
+```typescript
+// I useEffect eller ved tab-endring
+useEffect(() => {
+  if (selectedCategoryId) {
+    const categoryExists = filteredCategories.some(c => c.id === selectedCategoryId);
+    if (!categoryExists) {
+      setSelectedCategoryId(null);
+    }
+  }
+}, [selectedDisplayType, filteredCategories, selectedCategoryId]);
+```
 
-Hvis endringer ikke er lagret, vil kiosk-visningen bruke standardverdiene (hvit bakgrunn, mørk tekst).
-
-## Oppsummering
-
-| Status | Beskrivelse |
-|--------|-------------|
-| Kode | ✅ Korrekt - Kiosk henter `'packing'` innstillinger |
-| Database | ⚠️ Mangler lagrede innstillinger for `'packing'` type |
-| Løsning | Bruker må lagre innstillinger i Display Settings |
-
-Ingen kodeendringer er nødvendig. Brukeren må bare sørge for å lagre innstillingene.
+## Resultat
+- Når bruker velger "Pakkedisplay"-fanen, vises kun kategorier med `packing_mode = 'customer_based'`
+- Når bruker velger "Kunde Display"-fanen, vises kun kategorier med `packing_mode = 'product_based'`
+- "Felles Display" viser fortsatt alle kategorier
+- Innstillinger lagres korrekt per kategori og display-type
