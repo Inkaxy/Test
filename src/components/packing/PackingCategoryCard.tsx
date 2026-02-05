@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { Upload, Edit, Cloud, CloudOff, Loader2, MoreVertical, Play, Trash2, Palette, GripVertical, Link } from 'lucide-react';
+import { Upload, Edit, Cloud, CloudOff, Loader2, MoreVertical, Play, Trash2, Palette, GripVertical, Link, Settings } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -186,7 +186,7 @@ export function PackingCategoryCard({
     }
   };
   
-  const handleMenuAction = (action: 'import' | 'edit' | 'onedrive' | 'kiosklink' | 'delete') => {
+  const handleMenuAction = (action: 'import' | 'edit' | 'onedrive' | 'kiosklink' | 'display-settings' | 'delete') => {
     setIsMenuOpen(false);
     switch (action) {
       case 'import':
@@ -203,6 +203,10 @@ export function PackingCategoryCard({
         break;
       case 'kiosklink':
         setIsKioskLinkOpen(true);
+        break;
+      case 'display-settings':
+        const displayType = category.packing_mode === 'customer_based' ? 'packing' : 'shared';
+        navigate(`/display-settings?category=${category.id}&type=${displayType}`);
         break;
       case 'delete':
         setIsDeleteOpen(true);
@@ -324,6 +328,15 @@ export function PackingCategoryCard({
                 >
                   <Link className="h-4 w-4" />
                   {t('categories.kioskLink')}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="justify-start gap-2 w-full"
+                  onClick={() => handleMenuAction('display-settings')}
+                >
+                  <Settings className="h-4 w-4" />
+                  Display-innstillinger
                 </Button>
                 <div className="border-t my-1" />
                 <Button

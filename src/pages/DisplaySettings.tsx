@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -35,8 +36,19 @@ export default function DisplaySettingsPage() {
   const { profile, getActiveBakeryId } = useAuthStore();
   const bakeryId = getActiveBakeryId();
   
-  const [selectedDisplayType, setSelectedDisplayType] = useState<DisplayType>('shared');
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  // Read URL parameters for deep linking from category cards
+  const [searchParams] = useSearchParams();
+  const urlCategoryId = searchParams.get('category');
+  const urlDisplayType = searchParams.get('type') as DisplayType | null;
+  
+  const [selectedDisplayType, setSelectedDisplayType] = useState<DisplayType>(
+    urlDisplayType && Object.keys(DISPLAY_TYPES).includes(urlDisplayType) 
+      ? urlDisplayType 
+      : 'shared'
+  );
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(
+    urlCategoryId || null
+  );
   const [settings, setSettings] = useState<DisplaySettings>(getDefaultDisplaySettings());
   
   const { data: categories = [] } = useCategories();
