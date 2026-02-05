@@ -377,9 +377,37 @@ export default function KioskPackingView() {
   const totalOrders = customers.reduce((sum, c) => sum + c.totalOrders, 0);
   const packedOrders = customers.reduce((sum, c) => sum + c.packedOrders, 0);
   const overallProgress = totalOrders > 0 ? Math.round((packedOrders / totalOrders) * 100) : 0;
+  const remainingOrders = totalOrders - packedOrders;
+  
+  // Use display settings
+  const showBakeryName = settings.header_show_bakery_name;
+  const showCategoryName = settings.header_show_category_name;
+  const showClock = settings.header_show_clock ?? settings.show_clock;
+  const showDate = settings.header_show_date ?? settings.show_date;
+  const clockFormat = settings.header_clock_format || '24h';
+  
+  const getStatusColor = (progress: number) => {
+    if (progress === 100) return settings.completed_color;
+    if (progress > 0) return settings.packing_color;
+    return settings.pending_color;
+  };
+  
+  const handleFullscreen = () => {
+    if (containerRef.current) {
+      if (document.fullscreenElement) {
+        document.exitFullscreen();
+      } else {
+        containerRef.current.requestFullscreen();
+      }
+    }
+  };
+  
+  const handleManualRefresh = () => {
+    queryClient.invalidateQueries({ queryKey: ['kiosk-customers-for-date'] });
+  };
   
   const getQuantityDisplay = (quantity: number, piecesPerTray?: number | null) => {
-    if (!piecesPerTray) return t('packing.pieces', { count: quantity });
+    if (!piecesPerTray || !settings.card_show_quantity_as_trays) return t('packing.pieces', { count: quantity });
     
     const trays = Math.floor(quantity / piecesPerTray);
     const pieces = quantity % piecesPerTray;
@@ -392,11 +420,11 @@ export default function KioskPackingView() {
   const getStatusBadge = (status?: string) => {
     switch (status) {
       case 'packed':
-        return <Badge className="bg-success text-success-foreground text-lg px-3 py-1">{t('packing.packed')}</Badge>;
+        return <Badge style={{ backgroundColor: settings.completed_color, color: '#fff' }} className="text-lg px-3 py-1">{t('packing.packed')}</Badge>;
       case 'deviation':
         return <Badge variant="destructive" className="text-lg px-3 py-1">{t('packing.deviation')}</Badge>;
       default:
-        return <Badge variant="secondary" className="text-lg px-3 py-1">{t('packing.pending')}</Badge>;
+        return <Badge style={{ backgroundColor: settings.pending_color, color: '#fff' }} className="text-lg px-3 py-1">{t('packing.pending')}</Badge>;
     }
   };
   
