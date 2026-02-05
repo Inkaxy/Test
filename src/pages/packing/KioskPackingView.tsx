@@ -401,31 +401,12 @@ export default function KioskPackingView() {
   const undoPacking = useKioskUndoPacking(bakery?.id || null, dateStr, categoryId);
   const reportDeviation = useKioskReportDeviation(bakery?.id || null, dateStr, categoryId);
   
-  // Real-time subscription for packing status updates
+  // Set language based on display settings
   useEffect(() => {
-    if (!bakery?.id) return;
-    
-    const channel = supabase
-      .channel('kiosk-packing-status')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'packing_status',
-        },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ['kiosk-customers-for-date'] });
-        }
-      )
-      .subscribe((status) => {
-        setIsConnected(status === 'SUBSCRIBED');
-      });
-    
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [bakery?.id, queryClient]);
+    if (settings.packing_language && settings.packing_language !== i18n.language) {
+      i18n.changeLanguage(settings.packing_language);
+    }
+  }, [settings.packing_language, i18n]);
   
   // Update clock every second
   useEffect(() => {
