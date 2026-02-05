@@ -743,7 +743,7 @@ export default function KioskPackingView() {
                         <Button
                           size="lg"
                           variant="ghost"
-                          onClick={() => handleUndo(order.packing_status!.id)}
+                          onClick={() => handleUndo(order.packing_status!.id, order.id)}
                           disabled={undoPacking.isPending}
                           className="h-14 text-lg"
                           style={{ color: settings.text_color }}
