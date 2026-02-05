@@ -186,7 +186,15 @@
     "customerBased": "Customer based",
     "sortOrder": "Sort order",
     "noCategories": "No categories found",
-    "deleteConfirm": "Are you sure you want to delete this category?"
+    "deleteConfirm": "Are you sure you want to delete this category?",
+    "kioskLink": "Kiosk link",
+    "kioskLinkTitle": "Kiosk link for {{category}}",
+    "kioskLinkDescription": "Use this link on packing stations to lock to this category",
+    "copyLink": "Copy link",
+    "linkCopied": "Link copied!",
+    "downloadQr": "Download QR code",
+    "qrDownloaded": "QR code downloaded",
+    "kioskTips": "Tip: Open the link in fullscreen mode (F11) for the best experience"
   },
   "users": {
     "title": "Users",
