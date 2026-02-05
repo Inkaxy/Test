@@ -186,7 +186,15 @@
     "customerBased": "Kundebasert",
     "sortOrder": "Sorteringsrekkefølge",
     "noCategories": "Ingen kategorier funnet",
-    "deleteConfirm": "Er du sikker på at du vil slette denne kategorien?"
+    "deleteConfirm": "Er du sikker på at du vil slette denne kategorien?",
+    "kioskLink": "Kiosk-lenke",
+    "kioskLinkTitle": "Kiosk-lenke for {{category}}",
+    "kioskLinkDescription": "Bruk denne lenken på pakkestasjon for å låse til denne kategorien",
+    "copyLink": "Kopier lenke",
+    "linkCopied": "Lenke kopiert!",
+    "downloadQr": "Last ned QR-kode",
+    "qrDownloaded": "QR-kode lastet ned",
+    "kioskTips": "Tips: Åpne lenken i fullskjerm-modus (F11) for beste opplevelse"
   },
   "users": {
     "title": "Brukere",

@@ -316,6 +316,15 @@ export function PackingCategoryCard({
                     </>
                   )}
                 </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="justify-start gap-2 w-full"
+                  onClick={() => handleMenuAction('kiosklink')}
+                >
+                  <Link className="h-4 w-4" />
+                  {t('categories.kioskLink')}
+                </Button>
                 <div className="border-t my-1" />
                 <Button
                   variant="ghost"
