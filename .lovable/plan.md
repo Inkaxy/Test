@@ -1,80 +1,89 @@
 
-# Plan: Filtrer kategorier basert på display-type
+# Plan: Legg til hurtiglenke til Display-innstillinger i pakkekort-menyen
 
-## Problem
-I Display Settings-siden vises **alle** kategorier i dropdown-menyen uansett hvilken skjermtype (display type) som er valgt. Dette skaper forvirring fordi:
-
-- **Produktbasert pakking** (product_based) → Bruker "Felles Display" og "Kunde Display"
-- **Kundebasert pakking** (customer_based) → Bruker "Pakkedisplay"
+## Problemstilling
+Administratorer må navigere til Display Settings-siden og manuelt velge riktig kategori for å justere display-innstillingene. Det er ingen hurtigvei fra pakkekortene på `/packing`-siden.
 
 ## Løsning
-Filtrer kategori-listen basert på valgt display-type:
+Legg til et nytt menyvalg "Display-innstillinger" i dropdown-menyen på hvert pakkekort som navigerer direkte til DisplaySettings-siden med riktig kategori forhåndsvalgt.
 
-| Display Type | Viser kategorier med |
-|--------------|---------------------|
-| Felles Display | Alle kategorier |
-| Kunde Display | `packing_mode = 'product_based'` |
-| Pakkedisplay | `packing_mode = 'customer_based'` |
+## Teknisk tilnærming
 
-## Tekniske endringer
+### 1. Oppdater DisplaySettings for å støtte URL-parametre
 
-### Fil: `src/pages/DisplaySettings.tsx`
+**Fil:** `src/pages/DisplaySettings.tsx`
 
-**Endring 1:** Legg til filtrert kategori-liste (rundt linje 42-43)
+Legg til URL-parametre slik at siden kan åpnes med forhåndsvalgt kategori og display-type:
+
+- Bruk `useSearchParams` fra react-router-dom
+- Les `?category={categoryId}&type={displayType}` fra URL
+- Initialiser state basert på URL-parametre ved innlasting
+
 ```typescript
-const { data: categories = [] } = useCategories();
+import { useSearchParams } from 'react-router-dom';
 
-// Filtrer kategorier basert på display type
-const filteredCategories = categories.filter(cat => {
-  if (selectedDisplayType === 'packing') {
-    // Pakkedisplay = kun kundebaserte kategorier
-    return cat.packing_mode === 'customer_based';
-  }
-  if (selectedDisplayType === 'customer') {
-    // Kundedisplay = kun produktbaserte kategorier
-    return cat.packing_mode === 'product_based';
-  }
-  // Felles display = alle kategorier
-  return true;
-});
+// I komponenten:
+const [searchParams] = useSearchParams();
+const urlCategoryId = searchParams.get('category');
+const urlDisplayType = searchParams.get('type') as DisplayType | null;
+
+// Initialiser state med URL-verdier
+const [selectedDisplayType, setSelectedDisplayType] = useState<DisplayType>(
+  urlDisplayType && Object.keys(DISPLAY_TYPES).includes(urlDisplayType) 
+    ? urlDisplayType 
+    : 'shared'
+);
+const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(
+  urlCategoryId || null
+);
 ```
 
-**Endring 2:** Bruk `filteredCategories` i stedet for `categories` i dropdown (linje 366-389)
-```typescript
-{filteredCategories.length > 0 && (
-  // ... existing code
-  {filteredCategories.map((cat) => (
-    <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
-  ))}
-)}
-```
+### 2. Legg til menyvalg i PackingCategoryCard
 
-**Endring 3:** Oppdater beskrivelsestekst basert på display type
-```typescript
-<p className="text-xs text-muted-foreground mb-2">
-  {selectedDisplayType === 'packing'
-    ? 'Tilpass visning per kundebasert kategori'
-    : selectedDisplayType === 'customer'
-    ? 'Tilpass visning per produktbasert kategori'
-    : 'Tilpass visning per kategori'}
-</p>
-```
+**Fil:** `src/components/packing/PackingCategoryCard.tsx`
 
-**Endring 4:** Nullstill valgt kategori når display type endres (hvis kategorien ikke finnes i ny liste)
+Legg til nytt menyvalg med ikon og navigasjon:
+
+- Importer `Settings` ikon fra lucide-react
+- Legg til ny handling i `handleMenuAction`
+- Bygg URL med riktig display-type basert på kategoriens `packing_mode`:
+  - `product_based` → `type=shared` (Felles Display)
+  - `customer_based` → `type=packing` (Pakkedisplay)
+
 ```typescript
-// I useEffect eller ved tab-endring
-useEffect(() => {
-  if (selectedCategoryId) {
-    const categoryExists = filteredCategories.some(c => c.id === selectedCategoryId);
-    if (!categoryExists) {
-      setSelectedCategoryId(null);
-    }
-  }
-}, [selectedDisplayType, filteredCategories, selectedCategoryId]);
+// Ny import
+import { Settings } from 'lucide-react';
+
+// Ny handling i handleMenuAction
+case 'display-settings':
+  const displayType = category.packing_mode === 'customer_based' ? 'packing' : 'shared';
+  navigate(`/display-settings?category=${category.id}&type=${displayType}`);
+  break;
+
+// Nytt menyvalg (etter "Kiosk-lenke")
+<Button
+  variant="ghost"
+  size="sm"
+  className="justify-start gap-2 w-full"
+  onClick={() => handleMenuAction('display-settings')}
+>
+  <Settings className="h-4 w-4" />
+  Display-innstillinger
+</Button>
 ```
 
 ## Resultat
-- Når bruker velger "Pakkedisplay"-fanen, vises kun kategorier med `packing_mode = 'customer_based'`
-- Når bruker velger "Kunde Display"-fanen, vises kun kategorier med `packing_mode = 'product_based'`
-- "Felles Display" viser fortsatt alle kategorier
-- Innstillinger lagres korrekt per kategori og display-type
+
+Brukerflyten blir:
+1. Bruker er på `/packing`-siden
+2. Klikker på ⋮ menyen på et pakkekort (f.eks. "BRØD")
+3. Velger "Display-innstillinger"
+4. Navigeres til `/display-settings?category={id}&type=shared`
+5. DisplaySettings-siden åpner med riktig kategori og skjermtype forhåndsvalgt
+
+## Filendringer oppsummert
+
+| Fil | Endring |
+|-----|---------|
+| `src/pages/DisplaySettings.tsx` | Legg til `useSearchParams` for URL-parameter-støtte |
+| `src/components/packing/PackingCategoryCard.tsx` | Legg til Settings-ikon import, ny menyhandling og nytt menyvalg |
