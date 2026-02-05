@@ -211,12 +211,40 @@ export function useMarkAsPacked() {
           });
         }
       }
+      
+      return { orderId, deliveryDate, categoryId };
     },
-    onSuccess: () => {
+    onMutate: async ({ orderId, deliveryDate, categoryId }) => {
+      const bakeryId = getActiveBakeryId();
+      const queryKey = ['customers-for-date', deliveryDate, bakeryId, categoryId];
+      
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey });
+      
+      // Snapshot previous value
+      const previousData = queryClient.getQueryData(queryKey);
+      
+      // Optimistically update cache
+      queryClient.setQueryData(queryKey, (old: CustomerWithOrders[] | undefined) => {
+        if (!old) return old;
+        return updateOrderStatusInCustomersCache(old, orderId, 'packed');
+      });
+      
+      return { previousData, queryKey };
+    },
+    onError: (_err, _variables, context) => {
+      // Rollback on error
+      if (context?.previousData && context?.queryKey) {
+        queryClient.setQueryData(context.queryKey, context.previousData);
+      }
+    },
+    onSettled: (_data, _error, variables) => {
+      const bakeryId = getActiveBakeryId();
+      // Refetch to sync with server
+      queryClient.refetchQueries({ queryKey: ['customers-for-date', variables.deliveryDate, bakeryId, variables.categoryId] });
       queryClient.invalidateQueries({ queryKey: ['orders'] });
       queryClient.invalidateQueries({ queryKey: ['orders-by-product'] });
       queryClient.invalidateQueries({ queryKey: ['display-orders'] });
-      queryClient.invalidateQueries({ queryKey: ['customers-for-date'] });
     },
   });
 }
