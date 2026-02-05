@@ -1,18 +1,18 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams, useSearchParams } from 'react-router-dom';
-import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { Users, Package, Loader2, ArrowLeft, Check, AlertTriangle, Undo2, Clock, Wifi, WifiOff } from 'lucide-react';
+import { Users, Package, Loader2, ArrowLeft, Check, AlertTriangle, Undo2, Clock, Wifi, WifiOff, Maximize, RefreshCw } from 'lucide-react';
 import { format } from 'date-fns';
 import { nb, enUS } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { DeviationDialog } from '@/components/packing/DeviationDialog';
-import { useDisplaySettings, getDefaultDisplaySettings } from '@/hooks/useDisplayOrders';
+import { useDisplaySettings, getDefaultDisplaySettings, DisplaySettings } from '@/hooks/useDisplayOrders';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface DeviationOrderInfo {
   id: string;
