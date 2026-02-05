@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { Upload, Edit, Cloud, CloudOff, Loader2, MoreVertical, Play, Trash2, Palette, GripVertical, Link } from 'lucide-react';
+import { Upload, Edit, Cloud, CloudOff, Loader2, MoreVertical, Play, Trash2, Palette, GripVertical, Link, Settings } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
