@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useQuery } from '@tanstack/react-query';
 import { Loader2, Settings, GripVertical } from 'lucide-react';
 import { Reorder, AnimatePresence, motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -9,6 +10,7 @@ import { PackingCategoryCard } from '@/components/packing/PackingCategoryCard';
 import { AddPackingCategoryCard } from '@/components/packing/AddPackingCategoryCard';
 import { OneDriveConfigDialog } from '@/components/categories/OneDriveConfigDialog';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 export default function Packing() {
   const { t } = useTranslation();
