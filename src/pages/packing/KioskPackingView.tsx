@@ -397,9 +397,9 @@ export default function KioskPackingView() {
     });
   }, [customersData, settings.customer_sort_completed_last, settings.customer_sort_mode, settings.customer_sort_direction]);
   
-  const markAsPacked = useKioskMarkAsPacked();
-  const undoPacking = useKioskUndoPacking();
-  const reportDeviation = useKioskReportDeviation();
+  const markAsPacked = useKioskMarkAsPacked(bakery?.id || null, dateStr, categoryId);
+  const undoPacking = useKioskUndoPacking(bakery?.id || null, dateStr, categoryId);
+  const reportDeviation = useKioskReportDeviation(bakery?.id || null, dateStr, categoryId);
   
   // Real-time subscription for packing status updates
   useEffect(() => {
