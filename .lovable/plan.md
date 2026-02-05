@@ -1,62 +1,160 @@
 
-# Plan: Touch-vennlig tabellvisning for Pakkedisplay ✅ IMPLEMENTERT
+# Plan: Raskere respons på pakkedisplay - Sikrer display-synkronisering
 
-## Oppsummering
-Implementert mulighet for å velge mellom kort-visning og tabell-visning i Pakkedisplay, med konfigurerbare tabell-innstillinger for touch-optimalisert bruk.
+## Forståelse av arkitekturen
 
----
+**Display-skjermene (Felles Display, Kunde Display) bruker:**
+- `useRealtimeDisplay()` hook
+- Lytter på `broadcast` events (packing_update fra pakkestasjonene)
+- Lytter på `postgres_changes` som backup
+- Invaliderer queries og refetcher når oppdateringer mottas
 
-## Implementerte endringer
+**Pakkeskjermene (Pakkedisplay, Produktpakking):**
+- Sender broadcast events via `usePackingBroadcast()`
+- Bruker `useMarkAsPacked()`, `useBatchMarkAsPacked()`, `useUndoPacking()` mutations
+- Har egne `useRealtimeDisplay` som lytter (men på andre kanaler)
 
-### ✅ Del 1: Utvidet DisplaySettings interface
-**Fil:** `src/hooks/useDisplayOrders.ts`
+**Kritisk punkt:** 
+Display-skjermene må fortsatt motta realtime broadcast-events fra pakkestasjonene. Vi MUST NOT endre hvordan broadcast-events sendes fra pakkestasjonene.
 
-Nye innstillinger lagt til:
-- `packing_view_mode: 'cards' | 'table'`
-- `table_row_height: 'compact' | 'normal' | 'touch'`
-- `table_font_size: string`
-- `table_show_customer_number: boolean`
-- `table_show_progress_bar: boolean`
-- `table_show_order_count: boolean`
-- `table_alternate_rows: boolean`
-- `table_alternate_row_color: string`
-- `table_sticky_header: boolean`
-- `table_touch_row_spacing: string`
+## Løsning: Optimistisk oppdatering BARE på pakkeskjermen
 
-### ✅ Del 2: Ny innstillingsseksjon i DisplaySettings
-**Fil:** `src/pages/DisplaySettings.tsx`
+Optimiseringen gjøres lokalt på pakke-siden (KioskPackingView, CustomerPackingView) uten å påvirke realtime broadcast-systemet:
 
-Ny AccordionItem "Visningsmodus" under Pakkedisplay-fanen med:
-- Velg visningsmodus (Kort / Tabell)
-- Tabell-innstillinger (vises kun når tabell er valgt)
+1. **Optimistisk UI oppdatering på pakkedisplay** - Viser resultat umiddelbart når bruker klikker
+2. **Fortsatt send broadcast** - Pakkestasjonene sender broadcast slik som før
+3. **Display mottar broadcast** - Display-skjermene får realtime updates som før
+4. **Ingen endringer i broadcast-mekanikk** - Alt fungerer som før
 
-### ✅ Del 3: Touch-optimalisert tabell-komponent
-**Ny fil:** `src/components/packing/KioskCustomerTable.tsx`
+## Implementering
 
-Touch-optimalisert tabell med:
-- Store, touch-vennlige rader
-- Farget venstre kant for status
-- Kundenavn, kundenummer, antall ordrer, fremdrift
-- Alternerende radfarger
-- Sticky header
-- Framer Motion animasjoner
-- Støtte for kundelåsing (web-visning)
+### Del 1: Optimistisk oppdatering i useMarkAsPacked (og andre mutations)
 
-### ✅ Del 4: Integrasjon i visningskomponenter
-**Filer:** 
-- `src/pages/packing/KioskPackingView.tsx`
-- `src/pages/packing/CustomerPackingView.tsx`
+**Fil:** `src/hooks/useOrders.ts`
 
-Betinget rendering basert på `settings.packing_view_mode`:
-- `'table'` → KioskCustomerTable
-- `'cards'` (default) → Grid med kort
+Legg til `onMutate` handler som oppdaterer cache optimistisk:
 
----
+```typescript
+onMutate: async ({ orderId, packingStatusId }) => {
+  // Avbryt pågående refetch
+  await queryClient.cancelQueries({ queryKey: ['kiosk-customers-for-date'] });
+  
+  // Lagre forrige data
+  const previousData = queryClient.getQueryData(['kiosk-customers-for-date', ...]);
+  
+  // Optimistisk oppdatering av cache
+  queryClient.setQueryData(['kiosk-customers-for-date', ...], (old) => {
+    if (!old) return old;
+    // Oppdater status lokalt
+    return updateOrderStatusInCache(old, orderId, 'packed');
+  });
+  
+  return { previousData };
+},
+
+onError: (err, variables, context) => {
+  // Rollback ved feil
+  if (context?.previousData) {
+    queryClient.setQueryData(['kiosk-customers-for-date', ...], context.previousData);
+  }
+},
+
+onSettled: () => {
+  // Etter mutation, refetch for å synkronisere med server
+  queryClient.refetchQueries({ queryKey: ['kiosk-customers-for-date'] });
+  // VIKTIG: Broadcast sender automatisk - ingen endring her
+}
+```
+
+### Del 2: Oppdater KioskPackingView.tsx
+
+**Fil:** `src/pages/packing/KioskPackingView.tsx`
+
+Sikre at mutations brukes på alle packing-action buttons:
+- Mark as packed → `useMarkAsPacked()` (med optimistisk oppdatering)
+- Undo → `useUndoPacking()` (med optimistisk oppdatering)
+- Report deviation → `useReportDeviation()` (med optimistisk oppdatering)
+
+Innføring av optimistisk oppdatering påvirker BARE den lokale brukerens view - display-skjermene mottar fortsatt broadcast events fra `usePackingBroadcast()`.
+
+### Del 3: Oppdater CustomerPackingView.tsx
+
+**Fil:** `src/pages/packing/CustomerPackingView.tsx`
+
+Samme optimistisk oppdatering som KioskPackingView.
+
+### Del 4: Hjelpefunksjon for cache-update
+
+**Fil:** `src/hooks/useOrders.ts`
+
+Legg til hjelpefunksjon som beregner oppdatert status:
+
+```typescript
+function updateOrderStatusInCache(
+  customers: any[],
+  orderId: string,
+  newStatus: 'packed' | 'pending' | 'deviation'
+): any[] {
+  return customers.map(customer => {
+    const orderIndex = customer.orders.findIndex((o: any) => o.id === orderId);
+    if (orderIndex === -1) return customer;
+    
+    const updatedOrders = [...customer.orders];
+    updatedOrders[orderIndex] = {
+      ...updatedOrders[orderIndex],
+      packing_status: {
+        ...updatedOrders[orderIndex].packing_status,
+        status: newStatus,
+      }
+    };
+    
+    const packedCount = updatedOrders.filter(
+      (o: any) => o.packing_status?.status === 'packed'
+    ).length;
+    
+    return {
+      ...customer,
+      orders: updatedOrders,
+      packedOrders: packedCount,
+      progress: Math.round((packedCount / customer.totalOrders) * 100),
+    };
+  });
+}
+```
+
+## Sikkerhet - Display påvirkes IKKE
+
+| Komponent | Før | Etter | Resultat |
+|-----------|-----|-------|----------|
+| Pakkedisplay UI | Venter ~300ms | Oppdateres umiddelbar (optimistisk) | ✅ Raskere |
+| Broadcast sendt | `usePackingBroadcast()` | `usePackingBroadcast()` uendret | ✅ Display får signal |
+| Display mottar | `useRealtimeDisplay` invaliderer | `useRealtimeDisplay` invaliderer | ✅ Ingen endring |
+| Database roundtrip | Venter på svar | Samme som før | ✅ Ikke påvirket |
+
+## Filendringer
+
+| Fil | Endring |
+|-----|---------|
+| `src/hooks/useOrders.ts` | Legg til `onMutate` med optimistisk cache-update, legg til hjelpefunksjon |
+| `src/pages/packing/KioskPackingView.tsx` | Sikre alle mutations bruker optimistisk oppdatering |
+| `src/pages/packing/CustomerPackingView.tsx` | Sikre alle mutations bruker optimistisk oppdatering |
+
+## Teknisk sikring
+
+**Display-kanalen påvirkes IKKE fordi:**
+1. `usePackingBroadcast()` sendes som før
+2. `useRealtimeDisplay()` mottar broadcast som før
+3. Bare den lokale UI-cachen oppdateres optimistisk
+4. Når broadcast mottas, refetcher display-skjermen anyway
+
+**Fallback:**
+- Hvis optimistisk oppdatering mislykkes, `onError` rollback restorer forrige data
+- `onSettled` refetcher for å synkronisere med server
 
 ## Resultat
 
-1. **Valgfrihet**: Administratorer kan velge mellom kort- og tabellvisning i Display Settings
-2. **Touch-optimalisert**: Tabellen har store rader, god spacing og tydelige touch-targets
-3. **Konfigurerbar**: Radhøyde, fontstørrelse, alternerende farger og mer kan tilpasses
-4. **Konsistent**: Samme innstillinger gjelder for både web og kiosk
-5. **Rask oversikt**: Tabellvisningen gir bedre oversikt over mange kunder samtidig
+- ✅ Pakkedisplay respondere umiddelbart (0ms opplevd latency)
+- ✅ Felles Display og Kunde Display mottar broadcast som før
+- ✅ Display-skjermene refetcher ved broadcast mottatt
+- ✅ Ingen endring i realtime-arkitektur
+- ✅ Sikre fallback ved feil
