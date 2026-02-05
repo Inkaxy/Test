@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Package, Loader2, ArrowLeft, Check, AlertTriangle, Undo2 } from 'lucide-react';
+import { Package, Loader2, ArrowLeft, Check, AlertTriangle, Undo2, Clock, Wifi, WifiOff, Maximize, RefreshCw } from 'lucide-react';
 import { format } from 'date-fns';
 import { nb, enUS } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -21,6 +21,9 @@ import { useToast } from '@/hooks/use-toast';
 import { ProductTableView, ProductWithOrders } from '@/components/packing/ProductTableView';
 import { BatchPackingView } from '@/components/packing/BatchPackingView';
 import { PackingHeader } from '@/components/packing/PackingHeader';
+import { useDisplaySettings, getDefaultDisplaySettings, DisplaySettings } from '@/hooks/useDisplayOrders';
+import { useCategories } from '@/hooks/useCategories';
+import { motion, AnimatePresence } from 'framer-motion';
 
 type DeviationType = 'shortage' | 'damaged' | 'wrong_product' | 'other';
 
@@ -122,6 +125,7 @@ export default function ProductPackingView() {
   const { toast } = useToast();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const containerRef = useRef<HTMLDivElement>(null);
   const { categoryId, date } = useParams<{ categoryId: string; date: string }>();
   const { getActiveBakeryId } = useAuthStore();
   const locale = i18n.language === 'nb' ? nb : enUS;
@@ -131,11 +135,29 @@ export default function ProductPackingView() {
   const [deviationOrder, setDeviationOrder] = useState<{ id: string; packingStatusId?: string } | null>(null);
   const [deviationType, setDeviationType] = useState<DeviationType>('shortage');
   const [deviationNote, setDeviationNote] = useState('');
+  const [currentTime, setCurrentTime] = useState(new Date());
+  const [isConnected, setIsConnected] = useState(true);
   
   const dateStr = date || format(new Date(), 'yyyy-MM-dd');
   const bakeryId = getActiveBakeryId();
   
   const { data: products = [], isLoading: productsLoading } = useProductsForDate(dateStr, categoryId);
+  
+  // Get display settings (use 'shared' type for product-based packing)
+  const { data: displaySettings } = useDisplaySettings(bakeryId || null, categoryId, 'shared');
+  const settings: DisplaySettings = displaySettings || getDefaultDisplaySettings();
+  
+  // Get category info for header
+  const { data: categories = [] } = useCategories();
+  const category = categories.find(c => c.id === categoryId);
+  
+  // Update clock every second
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
   
   // Real-time subscription for packing status updates
   useEffect(() => {
@@ -156,7 +178,9 @@ export default function ProductPackingView() {
           });
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        setIsConnected(status === 'SUBSCRIBED');
+      });
     
     return () => {
       supabase.removeChannel(channel);
@@ -275,9 +299,36 @@ export default function ProductPackingView() {
     }
   };
   
+  const handleFullscreen = () => {
+    if (containerRef.current) {
+      if (document.fullscreenElement) {
+        document.exitFullscreen();
+      } else {
+        containerRef.current.requestFullscreen();
+      }
+    }
+  };
+  
+  const handleManualRefresh = () => {
+    queryClient.invalidateQueries({ queryKey: ['products-for-date', bakeryId, dateStr, categoryId] });
+  };
+  
   const totalOrders = products.reduce((sum, p) => sum + p.totalOrders, 0);
   const packedOrders = products.reduce((sum, p) => sum + p.packedOrders, 0);
   const totalQuantity = products.reduce((sum, p) => sum + p.totalQuantity, 0);
+  const overallProgress = totalOrders > 0 ? Math.round((packedOrders / totalOrders) * 100) : 0;
+  const remainingOrders = totalOrders - packedOrders;
+  
+  // Use display settings for header
+  const showClock = settings.header_show_clock ?? settings.show_clock;
+  const showDate = settings.header_show_date ?? settings.show_date;
+  const clockFormat = settings.header_clock_format || '24h';
+  
+  const getStatusColor = (progress: number) => {
+    if (progress === 100) return settings.completed_color;
+    if (progress > 0) return settings.packing_color;
+    return settings.pending_color;
+  };
   
   const getQuantityDisplay = (quantity: number, piecesPerTray?: number | null) => {
     if (!piecesPerTray) return t('packing.pieces', { count: quantity });
@@ -293,19 +344,22 @@ export default function ProductPackingView() {
   const getStatusBadge = (status?: string) => {
     switch (status) {
       case 'packed':
-        return <Badge className="bg-success text-success-foreground">{t('packing.packed')}</Badge>;
+        return <Badge style={{ backgroundColor: settings.completed_color, color: '#fff' }}>{t('packing.packed')}</Badge>;
       case 'deviation':
         return <Badge variant="destructive">{t('packing.deviation')}</Badge>;
       default:
-        return <Badge variant="secondary">{t('packing.pending')}</Badge>;
+        return <Badge style={{ backgroundColor: settings.pending_color, color: '#fff' }}>{t('packing.pending')}</Badge>;
     }
   };
 
   // Loading state
   if (productsLoading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="h-10 w-10 animate-spin text-muted-foreground" />
+      <div
+        className="min-h-screen flex items-center justify-center"
+        style={{ backgroundColor: settings.background_color }}
+      >
+        <Loader2 className="h-12 w-12 animate-spin" style={{ color: settings.text_color }} />
       </div>
     );
   }
@@ -391,99 +445,213 @@ export default function ProductPackingView() {
       </>
     );
   }
+
   // Product detail view - shows all customer orders for this product
   if (selectedProduct) {
     const currentProduct = products.find(p => p.id === selectedProduct.id) || selectedProduct;
     
     return (
-      <div className="min-h-screen bg-background p-4 space-y-4">
+      <div
+        ref={containerRef}
+        className="min-h-screen"
+        style={{
+          backgroundColor: settings.background_color,
+          color: settings.text_color,
+          padding: settings.padding || '1rem',
+        }}
+      >
         {/* Header */}
-        <div className="flex items-center gap-4">
+        <header
+          className="flex flex-wrap items-center gap-4 mb-6 p-4 rounded-xl"
+          style={{
+            backgroundColor: settings.card_background_color,
+            borderRadius: settings.border_radius,
+          }}
+        >
           <Button 
             variant="ghost" 
             size="lg" 
             onClick={handleBack}
-            className="h-14 w-14"
+            className="h-16 w-16"
+            style={{ color: settings.text_color }}
           >
-            <ArrowLeft className="h-6 w-6" />
+            <ArrowLeft className="h-8 w-8" />
           </Button>
           <div className="flex-1">
-            <h1 className="text-2xl font-bold">{currentProduct.name}</h1>
-            <p className="text-muted-foreground">
+            <h1 
+              className="font-bold"
+              style={{ fontSize: settings.card_customer_name_font_size || '1.5rem' }}
+            >
+              {currentProduct.name}
+            </h1>
+            <p className="opacity-70" style={{ fontSize: settings.card_product_font_size }}>
               {currentProduct.product_number} • {format(new Date(dateStr), 'PPP', { locale })}
             </p>
           </div>
-        </div>
+          
+          <div className="flex items-center gap-4">
+            {settings.realtime_show_connection_status && (
+              <div className="flex items-center gap-2">
+                {isConnected ? (
+                  <Wifi className="h-5 w-5" style={{ color: settings.completed_color }} />
+                ) : (
+                  <WifiOff className="h-5 w-5" style={{ color: '#ef4444' }} />
+                )}
+              </div>
+            )}
+            
+            {showClock && (
+              <div 
+                className="flex items-center gap-2 font-mono"
+                style={{ fontSize: settings.header_clock_font_size || '1.5rem' }}
+              >
+                <Clock className="h-5 w-5" />
+                {format(currentTime, clockFormat === '12h' ? 'hh:mm:ss a' : 'HH:mm:ss')}
+              </div>
+            )}
+            
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleManualRefresh}
+                className="h-10 w-10"
+                style={{ color: settings.text_color }}
+              >
+                <RefreshCw className="h-5 w-5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleFullscreen}
+                className="h-10 w-10"
+                style={{ color: settings.text_color }}
+              >
+                <Maximize className="h-5 w-5" />
+              </Button>
+            </div>
+          </div>
+        </header>
         
         {/* Summary stats */}
-        <Card>
-          <CardContent className="pt-6">
-            <div className="grid grid-cols-3 gap-4 mb-4">
-              <div className="text-center p-3 rounded-lg bg-muted/50">
-                <p className="text-2xl font-bold">{currentProduct.totalOrders}</p>
-                <p className="text-sm text-muted-foreground">{t('packing.orders')}</p>
-              </div>
-              <div className="text-center p-3 rounded-lg bg-muted/50">
-                <p className="text-2xl font-bold">{currentProduct.totalQuantity}</p>
-                <p className="text-sm text-muted-foreground">{t('display.totalQuantity')}</p>
-              </div>
-              <div className="text-center p-3 rounded-lg bg-muted/50">
-                <p className="text-2xl font-bold">
-                  {getQuantityDisplay(currentProduct.totalQuantity, currentProduct.pieces_per_tray)}
-                </p>
-                <p className="text-sm text-muted-foreground">{t('packing.traysCalculated')}</p>
-              </div>
-            </div>
-            
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-lg">
-                {t('packing.packingProgress', { packed: currentProduct.packedOrders, total: currentProduct.totalOrders })}
-              </span>
-              <span className="text-3xl font-bold">{currentProduct.progress}%</span>
-            </div>
-            <Progress value={currentProduct.progress} className="h-4" />
-          </CardContent>
-        </Card>
+        <div className="grid grid-cols-3 gap-4 mb-6">
+          <div 
+            className="text-center p-4 rounded-xl"
+            style={{ 
+              backgroundColor: settings.card_background_color,
+              borderRadius: settings.border_radius,
+            }}
+          >
+            <p className="font-bold" style={{ fontSize: settings.stats_value_font_size }}>{currentProduct.totalOrders}</p>
+            <p className="opacity-70" style={{ fontSize: settings.stats_label_font_size }}>{t('packing.orders')}</p>
+          </div>
+          <div 
+            className="text-center p-4 rounded-xl"
+            style={{ 
+              backgroundColor: settings.card_background_color,
+              borderRadius: settings.border_radius,
+            }}
+          >
+            <p className="font-bold" style={{ fontSize: settings.stats_value_font_size }}>{currentProduct.totalQuantity}</p>
+            <p className="opacity-70" style={{ fontSize: settings.stats_label_font_size }}>{t('display.totalQuantity')}</p>
+          </div>
+          <div 
+            className="text-center p-4 rounded-xl"
+            style={{ 
+              backgroundColor: settings.card_background_color,
+              borderRadius: settings.border_radius,
+            }}
+          >
+            <p className="font-bold" style={{ fontSize: settings.stats_value_font_size }}>
+              {getQuantityDisplay(currentProduct.totalQuantity, currentProduct.pieces_per_tray)}
+            </p>
+            <p className="opacity-70" style={{ fontSize: settings.stats_label_font_size }}>{t('packing.traysCalculated')}</p>
+          </div>
+        </div>
+        
+        {/* Progress */}
+        <div
+          className="mb-6 p-4 rounded-xl"
+          style={{
+            backgroundColor: settings.card_background_color,
+            borderRadius: settings.border_radius,
+          }}
+        >
+          <div className="flex items-center justify-between mb-3">
+            <span style={{ fontSize: settings.stats_label_font_size }}>
+              {t('packing.packingProgress', { packed: currentProduct.packedOrders, total: currentProduct.totalOrders })}
+            </span>
+            <span className="font-bold" style={{ fontSize: settings.stats_value_font_size }}>
+              {currentProduct.progress}%
+            </span>
+          </div>
+          <Progress 
+            value={currentProduct.progress} 
+            className="h-4"
+            style={{
+              height: settings.stats_progress_bar_height,
+              backgroundColor: `${settings.pending_color}40`,
+            }}
+          />
+        </div>
         
         {/* Customer orders - touch optimized */}
-        <div className="space-y-3">
-          {currentProduct.orders.map((order) => {
-            const status = order.packing_status?.status || 'pending';
-            
-            return (
-              <Card
-                key={order.id}
-                className={cn(
-                  'transition-all',
-                  status === 'packed' && 'bg-success/10 border-success/30',
-                  status === 'deviation' && 'bg-destructive/10 border-destructive/30'
-                )}
-              >
-                <CardContent className="p-4">
-                  <div className="flex items-start gap-4">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: settings.gap_size || '1rem' }}>
+          <AnimatePresence>
+            {currentProduct.orders.map((order) => {
+              const status = order.packing_status?.status || 'pending';
+              const isPacked = status === 'packed' || status === 'deviation';
+              
+              return (
+                <motion.div
+                  key={order.id}
+                  initial={settings.animation_enabled ? { opacity: 0, scale: 0.98 } : false}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={settings.animation_enabled ? { opacity: 0, scale: 0.98 } : undefined}
+                  transition={{ duration: settings.animation_speed === 'fast' ? 0.15 : settings.animation_speed === 'slow' ? 0.5 : 0.3 }}
+                  className="p-6 rounded-xl transition-all"
+                  style={{
+                    backgroundColor: isPacked
+                      ? `${settings.completed_color}20`
+                      : settings.card_background_color,
+                    borderRadius: settings.border_radius,
+                    borderLeft: `${settings.card_border_width || '4px'} solid ${getStatusColor(isPacked ? 100 : 0)}`,
+                  }}
+                >
+                  <div className="flex items-center gap-6">
                     <div className="flex-1 min-w-0">
-                      <p className="text-xl font-medium">{order.customer.name}</p>
-                      <div className="flex items-center gap-2 mt-1 text-muted-foreground">
-                        <span>{order.customer.customer_number}</span>
+                      <p 
+                        className="font-medium"
+                        style={{ fontSize: settings.card_customer_name_font_size }}
+                      >
+                        {order.customer.name}
+                      </p>
+                      <div className="flex items-center gap-3 mt-2 opacity-70">
+                        <span style={{ fontSize: settings.card_product_font_size }}>
+                          {order.customer.customer_number}
+                        </span>
                         <span>•</span>
-                        <span className="font-mono text-lg">
+                        <span 
+                          className="font-mono font-bold"
+                          style={{ fontSize: settings.card_quantity_font_size }}
+                        >
                           {getQuantityDisplay(order.quantity, currentProduct.pieces_per_tray)}
                         </span>
                       </div>
                     </div>
                     
-                    <div className="flex flex-col items-end gap-2">
+                    <div className="flex items-center gap-4">
                       {getStatusBadge(status)}
                       
                       {status === 'pending' && (
-                        <div className="flex gap-2">
+                        <div className="flex gap-3">
                           <Button
                             size="lg"
                             onClick={() => handleMarkPacked(order)}
                             disabled={markAsPacked.isPending}
-                            className="h-14 px-6 text-lg gap-2"
+                            className="h-16 px-8 text-xl gap-3"
                           >
-                            <Check className="h-5 w-5" />
+                            <Check className="h-6 w-6" />
                             {t('packing.markAsPacked')}
                           </Button>
                           
@@ -494,31 +662,33 @@ export default function ProductPackingView() {
                               id: order.id, 
                               packingStatusId: order.packing_status?.id 
                             })}
-                            className="h-14 w-14"
+                            className="h-16 w-16"
+                            style={{ color: settings.text_color }}
                           >
-                            <AlertTriangle className="h-5 w-5" />
+                            <AlertTriangle className="h-6 w-6" />
                           </Button>
                         </div>
                       )}
                       
-                      {(status === 'packed' || status === 'deviation') && order.packing_status?.id && (
+                      {isPacked && order.packing_status?.id && (
                         <Button
                           size="lg"
                           variant="ghost"
                           onClick={() => handleUndo(order.packing_status!.id)}
                           disabled={undoPacking.isPending}
-                          className="h-12"
+                          className="h-14 text-lg"
+                          style={{ color: settings.text_color }}
                         >
-                          <Undo2 className="h-5 w-5 mr-2" />
+                          <Undo2 className="h-6 w-6 mr-2" />
                           {t('packing.undoPacked')}
                         </Button>
                       )}
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
         </div>
         
         {/* Deviation dialog */}
@@ -574,24 +744,195 @@ export default function ProductPackingView() {
     );
   }
   
-  // Product selection view - table layout
+  // Product selection view - with display settings styling
   return (
-    <div className="min-h-screen bg-background p-4 space-y-6">
+    <div
+      ref={containerRef}
+      className="min-h-screen"
+      style={{
+        backgroundColor: settings.background_color,
+        color: settings.text_color,
+        padding: settings.padding || '1rem',
+      }}
+    >
       {/* Header */}
-      <PackingHeader
-        date={dateStr}
-        totalProducts={products.length}
-        totalQuantity={totalQuantity}
-        packedCount={packedOrders}
-        totalCount={totalOrders}
-        onBack={handleBack}
-      />
+      <header
+        className="flex flex-wrap items-center justify-between gap-4 mb-6 p-4 rounded-xl"
+        style={{
+          backgroundColor: settings.card_background_color,
+          borderRadius: settings.border_radius,
+        }}
+      >
+        <div className="flex items-center gap-4">
+          <Button 
+            variant="ghost" 
+            size="lg" 
+            onClick={handleBack}
+            className="h-14 w-14"
+            style={{ color: settings.text_color }}
+          >
+            <ArrowLeft className="h-6 w-6" />
+          </Button>
+          <div>
+            <h1 
+              className="font-bold"
+              style={{ fontSize: settings.header_bakery_font_size || '1.875rem' }}
+            >
+              {t('packing.productBased')}
+            </h1>
+            {category && (
+              <p 
+                className="opacity-80"
+                style={{ fontSize: settings.header_category_font_size || '1.25rem' }}
+              >
+                {category.name}
+              </p>
+            )}
+          </div>
+        </div>
+        
+        <div className="flex items-center gap-4">
+          {settings.realtime_show_connection_status && (
+            <div className="flex items-center gap-2">
+              {isConnected ? (
+                <Wifi className="h-5 w-5" style={{ color: settings.completed_color }} />
+              ) : (
+                <WifiOff className="h-5 w-5" style={{ color: '#ef4444' }} />
+              )}
+            </div>
+          )}
+          
+          {showClock && (
+            <div 
+              className="flex items-center gap-2 font-mono"
+              style={{ fontSize: settings.header_clock_font_size || '1.5rem' }}
+            >
+              <Clock className="h-5 w-5" />
+              {format(currentTime, clockFormat === '12h' ? 'hh:mm:ss a' : 'HH:mm:ss')}
+            </div>
+          )}
+          
+          {showDate && (
+            <div style={{ fontSize: settings.header_date_font_size || '1.25rem' }}>
+              {format(new Date(dateStr), 'EEEE d. MMMM', { locale: nb })}
+            </div>
+          )}
+          
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleManualRefresh}
+              className="h-10 w-10"
+              style={{ color: settings.text_color }}
+            >
+              <RefreshCw className="h-5 w-5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleFullscreen}
+              className="h-10 w-10"
+              style={{ color: settings.text_color }}
+            >
+              <Maximize className="h-5 w-5" />
+            </Button>
+          </div>
+        </div>
+      </header>
+
+      {/* Stats section */}
+      {(settings.stats_show_total_progress || settings.stats_show_packed_count || settings.stats_show_remaining_count) && products.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          {settings.stats_show_total_progress && (
+            <div 
+              className="rounded-xl p-4"
+              style={{ 
+                backgroundColor: settings.card_background_color,
+                borderRadius: settings.border_radius,
+              }}
+            >
+              <p 
+                className="opacity-70 mb-1"
+                style={{ fontSize: settings.stats_label_font_size }}
+              >
+                {t('display.totalProgress')}
+              </p>
+              <p 
+                className="font-bold"
+                style={{ fontSize: settings.stats_value_font_size }}
+              >
+                {overallProgress}%
+              </p>
+              {settings.stats_progress_bar_style !== 'none' && (
+                <Progress
+                  value={overallProgress}
+                  className="mt-2"
+                  style={{
+                    height: settings.stats_progress_bar_height,
+                    backgroundColor: `${settings.pending_color}40`,
+                  }}
+                />
+              )}
+            </div>
+          )}
+
+          {settings.stats_show_packed_count && (
+            <div 
+              className="rounded-xl p-4"
+              style={{ 
+                backgroundColor: settings.card_background_color,
+                borderRadius: settings.border_radius,
+              }}
+            >
+              <p 
+                className="opacity-70 mb-1"
+                style={{ fontSize: settings.stats_label_font_size }}
+              >
+                {t('packing.packed')}
+              </p>
+              <p 
+                className="font-bold"
+                style={{ fontSize: settings.stats_value_font_size }}
+              >
+                {packedOrders} / {totalOrders}
+              </p>
+            </div>
+          )}
+
+          {settings.stats_show_remaining_count && (
+            <div 
+              className="rounded-xl p-4"
+              style={{ 
+                backgroundColor: settings.card_background_color,
+                borderRadius: settings.border_radius,
+              }}
+            >
+              <p 
+                className="opacity-70 mb-1"
+                style={{ fontSize: settings.stats_label_font_size }}
+              >
+                {t('display.remaining')}
+              </p>
+              <p 
+                className="font-bold"
+                style={{ 
+                  fontSize: settings.stats_value_font_size,
+                  color: remainingOrders > 0 ? settings.packing_color : settings.completed_color,
+                }}
+              >
+                {remainingOrders}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
       
       {/* No products state */}
       {products.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center">
-          <Package className="h-16 w-16 text-muted-foreground mb-4" />
-          <p className="text-xl text-muted-foreground">{t('dashboard.noOrders')}</p>
+          <Package className="h-20 w-20 mb-4" style={{ opacity: 0.6 }} />
+          <p className="text-2xl" style={{ opacity: 0.8 }}>{t('dashboard.noOrders')}</p>
         </div>
       ) : (
         <ProductTableView
