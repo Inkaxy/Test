@@ -186,7 +186,7 @@ export function PackingCategoryCard({
     }
   };
   
-  const handleMenuAction = (action: 'import' | 'edit' | 'onedrive' | 'delete') => {
+  const handleMenuAction = (action: 'import' | 'edit' | 'onedrive' | 'kiosklink' | 'delete') => {
     setIsMenuOpen(false);
     switch (action) {
       case 'import':
@@ -200,6 +200,9 @@ export function PackingCategoryCard({
         break;
       case 'onedrive':
         onOneDriveConfig();
+        break;
+      case 'kiosklink':
+        setIsKioskLinkOpen(true);
         break;
       case 'delete':
         setIsDeleteOpen(true);
