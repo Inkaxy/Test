@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuthStore } from '@/stores/authStore';
+import type { CustomerWithOrders } from '@/hooks/useCustomersForDate';
 
 export interface Order {
   id: string;
@@ -31,6 +32,41 @@ export interface Order {
     deviation_type: string | null;
     deviation_note: string | null;
   };
+}
+
+// Helper function to optimistically update order status in customers cache
+export function updateOrderStatusInCustomersCache(
+  customers: CustomerWithOrders[],
+  orderId: string,
+  newStatus: 'packed' | 'pending' | 'deviation'
+): CustomerWithOrders[] {
+  return customers.map(customer => {
+    const orderIndex = customer.orders.findIndex(o => o.id === orderId);
+    if (orderIndex === -1) return customer;
+    
+    const updatedOrders = [...customer.orders];
+    updatedOrders[orderIndex] = {
+      ...updatedOrders[orderIndex],
+      packing_status: {
+        id: updatedOrders[orderIndex].packing_status?.id || `temp-${orderId}`,
+        status: newStatus,
+        packed_at: newStatus === 'pending' ? null : new Date().toISOString(),
+        deviation_type: null,
+        deviation_note: null,
+      },
+    };
+    
+    const packedCount = updatedOrders.filter(
+      o => o.packing_status?.status === 'packed' || o.packing_status?.status === 'deviation'
+    ).length;
+    
+    return {
+      ...customer,
+      orders: updatedOrders,
+      packedOrders: packedCount,
+      progress: Math.round((packedCount / customer.totalOrders) * 100),
+    };
+  });
 }
 
 export function useOrders(deliveryDate: string) {
