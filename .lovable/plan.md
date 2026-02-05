@@ -1,169 +1,102 @@
 
-
-# Plan: Fikse "Bakeri ikke funnet" i Kiosk-visning
+# Plan: Synkroniser Kiosk-utseende med Display-innstillinger
 
 ## Problemet
-Når en bruker åpner en kiosk-lenke uten å være innlogget, får de "Bakeri ikke funnet". Dette skjer fordi alle RLS-policies på `bakeries`-tabellen krever `authenticated` rolle - det finnes ingen policy for `anon` (uinnloggede brukere).
+Kiosk-visningen (`KioskPackingView`) har et hardkodet design og bruker **ikke** de visuelle innstillingene fra `display_settings`-tabellen. Den leser kun sorteringsinnstillingene.
 
-Kiosk-visningen er designet for å være **offentlig tilgjengelig** uten innlogging, men databasetilgangen blokkerer dette.
-
-## Hvilke tabeller trenger offentlig tilgang for kiosk
-
-For at kiosk-pakking skal fungere offentlig, må følgende tabeller ha `anon`-policies:
-
-| Tabell | Operasjon | Behov |
-|--------|-----------|-------|
-| `bakeries` | SELECT | Slå opp bakeri basert på `short_id` |
-| `categories` | SELECT | Hente kategori-info |
-| `orders` | SELECT | Hente ordrer for pakking |
-| `customers` | SELECT | Vise kundenavn |
-| `products` | SELECT | Vise produktnavn |
-| `packing_status` | SELECT, INSERT, UPDATE | Lese og oppdatere pakkestatus |
-| `display_settings` | SELECT | Hente visningsinnstillinger |
+SharedDisplay bruker derimot alle display settings for farger, fontstørrelser, layout osv.
 
 ## Løsning
+Oppdatere `KioskPackingView.tsx` til å bruke de samme visuelle innstillingene som SharedDisplay, inkludert:
 
-Legger til nye RLS-policies som tillater `anon`-brukere lesing av nødvendige data. For `packing_status` tillates også skriving siden kiosk-brukere skal kunne pakke ordrer.
+### Visuelle endringer som skal synkroniseres
 
-### Nye RLS-policies
+| Innstilling | Nå i Kiosk | Mål |
+|-------------|------------|-----|
+| Bakgrunnsfarge | Hvit (`bg-background`) | Fra `displaySettings.background_color` |
+| Kortfarge | Standard `Card` | Fra `displaySettings.card_background_color` |
+| Tekstfarge | Standard mørk | Fra `displaySettings.text_color` |
+| Fontstørrelser | Hardkodede verdier | Fra `displaySettings.*_font_size` |
+| Antall kolonner | Fast 4-kolonner grid | Fra `displaySettings.columns` |
+| Border-radius | Standard Tailwind | Fra `displaySettings.border_radius` |
+| Statusfarger | Hardkodet grønn/gul/grå | Fra `displaySettings.completed_color` etc. |
 
-**1. bakeries - Offentlig lesing**
-```sql
-CREATE POLICY "Public can view bakeries by short_id"
-  ON bakeries FOR SELECT
-  TO anon
-  USING (short_id IS NOT NULL AND is_active = true);
+### Implementasjonsdetaljer
+
+**Fase 1: Oppdater hovedcontainer**
+- Sett bakgrunnsfarge fra `displaySettings.background_color`
+- Sett tekstfarge fra `displaySettings.text_color`
+- Sett padding fra `displaySettings.padding`
+
+**Fase 2: Oppdater header-seksjon**
+- Bruk `displaySettings.header_bakery_font_size` for bakerinavnet
+- Bruk `displaySettings.header_category_font_size` for kategorinavnet
+- Bruk `displaySettings.header_clock_font_size` og `header_clock_format`
+- Bruk `displaySettings.header_date_font_size`
+
+**Fase 3: Oppdater stats/progress-kort**
+- Bruk `displaySettings.card_background_color` for kortbakgrunn
+- Bruk `displaySettings.stats_*` innstillinger for fremdriftskort
+- Bruk statusfarger for progress bar
+
+**Fase 4: Oppdater kundekort-grid**
+- Bruk `displaySettings.columns` for antall kolonner
+- Bruk `displaySettings.gap_size` for mellomrom
+- Stil hvert kort med `card_background_color`, `border_radius`, `card_border_width`
+- Bruk `displaySettings.card_customer_name_font_size` for kundenavn
+- Bruk statusfarger (`completed_color`, `packing_color`, `pending_color`)
+
+**Fase 5: Oppdater kundedetalj-visning**
+- Samme styling når bruker har valgt en kunde og pakker produkter
+- Bruk `displaySettings.card_product_font_size` for produktnavn
+- Bruk statusfarger for pakket/avvik-badges
+
+### Filer som endres
+
+| Fil | Endring |
+|-----|---------|
+| `src/pages/packing/KioskPackingView.tsx` | Omfattende styling-oppdatering for å bruke display settings |
+
+### Tekniske detaljer
+
+Koden henter allerede display settings (linje 282-283):
+```typescript
+const { data: displaySettings } = useDisplaySettings(bakery?.id || null, categoryId, 'shared');
+const settings = displaySettings || getDefaultDisplaySettings();
 ```
 
-**2. categories - Offentlig lesing**
-```sql
-CREATE POLICY "Public can view categories for active bakeries"
-  ON categories FOR SELECT
-  TO anon
-  USING (
-    EXISTS (
-      SELECT 1 FROM bakeries b 
-      WHERE b.id = categories.bakery_id 
-      AND b.short_id IS NOT NULL 
-      AND b.is_active = true
-    )
-  );
+Men bruker dem kun for sortering. Vi må utvide dette til styling av alle elementer.
+
+Eksempel på endring for hovedcontainer:
+```typescript
+// Før
+<div className="min-h-screen bg-background p-4 space-y-4">
+
+// Etter  
+<div 
+  className="min-h-screen"
+  style={{ 
+    backgroundColor: settings.background_color, 
+    color: settings.text_color,
+    padding: settings.padding || '1rem',
+  }}
+>
 ```
 
-**3. orders - Offentlig lesing for kiosk**
-```sql
-CREATE POLICY "Public can view orders for kiosk"
-  ON orders FOR SELECT
-  TO anon
-  USING (
-    EXISTS (
-      SELECT 1 FROM bakeries b 
-      WHERE b.id = orders.bakery_id 
-      AND b.short_id IS NOT NULL 
-      AND b.is_active = true
-    )
-  );
+Eksempel på endring for kundekort-grid:
+```typescript
+// Før
+<div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+
+// Etter
+<div
+  className="grid"
+  style={{
+    gridTemplateColumns: `repeat(${settings.columns || 4}, minmax(0, 1fr))`,
+    gap: settings.gap_size || '1rem',
+  }}
+>
 ```
 
-**4. customers - Offentlig lesing**
-```sql
-CREATE POLICY "Public can view customers for kiosk"
-  ON customers FOR SELECT
-  TO anon
-  USING (
-    EXISTS (
-      SELECT 1 FROM bakeries b 
-      WHERE b.id = customers.bakery_id 
-      AND b.short_id IS NOT NULL 
-      AND b.is_active = true
-    )
-  );
-```
-
-**5. products - Offentlig lesing**
-```sql
-CREATE POLICY "Public can view products for kiosk"
-  ON products FOR SELECT
-  TO anon
-  USING (
-    EXISTS (
-      SELECT 1 FROM bakeries b 
-      WHERE b.id = products.bakery_id 
-      AND b.short_id IS NOT NULL 
-      AND b.is_active = true
-    )
-  );
-```
-
-**6. packing_status - Offentlig lesing og skriving**
-```sql
--- SELECT
-CREATE POLICY "Public can view packing_status for kiosk"
-  ON packing_status FOR SELECT
-  TO anon
-  USING (
-    EXISTS (
-      SELECT 1 FROM orders o
-      JOIN bakeries b ON b.id = o.bakery_id
-      WHERE o.id = packing_status.order_id
-      AND b.short_id IS NOT NULL 
-      AND b.is_active = true
-    )
-  );
-
--- INSERT
-CREATE POLICY "Public can insert packing_status for kiosk"
-  ON packing_status FOR INSERT
-  TO anon
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM orders o
-      JOIN bakeries b ON b.id = o.bakery_id
-      WHERE o.id = packing_status.order_id
-      AND b.short_id IS NOT NULL 
-      AND b.is_active = true
-    )
-  );
-
--- UPDATE
-CREATE POLICY "Public can update packing_status for kiosk"
-  ON packing_status FOR UPDATE
-  TO anon
-  USING (
-    EXISTS (
-      SELECT 1 FROM orders o
-      JOIN bakeries b ON b.id = o.bakery_id
-      WHERE o.id = packing_status.order_id
-      AND b.short_id IS NOT NULL 
-      AND b.is_active = true
-    )
-  );
-```
-
-**7. display_settings - Offentlig lesing**
-```sql
-CREATE POLICY "Public can view display_settings for kiosk"
-  ON display_settings FOR SELECT
-  TO anon
-  USING (
-    EXISTS (
-      SELECT 1 FROM bakeries b 
-      WHERE b.id = display_settings.bakery_id 
-      AND b.short_id IS NOT NULL 
-      AND b.is_active = true
-    )
-  );
-```
-
-## Sikkerhetsnotater
-
-- Alle policies krever at bakeriet har en `short_id` (er konfigurert for kiosk/display)
-- Alle policies krever at bakeriet er aktivt (`is_active = true`)
-- Ingen sensitiv data eksponeres - kun ordredata som trengs for pakking
-- Policies gir ikke tilgang til å slette data
-- Policies gir ikke tilgang til å opprette nye ordrer eller kunder
-
-## Implementasjonsendringer
-
-Kun én databasemigrasjon trengs - ingen kodeendringer er nødvendige siden spørringene allerede er korrekt implementert.
-
+### Resultat
+Kiosk-visningen vil se identisk ut med SharedDisplay-innstillingene, slik at brukerne får en konsistent opplevelse på tvers av alle skjermtyper.
