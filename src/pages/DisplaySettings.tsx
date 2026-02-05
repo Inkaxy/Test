@@ -1509,6 +1509,38 @@ export default function DisplaySettingsPage() {
                       </button>
                     </div>
                     
+                    {/* Language selection */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Språk</label>
+                      <p className="text-xs text-muted-foreground mb-3">Velg hvilket språk som skal brukes på pakkedisplayet</p>
+                      <div className="flex gap-3">
+                        <button
+                          type="button"
+                          onClick={() => updateSetting('packing_language', 'nb')}
+                          className={`flex-1 p-3 rounded-lg border-2 transition-all ${
+                            (settings.packing_language || 'nb') === 'nb'
+                              ? 'border-primary ring-2 ring-primary/20'
+                              : 'border-border hover:border-primary/50'
+                          }`}
+                        >
+                          <div className="font-medium">Norsk</div>
+                          <div className="text-xs text-muted-foreground">Norwegian</div>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => updateSetting('packing_language', 'en')}
+                          className={`flex-1 p-3 rounded-lg border-2 transition-all ${
+                            settings.packing_language === 'en'
+                              ? 'border-primary ring-2 ring-primary/20'
+                              : 'border-border hover:border-primary/50'
+                          }`}
+                        >
+                          <div className="font-medium">English</div>
+                          <div className="text-xs text-muted-foreground">Engelsk</div>
+                        </button>
+                      </div>
+                    </div>
+                    
                     {/* Table-specific settings */}
                     {settings.packing_view_mode === 'table' && (
                       <div className="border-t pt-4 space-y-4">

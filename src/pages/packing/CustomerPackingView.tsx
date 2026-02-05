@@ -100,6 +100,13 @@ export default function CustomerPackingView() {
     return () => clearInterval(interval);
   }, []);
   
+  // Set language based on display settings
+  useEffect(() => {
+    if (settings.packing_language && settings.packing_language !== i18n.language) {
+      i18n.changeLanguage(settings.packing_language);
+    }
+  }, [settings.packing_language, i18n]);
+  
   // Real-time subscription for packing status updates
   useEffect(() => {
     if (!bakeryId) return;

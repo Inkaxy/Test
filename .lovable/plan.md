@@ -1,7 +1,7 @@
 
-# Plan: Raskere respons på pakkedisplay - Sikrer display-synkronisering
+# Plan: Norsk som hovedspråk - FULLFØRT
 
-## Forståelse av arkitekturen
+## Implementering
 
 **Display-skjermene (Felles Display, Kunde Display) bruker:**
 - `useRealtimeDisplay()` hook
