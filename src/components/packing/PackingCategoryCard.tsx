@@ -54,6 +54,7 @@ interface PackingCategoryCardProps {
   category: Category;
   onOneDriveConfig: () => void;
   isEditMode?: boolean;
+  bakeryShortId?: string;
 }
 
 export function PackingCategoryCard({ 
