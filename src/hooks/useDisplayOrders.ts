@@ -437,6 +437,20 @@ export function getDefaultDisplaySettings(): DisplaySettings {
     fullscreen_button_visible: true,
     wake_lock_enabled: true,
     
+    // Visningsmodus
+    packing_view_mode: 'cards',
+    
+    // Tabell-innstillinger
+    table_row_height: 'touch',
+    table_font_size: '1.25rem',
+    table_show_customer_number: true,
+    table_show_progress_bar: true,
+    table_show_order_count: true,
+    table_alternate_rows: true,
+    table_alternate_row_color: '#f1f5f9',
+    table_sticky_header: true,
+    table_touch_row_spacing: '0.75rem',
+    
     // Legacy
     show_progress_bar: true,
     progress_bar_style: 'bar',
