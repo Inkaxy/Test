@@ -443,6 +443,9 @@ export function getDefaultDisplaySettings(): DisplaySettings {
     // Visningsmodus
     packing_view_mode: 'cards',
     
+    // Språk
+    packing_language: 'nb',
+    
     // Tabell-innstillinger
     table_row_height: 'touch',
     table_font_size: '1.25rem',
