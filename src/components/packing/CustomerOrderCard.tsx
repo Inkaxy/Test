@@ -35,7 +35,7 @@ interface CustomerOrderCardProps {
   alternateRowColor?: string;
   onMarkPacked: (orderId: string, packingStatusId?: string, productId?: string, categoryId?: string | null) => void;
   onReportDeviation: (order: Order) => void;
-  onUndo: (packingStatusId: string) => void;
+  onUndo: (packingStatusId: string, orderId: string) => void;
   isMarkingPacked: boolean;
   isUndoing: boolean;
 }
