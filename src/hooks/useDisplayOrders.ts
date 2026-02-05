@@ -324,6 +324,20 @@ export interface DisplaySettings {
   fullscreen_button_visible: boolean;
   wake_lock_enabled: boolean;
   
+  // Visningsmodus (pakkedisplay)
+  packing_view_mode: 'cards' | 'table';
+  
+  // Tabell-spesifikke innstillinger
+  table_row_height: 'compact' | 'normal' | 'touch';
+  table_font_size: string;
+  table_show_customer_number: boolean;
+  table_show_progress_bar: boolean;
+  table_show_order_count: boolean;
+  table_alternate_rows: boolean;
+  table_alternate_row_color: string;
+  table_sticky_header: boolean;
+  table_touch_row_spacing: string;
+  
   // Legacy support
   show_progress_bar: boolean;
   progress_bar_style: string;
@@ -422,6 +436,20 @@ export function getDefaultDisplaySettings(): DisplaySettings {
     // Fullskjerm & Wake Lock
     fullscreen_button_visible: true,
     wake_lock_enabled: true,
+    
+    // Visningsmodus
+    packing_view_mode: 'cards',
+    
+    // Tabell-innstillinger
+    table_row_height: 'touch',
+    table_font_size: '1.25rem',
+    table_show_customer_number: true,
+    table_show_progress_bar: true,
+    table_show_order_count: true,
+    table_alternate_rows: true,
+    table_alternate_row_color: '#f1f5f9',
+    table_sticky_header: true,
+    table_touch_row_spacing: '0.75rem',
     
     // Legacy
     show_progress_bar: true,

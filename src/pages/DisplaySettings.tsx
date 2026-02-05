@@ -1455,6 +1455,192 @@ export default function DisplaySettingsPage() {
                   )}
                 </AccordionContent>
               </AccordionItem>
+              
+              {/* Visningsmodus (kun for Pakkedisplay) */}
+              {selectedDisplayType === 'packing' && (
+                <AccordionItem value="view-mode" className="border rounded-lg px-4">
+                  <AccordionTrigger className="hover:no-underline">
+                    <div className="flex items-center gap-3">
+                      <LayoutGrid className="h-5 w-5 text-muted-foreground" />
+                      <span className="font-medium">Visningsmodus</span>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="space-y-4 pt-2">
+                    <p className="text-sm text-muted-foreground">
+                      Velg hvordan kundeoversikten vises i pakkevisningen.
+                    </p>
+                    
+                    {/* View mode selector */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <button
+                        type="button"
+                        onClick={() => updateSetting('packing_view_mode', 'cards')}
+                        className={`p-4 rounded-lg border-2 transition-all text-left ${
+                          (settings.packing_view_mode || 'cards') === 'cards'
+                            ? 'border-primary ring-2 ring-primary/20'
+                            : 'border-border hover:border-primary/50'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 mb-2">
+                          <LayoutGrid className="h-5 w-5" />
+                          <span className="font-medium">Kort-visning</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Grid med kundekort. Visuelt rikt, med fremdrift og status.
+                        </p>
+                      </button>
+                      
+                      <button
+                        type="button"
+                        onClick={() => updateSetting('packing_view_mode', 'table')}
+                        className={`p-4 rounded-lg border-2 transition-all text-left ${
+                          settings.packing_view_mode === 'table'
+                            ? 'border-primary ring-2 ring-primary/20'
+                            : 'border-border hover:border-primary/50'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 mb-2">
+                          <Users className="h-5 w-5" />
+                          <span className="font-medium">Tabell-visning</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Kompakt liste. Rask oversikt over mange kunder.
+                        </p>
+                      </button>
+                    </div>
+                    
+                    {/* Table-specific settings */}
+                    {settings.packing_view_mode === 'table' && (
+                      <div className="border-t pt-4 space-y-4">
+                        <h4 className="text-sm font-medium">Tabell-innstillinger</h4>
+                        
+                        <div className="space-y-2">
+                          <Label>Radhøyde</Label>
+                          <Select 
+                            value={settings.table_row_height || 'touch'} 
+                            onValueChange={(v) => updateSetting('table_row_height', v as 'compact' | 'normal' | 'touch')}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="compact">Kompakt</SelectItem>
+                              <SelectItem value="normal">Normal</SelectItem>
+                              <SelectItem value="touch">Touch-vennlig (anbefalt)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label>Fontstørrelse</Label>
+                          <Select 
+                            value={settings.table_font_size || '1.25rem'} 
+                            onValueChange={(v) => updateSetting('table_font_size', v)}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="1rem">Liten</SelectItem>
+                              <SelectItem value="1.25rem">Normal</SelectItem>
+                              <SelectItem value="1.5rem">Stor</SelectItem>
+                              <SelectItem value="1.75rem">Ekstra stor</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label>Mellomrom mellom rader</Label>
+                          <Select 
+                            value={settings.table_touch_row_spacing || '0.75rem'} 
+                            onValueChange={(v) => updateSetting('table_touch_row_spacing', v)}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="0.5rem">Liten</SelectItem>
+                              <SelectItem value="0.75rem">Normal</SelectItem>
+                              <SelectItem value="1rem">Stor</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        
+                        <div className="border-t pt-4 space-y-4">
+                          <h4 className="text-sm font-medium">Vis i tabellen</h4>
+                          
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <Label>Kundenummer</Label>
+                              <p className="text-xs text-muted-foreground">Vis kundenummer under navn</p>
+                            </div>
+                            <Switch
+                              checked={settings.table_show_customer_number ?? true}
+                              onCheckedChange={(v) => updateSetting('table_show_customer_number', v)}
+                            />
+                          </div>
+                          
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <Label>Fremdriftsbar</Label>
+                              <p className="text-xs text-muted-foreground">Visuell fremdriftsindikator</p>
+                            </div>
+                            <Switch
+                              checked={settings.table_show_progress_bar ?? true}
+                              onCheckedChange={(v) => updateSetting('table_show_progress_bar', v)}
+                            />
+                          </div>
+                          
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <Label>Antall ordrer</Label>
+                              <p className="text-xs text-muted-foreground">Vis totalt antall ordrer</p>
+                            </div>
+                            <Switch
+                              checked={settings.table_show_order_count ?? true}
+                              onCheckedChange={(v) => updateSetting('table_show_order_count', v)}
+                            />
+                          </div>
+                        </div>
+                        
+                        <div className="border-t pt-4 space-y-4">
+                          <h4 className="text-sm font-medium">Utseende</h4>
+                          
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <Label>Alternerende radfarger</Label>
+                              <p className="text-xs text-muted-foreground">Zebra-stripe for lesbarhet</p>
+                            </div>
+                            <Switch
+                              checked={settings.table_alternate_rows ?? true}
+                              onCheckedChange={(v) => updateSetting('table_alternate_rows', v)}
+                            />
+                          </div>
+                          
+                          {settings.table_alternate_rows && (
+                            <ColorInput 
+                              label="Alternativ radfarge" 
+                              value={settings.table_alternate_row_color || '#f1f5f9'}
+                              onChange={(v) => updateSetting('table_alternate_row_color', v)}
+                            />
+                          )}
+                          
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <Label>Fast header</Label>
+                              <p className="text-xs text-muted-foreground">Header blir stående ved scrolling</p>
+                            </div>
+                            <Switch
+                              checked={settings.table_sticky_header ?? true}
+                              onCheckedChange={(v) => updateSetting('table_sticky_header', v)}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </AccordionContent>
+                </AccordionItem>
+              )}
             </Accordion>
           </div>
           
