@@ -64,6 +64,8 @@ export default function CustomerPackingView() {
   // Get category and bakery info for header
   const { data: categories = [] } = useCategories();
   const category = categories.find(c => c.id === categoryId);
+  const { data: bakeries = [] } = useBakeries();
+  const bakery = bakeries.find(b => b.id === bakeryId);
   
   // Build sort options from display settings
   const sortOptions = {

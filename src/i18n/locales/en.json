@@ -344,7 +344,8 @@
     "noOrders": "No orders for this date",
     "bakeryNotFound": "Bakery not found",
     "totalProgress": "Total progress",
-    "products": "products"
+    "products": "products",
+    "remaining": "Remaining"
   },
   "errors": {
     "generic": "Something went wrong. Please try again.",
