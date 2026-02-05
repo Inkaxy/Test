@@ -1,77 +1,207 @@
 
-# Plan: Fiks gjenværende forskjeller mellom web og kiosk pakkevisning (FERDIG)
+# Plan: Touch-vennlig tabellvisning for Pakkedisplay
 
-## Oppsummering av undersøkelsen
+## Problemstilling
+Kiosk-visningen for kundebasert pakking (Pakkedisplay) viser kun kort-grid layout. For noen brukssituasjoner kan en tabellvisning være mer effektiv, spesielt når man vil se mange kunder raskt. Vi skal legge til mulighet for å velge mellom kort-visning og tabell-visning, samt forbedre tabellen for touch-bruk.
 
-Etter grundig analyse fant jeg:
+## Løsning
+Legge til nye innstillinger under "Pakkedisplay" i Display Settings som lar administratorer velge visningsmodus og konfigurere tabellens utseende. Implementere en touch-optimalisert tabell-komponent i KioskPackingView og CustomerPackingView.
 
-1. **Koden ER allerede oppdatert** - `CustomerPackingView.tsx` bruker nå display-innstillinger med mørk bakgrunn, grid-layout og kiosk-stil elementer
-2. **Brukerens skjermbilde var sannsynligvis fra en gammel cache** - nåværende versjon viser korrekt kiosk-stil visning
-3. **Det finnes fortsatt noen forskjeller** mellom web og kiosk som bør fikses
+---
 
-## Gjenværende forskjeller
+## Del 1: Utvid DisplaySettings interface
 
-| Element | Web (CustomerPackingView) | Kiosk (KioskPackingView) | Problem |
-|---------|---------------------------|--------------------------|---------|
-| Header tittel | "Customer based / Kundebasert" | Bakerienavn (f.eks. "Test Bakeri AS") | Web viser ikke bakerienavn |
-| Undertittel | Kategorinavn | Kategorinavn | OK |
-| Sidebar | Vises (DashboardLayout) | Ingen sidebar | Web har sidebar som tar plass |
-| "Gjenstår" tekst | "display.remaining" (feil!) | "Gjenstår" | Oversettelsesnøkkel mangler |
-| Fullskjerm | Tilgjengelig via knapp | Standard fullskjerm | Kiosk åpnes ofte i fullskjerm |
+### Fil: `src/hooks/useDisplayOrders.ts`
 
-## Tekniske endringer
+Legg til nye innstillinger i `DisplaySettings` interface:
 
-### 1. Fiks oversettelsesnøkkel for "Gjenstår"
-
-**Fil:** `src/pages/packing/CustomerPackingView.tsx` (linje 600)
-
-Nåværende kode bruker `t('display.remaining')` som ikke eksisterer. Må endres til riktig nøkkel.
-
-### 2. Vis bakerienavn i header (som kiosk)
-
-**Fil:** `src/pages/packing/CustomerPackingView.tsx` (linje 463-478)
-
-Legg til spørring for bakerienavn og vis det i headeren på samme måte som kiosk-visningen:
-
-```text
-Før:
-<h1>Kundebasert</h1>
-<p>Kategorinavn</p>
-
-Etter (som kiosk):
-<h1>Test Bakeri AS</h1>    (bakerienavn)
-<p>Småvarer</p>            (kategorinavn)
+```typescript
+export interface DisplaySettings {
+  // ... eksisterende innstillinger ...
+  
+  // Visningsmodus
+  packing_view_mode: 'cards' | 'table';
+  
+  // Tabell-spesifikke innstillinger
+  table_row_height: 'compact' | 'normal' | 'touch';
+  table_font_size: string;
+  table_show_customer_number: boolean;
+  table_show_progress_bar: boolean;
+  table_show_order_count: boolean;
+  table_alternate_rows: boolean;
+  table_alternate_row_color: string;
+  table_sticky_header: boolean;
+  table_touch_row_spacing: string;
+}
 ```
 
-### 3. Valgfritt: Legg til "Skjul sidebar"-modus
+Oppdater `getDefaultDisplaySettings()`:
 
-For å oppnå samme opplevelse som kiosk, kan vi legge til en knapp som skjuler sidebaren midlertidig. Dette er valgfritt siden fullskjerm-knappen allerede finnes.
+```typescript
+// Visningsmodus
+packing_view_mode: 'cards',
 
-## Filendringer
+// Tabell-innstillinger
+table_row_height: 'touch',
+table_font_size: '1.25rem',
+table_show_customer_number: true,
+table_show_progress_bar: true,
+table_show_order_count: true,
+table_alternate_rows: true,
+table_alternate_row_color: '#f1f5f9',
+table_sticky_header: true,
+table_touch_row_spacing: '0.75rem',
+```
+
+---
+
+## Del 2: Ny innstillingsseksjon i DisplaySettings
+
+### Fil: `src/pages/DisplaySettings.tsx`
+
+Legg til ny AccordionItem for "Visningsmodus" under Pakkedisplay-fanen:
+
+```text
+Visningsmodus-seksjon:
+├── Velg visningsmodus (Radio: Kort / Tabell)
+│
+└── Tabell-innstillinger (vises kun når tabell er valgt):
+    ├── Radhøyde (Kompakt / Normal / Touch-vennlig)
+    ├── Fontstørrelse (Liten / Normal / Stor / Ekstra stor)
+    ├── Vis kundenummer (Switch)
+    ├── Vis fremdriftsbar (Switch)
+    ├── Vis antall ordrer (Switch)
+    ├── Alternerende radfarger (Switch)
+    │   └── Fargevelger (hvis aktivert)
+    ├── Fest header (Switch)
+    └── Mellomrom mellom rader (Liten / Normal / Stor)
+```
+
+---
+
+## Del 3: Touch-optimalisert tabell-komponent
+
+### Ny fil: `src/components/packing/KioskCustomerTable.tsx`
+
+Opprett en dedikert tabell-komponent for kiosk-bruk:
+
+**Funksjoner:**
+- Store, touch-vennlige rader (min 60px høyde i touch-modus)
+- Tydelig visuell statusindikator (farget venstre kant)
+- Kundenavn, kundenummer, antall ordrer, fremdrift
+- Klikk/touch på rad for å velge kunde
+- Alternerende radfarger for bedre lesbarhet
+- Sticky header for scrolling
+- Framer Motion animasjoner ved statusendring
+- Respekterer alle display-innstillinger
+
+**Struktur:**
+```text
+┌─────────────────────────────────────────────────────────────┐
+│ Kunde              │ Ordrer │ Fremdrift          │ Status   │
+├─────────────────────────────────────────────────────────────┤
+│ █ Bakerguten AS    │   12   │ ████████░░ 80%     │ Pågår    │
+├─────────────────────────────────────────────────────────────┤
+│   Cafe Sentrum     │    5   │ ░░░░░░░░░░  0%     │ Venter   │
+├─────────────────────────────────────────────────────────────┤
+│ █ Konditori Hjørne │    8   │ ██████████ 100%    │ ✓ Ferdig │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Del 4: Integrer i visningskomponenter
+
+### Fil: `src/pages/packing/KioskPackingView.tsx`
+
+Legg til betinget rendering basert på `settings.packing_view_mode`:
+
+```typescript
+{settings.packing_view_mode === 'table' ? (
+  <KioskCustomerTable
+    customers={customers}
+    settings={settings}
+    onSelectCustomer={setSelectedCustomer}
+  />
+) : (
+  // Eksisterende kort-grid visning
+  <div className="grid" style={{ ... }}>
+    {/* Kort-visning */}
+  </div>
+)}
+```
+
+### Fil: `src/pages/packing/CustomerPackingView.tsx`
+
+Samme endring for konsistens mellom web og kiosk.
+
+---
+
+## Tekniske detaljer
+
+### KioskCustomerTable komponent
+
+```typescript
+interface KioskCustomerTableProps {
+  customers: CustomerWithOrders[];
+  settings: DisplaySettings;
+  onSelectCustomer: (customer: CustomerWithOrders) => void;
+  locks?: CustomerLock[];
+  currentUserId?: string;
+}
+
+// Radhøyde-mapping
+const rowHeightMap = {
+  compact: 'py-2',
+  normal: 'py-4', 
+  touch: 'py-6 min-h-[4rem]',
+};
+
+// Alternerende rad-styling
+const getRowStyle = (index: number, settings: DisplaySettings) => ({
+  backgroundColor: settings.table_alternate_rows && index % 2 === 1 
+    ? settings.table_alternate_row_color 
+    : 'transparent',
+});
+```
+
+---
+
+## Filendringer oppsummert
 
 | Fil | Endring |
 |-----|---------|
-| `src/pages/packing/CustomerPackingView.tsx` | Fiks "display.remaining" til riktig oversettelse, vis bakerienavn i header |
-| `src/i18n/locales/nb.json` | Sjekk at oversettelsesnøkkel finnes |
-| `src/i18n/locales/en.json` | Sjekk at oversettelsesnøkkel finnes |
+| `src/hooks/useDisplayOrders.ts` | Utvid DisplaySettings interface med visningsmodus og tabell-innstillinger |
+| `src/pages/DisplaySettings.tsx` | Legg til visningsmodus-seksjon i Pakkedisplay |
+| `src/components/packing/KioskCustomerTable.tsx` | **Ny fil**: Touch-optimalisert tabell-komponent |
+| `src/pages/packing/KioskPackingView.tsx` | Betinget rendering basert på visningsmodus |
+| `src/pages/packing/CustomerPackingView.tsx` | Betinget rendering basert på visningsmodus |
 
-## Verifisering
+---
 
-For å bekrefte at endringene fungerer:
-1. Naviger til `/packing`, velg en kategori, velg en dato, og klikk "Fortsett pakking"
-2. Verifiser at:
-   - Mørk bakgrunn vises
-   - 3-kolonners grid med kundekort
-   - Header viser bakerienavn + kategorinavn (som kiosk)
-   - Statistikk-seksjonen viser "Total fremdrift", "Pakket", "Gjenstår" (ikke "display.remaining")
-   - Klokke og dato vises
-   - Fullskjerm-knapp fungerer
+## Resultat
 
-## Viktig merknad
+Etter implementering:
 
-Hvis brukeren fortsatt ser den gamle tabell-visningen, bør de:
-1. Hard-refresh nettleseren (Ctrl+Shift+R)
-2. Tømme cache
-3. Prøve i inkognitomodus
+1. **Valgfrihet**: Administratorer kan velge mellom kort- og tabellvisning i Display Settings
+2. **Touch-optimalisert**: Tabellen har store rader, god spacing og tydelige touch-targets
+3. **Konfigurerbar**: Radhøyde, fontstørrelse, alternerende farger og mer kan tilpasses
+4. **Konsistent**: Samme innstillinger gjelder for både web og kiosk
+5. **Rask oversikt**: Tabellvisningen gir bedre oversikt over mange kunder samtidig
 
-Dette skyldes at nettleseren kan ha cachet den gamle versjonen av JavaScript-filene.
+---
+
+## Visuell sammenligning
+
+**Kort-visning (nåværende):**
+- 3 kolonner med kort
+- Mer visuelt rik
+- Bedre for færre kunder
+- Animert og interaktiv
+
+**Tabell-visning (ny):**
+- Vertikal liste
+- Kompakt og effektiv
+- Bedre for mange kunder
+- Raskere scanning
+- Valgfri touch-optimalisering
