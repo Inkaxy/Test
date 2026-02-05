@@ -414,8 +414,8 @@ export default function DisplaySettingsPage() {
             </div>
           )}
           
-          {/* Kiosk Packing URLs - only show for shared and packing display types */}
-          {bakery?.short_id && selectedDisplayType !== 'customer' && (
+          {/* Kiosk Packing URLs - only show for shared display type */}
+          {bakery?.short_id && selectedDisplayType === 'shared' && (
             <div className="pt-4 border-t mt-4 space-y-4">
               <div className="mb-2">
                 <h4 className="text-sm font-semibold flex items-center gap-2">
