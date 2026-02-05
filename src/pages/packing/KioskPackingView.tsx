@@ -445,8 +445,8 @@ export default function KioskPackingView() {
     await markAsPacked.mutateAsync({ orderId, packingStatusId });
   };
   
-  const handleUndo = async (packingStatusId: string) => {
-    await undoPacking.mutateAsync({ packingStatusId });
+  const handleUndo = async (packingStatusId: string, orderId: string) => {
+    await undoPacking.mutateAsync({ packingStatusId, orderId });
   };
   
   const handleReportDeviation = async (data: { deviationType: string; deviationNote: string }) => {
