@@ -689,99 +689,273 @@ export default function KioskPackingView() {
     );
   }
   
-  // Customer selection view - kiosk optimized
+  // Customer selection view - kiosk optimized with display settings
   return (
-    <div className="min-h-screen bg-background p-4 space-y-4">
+    <div
+      ref={containerRef}
+      className="min-h-screen"
+      style={{
+        backgroundColor: settings.background_color,
+        color: settings.text_color,
+        padding: settings.padding || '1rem',
+      }}
+    >
       {/* Header */}
-      <div className="flex items-center gap-4 bg-card rounded-lg p-4 shadow-sm">
-        <div className="flex-1">
-          <h1 className="text-3xl font-bold">
-            {bakery.name} {category ? `- ${category.name}` : ''}
-          </h1>
-          <p className="text-xl text-muted-foreground">
-            {format(new Date(dateStr), 'EEEE d. MMMM yyyy', { locale })} • {t('packing.selectCustomerToPack')}
-          </p>
-        </div>
-        <div className="flex items-center gap-3 text-muted-foreground">
-          <Clock className="h-6 w-6" />
-          <span className="text-2xl font-mono">{format(currentTime, 'HH:mm:ss')}</span>
-          {isConnected ? (
-            <Wifi className="h-6 w-6 text-success" />
-          ) : (
-            <WifiOff className="h-6 w-6 text-destructive" />
+      <header
+        className="flex flex-wrap items-center justify-between gap-4 mb-6 p-4 rounded-xl"
+        style={{
+          backgroundColor: settings.card_background_color,
+          borderRadius: settings.border_radius,
+        }}
+      >
+        <div>
+          {showBakeryName && (
+            <h1 
+              className="font-bold"
+              style={{ fontSize: settings.header_bakery_font_size || '1.875rem' }}
+            >
+              {bakery.name}
+            </h1>
+          )}
+          {showCategoryName && category && (
+            <p 
+              className="opacity-80"
+              style={{ fontSize: settings.header_category_font_size || '1.25rem' }}
+            >
+              {category.name}
+            </p>
           )}
         </div>
-      </div>
-      
-      {/* Overall progress */}
-      {customers.length > 0 && (
-        <Card>
-          <CardContent className="py-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <Users className="h-8 w-8 text-muted-foreground" />
-                <span className="text-2xl">
-                  {t('packing.overallProgress', { packed: packedOrders, total: totalOrders })}
-                </span>
-              </div>
-              <span className="text-4xl font-bold">{overallProgress}%</span>
+        
+        <div className="flex items-center gap-4">
+          {settings.realtime_show_connection_status && (
+            <div className="flex items-center gap-2">
+              {isConnected ? (
+                <Wifi className="h-5 w-5" style={{ color: settings.completed_color }} />
+              ) : (
+                <WifiOff className="h-5 w-5" style={{ color: '#ef4444' }} />
+              )}
             </div>
-            <Progress value={overallProgress} className="h-6" />
-          </CardContent>
-        </Card>
+          )}
+          
+          {showClock && (
+            <div 
+              className="flex items-center gap-2 font-mono"
+              style={{ fontSize: settings.header_clock_font_size || '1.5rem' }}
+            >
+              <Clock className="h-5 w-5" />
+              {format(currentTime, clockFormat === '12h' ? 'hh:mm:ss a' : 'HH:mm:ss')}
+            </div>
+          )}
+          
+          {showDate && (
+            <div style={{ fontSize: settings.header_date_font_size || '1.25rem' }}>
+              {format(new Date(dateStr), 'EEEE d. MMMM', { locale: nb })}
+            </div>
+          )}
+          
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleManualRefresh}
+              className="h-10 w-10"
+              style={{ color: settings.text_color }}
+            >
+              <RefreshCw className="h-5 w-5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleFullscreen}
+              className="h-10 w-10"
+              style={{ color: settings.text_color }}
+            >
+              <Maximize className="h-5 w-5" />
+            </Button>
+          </div>
+        </div>
+      </header>
+
+      {/* Stats section */}
+      {(settings.stats_show_total_progress || settings.stats_show_packed_count || settings.stats_show_remaining_count) && customers.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          {settings.stats_show_total_progress && (
+            <div 
+              className="rounded-xl p-4"
+              style={{ 
+                backgroundColor: settings.card_background_color,
+                borderRadius: settings.border_radius,
+              }}
+            >
+              <p 
+                className="opacity-70 mb-1"
+                style={{ fontSize: settings.stats_label_font_size }}
+              >
+                Total fremdrift
+              </p>
+              <p 
+                className="font-bold"
+                style={{ fontSize: settings.stats_value_font_size }}
+              >
+                {overallProgress}%
+              </p>
+              {settings.stats_progress_bar_style !== 'none' && (
+                <Progress
+                  value={overallProgress}
+                  className="mt-2"
+                  style={{
+                    height: settings.stats_progress_bar_height,
+                    backgroundColor: `${settings.pending_color}40`,
+                  }}
+                />
+              )}
+            </div>
+          )}
+
+          {settings.stats_show_packed_count && (
+            <div 
+              className="rounded-xl p-4"
+              style={{ 
+                backgroundColor: settings.card_background_color,
+                borderRadius: settings.border_radius,
+              }}
+            >
+              <p 
+                className="opacity-70 mb-1"
+                style={{ fontSize: settings.stats_label_font_size }}
+              >
+                Pakket
+              </p>
+              <p 
+                className="font-bold"
+                style={{ fontSize: settings.stats_value_font_size }}
+              >
+                {packedOrders} / {totalOrders}
+              </p>
+            </div>
+          )}
+
+          {settings.stats_show_remaining_count && (
+            <div 
+              className="rounded-xl p-4"
+              style={{ 
+                backgroundColor: settings.card_background_color,
+                borderRadius: settings.border_radius,
+              }}
+            >
+              <p 
+                className="opacity-70 mb-1"
+                style={{ fontSize: settings.stats_label_font_size }}
+              >
+                Gjenstår
+              </p>
+              <p 
+                className="font-bold"
+                style={{ 
+                  fontSize: settings.stats_value_font_size,
+                  color: remainingOrders > 0 ? settings.packing_color : settings.completed_color,
+                }}
+              >
+                {remainingOrders}
+              </p>
+            </div>
+          )}
+        </div>
       )}
       
       {/* Customer grid - kiosk optimized */}
       {customers.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center">
-          <Package className="h-20 w-20 text-muted-foreground mb-4" />
-          <p className="text-2xl text-muted-foreground">{t('dashboard.noOrders')}</p>
+          <Package className="h-20 w-20 mb-4" style={{ opacity: 0.6 }} />
+          <p className="text-2xl" style={{ opacity: 0.8 }}>{t('dashboard.noOrders')}</p>
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {customers.map((customer) => {
-            const isComplete = customer.progress === 100;
-            
-            return (
-              <Card
-                key={customer.id}
-                className={cn(
-                  'cursor-pointer transition-all active:scale-[0.98] touch-manipulation',
-                  isComplete && 'bg-success/5 border-success/20',
-                  !isComplete && 'hover:border-primary/50 hover:shadow-md'
-                )}
-                onClick={() => setSelectedCustomer(customer)}
-              >
-                <CardContent className="p-6">
-                  <div className="flex items-start justify-between mb-4">
+        <div
+          className="grid"
+          style={{
+            gridTemplateColumns: `repeat(${settings.columns || 3}, minmax(0, 1fr))`,
+            gap: settings.gap_size || '1rem',
+          }}
+        >
+          <AnimatePresence>
+            {customers.map((customer) => {
+              const isComplete = customer.progress === 100;
+              
+              return (
+                <motion.div
+                  key={customer.id}
+                  initial={settings.animation_enabled ? { opacity: 0, scale: 0.95 } : false}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={settings.animation_enabled ? { opacity: 0, scale: 0.95 } : undefined}
+                  transition={{ 
+                    duration: settings.animation_speed === 'fast' ? 0.15 : 
+                              settings.animation_speed === 'slow' ? 0.5 : 0.3 
+                  }}
+                  className={cn(
+                    'cursor-pointer transition-all active:scale-[0.98] touch-manipulation p-4 rounded-xl',
+                    settings.card_compact_mode && 'p-3'
+                  )}
+                  style={{
+                    backgroundColor: settings.card_background_color,
+                    borderRadius: settings.border_radius,
+                    borderLeft: `${settings.card_border_width || '4px'} solid ${getStatusColor(customer.progress)}`,
+                  }}
+                  onClick={() => setSelectedCustomer(customer)}
+                >
+                  {/* Customer header */}
+                  <div className="flex items-start justify-between mb-3">
                     <div>
-                      <h3 className="text-2xl font-semibold">{customer.name}</h3>
-                      <p className="text-lg text-muted-foreground">{customer.customer_number}</p>
+                      <h3
+                        className="font-bold truncate"
+                        style={{ fontSize: settings.card_customer_name_font_size || settings.customer_name_font_size }}
+                      >
+                        {customer.name}
+                      </h3>
+                      {settings.card_show_customer_number && (
+                        <span className="text-sm opacity-60">
+                          #{customer.customer_number}
+                        </span>
+                      )}
                     </div>
                     
                     {isComplete && (
-                      <Badge className="bg-success text-success-foreground gap-1 text-base px-3 py-1">
+                      <Badge 
+                        className="gap-1 text-base px-3 py-1"
+                        style={{ backgroundColor: settings.completed_color, color: '#fff' }}
+                      >
                         <Check className="h-4 w-4" />
                         {t('packing.complete')}
                       </Badge>
                     )}
                   </div>
                   
-                  <div className="flex items-center gap-4 mb-4 text-lg text-muted-foreground">
-                    <span>{customer.totalOrders} {t('packing.orders')}</span>
+                  <div className="opacity-70 mb-3" style={{ fontSize: settings.card_progress_font_size }}>
+                    {customer.totalOrders} {t('packing.orders')}
                   </div>
                   
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between text-base">
-                      <span>{customer.packedOrders} / {customer.totalOrders} {t('display.products')}</span>
-                      <span className="font-medium text-lg">{customer.progress}%</span>
+                  {/* Progress bar */}
+                  {settings.card_show_individual_progress && (
+                    <div>
+                      <Progress
+                        value={customer.progress}
+                        className="h-2"
+                        style={{
+                          backgroundColor: `${settings.pending_color}40`,
+                        }}
+                      />
+                      <p 
+                        className="text-sm mt-1 opacity-70"
+                        style={{ fontSize: settings.card_progress_font_size }}
+                      >
+                        {customer.packedOrders} / {customer.totalOrders} {t('display.products')}
+                      </p>
                     </div>
-                    <Progress value={customer.progress} className="h-3" />
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+                  )}
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
         </div>
       )}
     </div>
