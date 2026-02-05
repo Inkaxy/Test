@@ -41,6 +41,20 @@ export default function DisplaySettingsPage() {
   
   const { data: categories = [] } = useCategories();
   
+  // Filtrer kategorier basert på display type
+  const filteredCategories = categories.filter(cat => {
+    if (selectedDisplayType === 'packing') {
+      // Pakkedisplay = kun kundebaserte kategorier
+      return cat.packing_mode === 'customer_based';
+    }
+    if (selectedDisplayType === 'customer') {
+      // Kundedisplay = kun produktbaserte kategorier
+      return cat.packing_mode === 'product_based';
+    }
+    // Felles display = alle kategorier
+    return true;
+  });
+
   // Fetch bakery info for short_id
   const { data: bakery } = useQuery({
     queryKey: ['bakery-info', bakeryId],
@@ -95,6 +109,16 @@ export default function DisplaySettingsPage() {
       setSettings(getDefaultDisplaySettings());
     }
   }, [existingSettings]);
+  
+  // Nullstill valgt kategori når display type endres (hvis kategorien ikke finnes i ny liste)
+  useEffect(() => {
+    if (selectedCategoryId) {
+      const categoryExists = filteredCategories.some(c => c.id === selectedCategoryId);
+      if (!categoryExists) {
+        setSelectedCategoryId(null);
+      }
+    }
+  }, [selectedDisplayType, filteredCategories, selectedCategoryId]);
   
   // Save settings mutation
   const saveMutation = useMutation({
@@ -363,14 +387,15 @@ export default function DisplaySettingsPage() {
             </p>
           </div>
           
-          {categories.length > 0 && (
+          {filteredCategories.length > 0 && (
             <div className="pt-2 border-t">
               <Label className="text-sm font-medium">Kategori-spesifikke innstillinger</Label>
               <p className="text-xs text-muted-foreground mb-2">
-                {selectedDisplayType === 'customer' 
-                  ? 'Tilpass visning per produktkategori. Produkter arver innstillinger fra sin kategori.'
-                  : 'Tilpass visning per produktkategori (f.eks. ulik fontstørrelse for brød vs kaker)'
-                }
+                {selectedDisplayType === 'packing'
+                  ? 'Tilpass visning per kundebasert kategori'
+                  : selectedDisplayType === 'customer'
+                  ? 'Tilpass visning per produktbasert kategori'
+                  : 'Tilpass visning per kategori'}
               </p>
               <Select 
                 value={selectedCategoryId || 'all'} 
@@ -381,7 +406,7 @@ export default function DisplaySettingsPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Alle kategorier (standard)</SelectItem>
-                  {categories.map((cat) => (
+                  {filteredCategories.map((cat) => (
                     <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
                   ))}
                 </SelectContent>
