@@ -283,8 +283,9 @@ function useKioskUndoPacking(bakeryId: string | null, dateStr: string, categoryI
   });
 }
 
-function useKioskReportDeviation() {
+function useKioskReportDeviation(bakeryId: string | null, dateStr: string, categoryId?: string) {
   const queryClient = useQueryClient();
+  const queryKey = ['kiosk-customers-for-date', bakeryId, dateStr, categoryId];
   
   return useMutation({
     mutationFn: async ({ 
@@ -322,8 +323,23 @@ function useKioskReportDeviation() {
         if (error) throw error;
       }
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['kiosk-customers-for-date'] });
+    onMutate: async ({ orderId }) => {
+      await queryClient.cancelQueries({ queryKey });
+      const previousData = queryClient.getQueryData<CustomerWithOrders[]>(queryKey);
+      
+      if (previousData) {
+        queryClient.setQueryData(queryKey, updateOrderStatusInKioskCache(previousData, orderId, 'deviation'));
+      }
+      
+      return { previousData };
+    },
+    onError: (_err, _variables, context) => {
+      if (context?.previousData) {
+        queryClient.setQueryData(queryKey, context.previousData);
+      }
+    },
+    onSettled: () => {
+      queryClient.refetchQueries({ queryKey });
     },
   });
 }
