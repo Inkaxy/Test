@@ -280,7 +280,7 @@ export default function KioskPackingView() {
     dateStr, 
     categoryId
   );
-  const { data: displaySettings } = useDisplaySettings(bakery?.id || null, categoryId, 'shared');
+  const { data: displaySettings } = useDisplaySettings(bakery?.id || null, categoryId, 'packing');
   const settings: DisplaySettings = displaySettings || getDefaultDisplaySettings();
   
   // Apply sorting based on display settings
