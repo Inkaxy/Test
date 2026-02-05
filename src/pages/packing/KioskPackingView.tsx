@@ -865,12 +865,18 @@ export default function KioskPackingView() {
         </div>
       )}
       
-      {/* Customer grid - kiosk optimized */}
+      {/* Customer selection - Cards or Table based on settings */}
       {customers.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center">
           <Package className="h-20 w-20 mb-4" style={{ opacity: 0.6 }} />
           <p className="text-2xl" style={{ opacity: 0.8 }}>{t('dashboard.noOrders')}</p>
         </div>
+      ) : settings.packing_view_mode === 'table' ? (
+        <KioskCustomerTable
+          customers={customers}
+          settings={settings}
+          onSelectCustomer={(customer) => setSelectedCustomer(customer as CustomerWithOrders)}
+        />
       ) : (
         <div
           className="grid"
