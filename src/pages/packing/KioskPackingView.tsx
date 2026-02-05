@@ -431,8 +431,11 @@ export default function KioskPackingView() {
   // Loading state
   if (bakeryLoading || customersLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      <div
+        className="min-h-screen flex items-center justify-center"
+        style={{ backgroundColor: settings.background_color }}
+      >
+        <Loader2 className="h-12 w-12 animate-spin" style={{ color: settings.text_color }} />
       </div>
     );
   }
@@ -440,10 +443,13 @@ export default function KioskPackingView() {
   // Bakery not found
   if (!bakery) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div
+        className="min-h-screen flex items-center justify-center"
+        style={{ backgroundColor: settings.background_color }}
+      >
         <div className="text-center">
-          <Package className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-          <p className="text-2xl text-muted-foreground">{t('display.bakeryNotFound')}</p>
+          <Package className="h-16 w-16 mx-auto mb-4" style={{ color: settings.text_color, opacity: 0.6 }} />
+          <p className="text-2xl" style={{ color: settings.text_color, opacity: 0.8 }}>{t('display.bakeryNotFound')}</p>
         </div>
       </div>
     );
