@@ -506,6 +506,14 @@ export function PackingCategoryCard({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      
+      {/* Kiosk Link Dialog */}
+      <KioskLinkDialog
+        open={isKioskLinkOpen}
+        onOpenChange={setIsKioskLinkOpen}
+        category={category}
+        bakeryShortId={bakeryShortId}
+      />
     </>
   );
 }

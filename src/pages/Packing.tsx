@@ -214,6 +214,7 @@ export default function Packing() {
                   category={category}
                   onOneDriveConfig={() => setOneDriveCategory(category)}
                   isEditMode={false}
+                  bakeryShortId={bakery?.short_id || ''}
                 />
               </motion.div>
             ))}
