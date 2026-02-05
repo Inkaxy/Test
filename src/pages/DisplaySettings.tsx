@@ -41,6 +41,20 @@ export default function DisplaySettingsPage() {
   
   const { data: categories = [] } = useCategories();
   
+  // Filtrer kategorier basert på display type
+  const filteredCategories = categories.filter(cat => {
+    if (selectedDisplayType === 'packing') {
+      // Pakkedisplay = kun kundebaserte kategorier
+      return cat.packing_mode === 'customer_based';
+    }
+    if (selectedDisplayType === 'customer') {
+      // Kundedisplay = kun produktbaserte kategorier
+      return cat.packing_mode === 'product_based';
+    }
+    // Felles display = alle kategorier
+    return true;
+  });
+
   // Fetch bakery info for short_id
   const { data: bakery } = useQuery({
     queryKey: ['bakery-info', bakeryId],
