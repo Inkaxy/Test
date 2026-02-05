@@ -410,7 +410,6 @@ export default function CustomerPackingView() {
                 onUndo={handleUndo}
                 isMarkingPacked={markAsPacked.isPending}
                 isUndoing={undoPacking.isPending}
-                settings={settings}
               />
             ))}
           </AnimatePresence>
