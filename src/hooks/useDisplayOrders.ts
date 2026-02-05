@@ -324,6 +324,20 @@ export interface DisplaySettings {
   fullscreen_button_visible: boolean;
   wake_lock_enabled: boolean;
   
+  // Visningsmodus (pakkedisplay)
+  packing_view_mode: 'cards' | 'table';
+  
+  // Tabell-spesifikke innstillinger
+  table_row_height: 'compact' | 'normal' | 'touch';
+  table_font_size: string;
+  table_show_customer_number: boolean;
+  table_show_progress_bar: boolean;
+  table_show_order_count: boolean;
+  table_alternate_rows: boolean;
+  table_alternate_row_color: string;
+  table_sticky_header: boolean;
+  table_touch_row_spacing: string;
+  
   // Legacy support
   show_progress_bar: boolean;
   progress_bar_style: string;
