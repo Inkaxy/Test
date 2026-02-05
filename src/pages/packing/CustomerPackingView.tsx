@@ -26,6 +26,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useBakerySettings } from '@/hooks/useBakerySettings';
 import { useDisplaySettings, getDefaultDisplaySettings, DisplaySettings } from '@/hooks/useDisplayOrders';
 import { useCategories } from '@/hooks/useCategories';
+import { useBakeries } from '@/hooks/useBakeries';
 import { DeviationDialog } from '@/components/packing/DeviationDialog';
 import { CustomerOrderCard } from '@/components/packing/CustomerOrderCard';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -63,6 +64,8 @@ export default function CustomerPackingView() {
   // Get category and bakery info for header
   const { data: categories = [] } = useCategories();
   const category = categories.find(c => c.id === categoryId);
+  const { bakeries } = useBakeries();
+  const bakery = bakeries.find(b => b.id === bakeryId);
   
   // Build sort options from display settings
   const sortOptions = {
@@ -465,7 +468,7 @@ export default function CustomerPackingView() {
               className="font-bold"
               style={{ fontSize: settings.header_bakery_font_size || '1.875rem' }}
             >
-              {t('packing.customerBased')}
+              {bakery?.name || t('packing.customerBased')}
             </h1>
             {category && (
               <p 

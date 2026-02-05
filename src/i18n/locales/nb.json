@@ -344,7 +344,8 @@
     "noOrders": "Ingen ordrer for denne datoen",
     "bakeryNotFound": "Bakeri ikke funnet",
     "totalProgress": "Total fremdrift",
-    "products": "produkter"
+    "products": "produkter",
+    "remaining": "Gjenstår"
   },
   "errors": {
     "generic": "Noe gikk galt. Prøv igjen.",
