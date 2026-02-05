@@ -15,7 +15,7 @@ import { supabase } from '@/integrations/supabase/client';
 export default function Packing() {
   const { t } = useTranslation();
   const { toast } = useToast();
-  const { isBakeryAdmin, isSuperAdmin } = useAuthStore();
+  const { isBakeryAdmin, isSuperAdmin, getActiveBakeryId } = useAuthStore();
   
   const { data: categories = [], isLoading } = useCategories();
   const updateCategory = useUpdateCategory();
@@ -23,6 +23,25 @@ export default function Packing() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [orderedCategories, setOrderedCategories] = useState<Category[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  
+  // Fetch bakery short_id for kiosk links
+  const { data: bakery } = useQuery({
+    queryKey: ['bakery-short-id', getActiveBakeryId()],
+    queryFn: async () => {
+      const bakeryId = getActiveBakeryId();
+      if (!bakeryId) return null;
+      
+      const { data, error } = await supabase
+        .from('bakeries')
+        .select('short_id')
+        .eq('id', bakeryId)
+        .maybeSingle();
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!getActiveBakeryId(),
+  });
   
   const activeCategories = categories.filter(c => c.is_active);
   const isAdmin = isBakeryAdmin() || isSuperAdmin();
