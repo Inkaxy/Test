@@ -160,9 +160,42 @@ function useKioskCustomersForDate(bakeryId: string | null, date: string, categor
   });
 }
 
-// Mutations for packing operations
-function useKioskMarkAsPacked() {
+// Helper function to optimistically update order status in cache
+function updateOrderStatusInKioskCache(
+  customers: CustomerWithOrders[],
+  orderId: string,
+  newStatus: 'packed' | 'pending' | 'deviation'
+): CustomerWithOrders[] {
+  return customers.map(customer => {
+    const orderIndex = customer.orders.findIndex(o => o.id === orderId);
+    if (orderIndex === -1) return customer;
+    
+    const updatedOrders = [...customer.orders];
+    updatedOrders[orderIndex] = {
+      ...updatedOrders[orderIndex],
+      packing_status: {
+        id: updatedOrders[orderIndex].packing_status?.id || `temp-${orderId}`,
+        status: newStatus,
+      },
+    };
+    
+    const packedCount = updatedOrders.filter(
+      o => o.packing_status?.status === 'packed' || o.packing_status?.status === 'deviation'
+    ).length;
+    
+    return {
+      ...customer,
+      orders: updatedOrders,
+      packedOrders: packedCount,
+      progress: Math.round((packedCount / customer.totalOrders) * 100),
+    };
+  });
+}
+
+// Mutations for packing operations with optimistic updates
+function useKioskMarkAsPacked(bakeryId: string | null, dateStr: string, categoryId?: string) {
   const queryClient = useQueryClient();
+  const queryKey = ['kiosk-customers-for-date', bakeryId, dateStr, categoryId];
   
   return useMutation({
     mutationFn: async ({ orderId, packingStatusId }: { orderId: string; packingStatusId?: string }) => {
@@ -186,8 +219,29 @@ function useKioskMarkAsPacked() {
         if (error) throw error;
       }
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['kiosk-customers-for-date'] });
+    onMutate: async ({ orderId }) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey });
+      
+      // Snapshot previous value
+      const previousData = queryClient.getQueryData<CustomerWithOrders[]>(queryKey);
+      
+      // Optimistically update cache
+      if (previousData) {
+        queryClient.setQueryData(queryKey, updateOrderStatusInKioskCache(previousData, orderId, 'packed'));
+      }
+      
+      return { previousData };
+    },
+    onError: (_err, _variables, context) => {
+      // Rollback on error
+      if (context?.previousData) {
+        queryClient.setQueryData(queryKey, context.previousData);
+      }
+    },
+    onSettled: () => {
+      // Always refetch to sync with server
+      queryClient.refetchQueries({ queryKey });
     },
   });
 }
