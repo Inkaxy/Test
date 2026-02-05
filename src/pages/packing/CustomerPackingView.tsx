@@ -26,6 +26,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useBakerySettings } from '@/hooks/useBakerySettings';
 import { useDisplaySettings, getDefaultDisplaySettings, DisplaySettings } from '@/hooks/useDisplayOrders';
 import { useCategories } from '@/hooks/useCategories';
+import { useBakeries } from '@/hooks/useBakeries';
 import { DeviationDialog } from '@/components/packing/DeviationDialog';
 import { CustomerOrderCard } from '@/components/packing/CustomerOrderCard';
 import { motion, AnimatePresence } from 'framer-motion';
