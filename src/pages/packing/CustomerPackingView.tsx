@@ -468,7 +468,7 @@ export default function CustomerPackingView() {
               className="font-bold"
               style={{ fontSize: settings.header_bakery_font_size || '1.875rem' }}
             >
-              {t('packing.customerBased')}
+              {bakery?.name || t('packing.customerBased')}
             </h1>
             {category && (
               <p 
