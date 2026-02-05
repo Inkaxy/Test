@@ -176,6 +176,7 @@ export default function Packing() {
                   category={category}
                   onOneDriveConfig={() => setOneDriveCategory(category)}
                   isEditMode={true}
+                  bakeryShortId={bakery?.short_id || ''}
                 />
               </Reorder.Item>
             ))}
