@@ -1,5 +1,5 @@
 
-# Plan: Fiks gjenværende forskjeller mellom web og kiosk pakkevisning
+# Plan: Fiks gjenværende forskjeller mellom web og kiosk pakkevisning (FERDIG)
 
 ## Oppsummering av undersøkelsen
 
