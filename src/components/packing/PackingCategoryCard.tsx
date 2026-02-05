@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { Upload, Edit, Cloud, CloudOff, Loader2, MoreVertical, Play, Trash2, Palette, GripVertical } from 'lucide-react';
+import { Upload, Edit, Cloud, CloudOff, Loader2, MoreVertical, Play, Trash2, Palette, GripVertical, Link } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -20,6 +20,7 @@ import { useOneDriveConfigForCategory } from '@/hooks/useOneDriveConfig';
 import { useImport } from '@/hooks/useImport';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { KioskLinkDialog } from './KioskLinkDialog';
 
 // Available card colors - bakery-inspired palette
 export const CARD_COLORS = [
@@ -53,12 +54,14 @@ interface PackingCategoryCardProps {
   category: Category;
   onOneDriveConfig: () => void;
   isEditMode?: boolean;
+  bakeryShortId?: string;
 }
 
 export function PackingCategoryCard({ 
   category, 
   onOneDriveConfig,
-  isEditMode = false
+  isEditMode = false,
+  bakeryShortId = ''
 }: PackingCategoryCardProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -68,6 +71,7 @@ export function PackingCategoryCard({
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [isKioskLinkOpen, setIsKioskLinkOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [editName, setEditName] = useState(category.name);
   const [editPackingMode, setEditPackingMode] = useState(category.packing_mode);
@@ -182,7 +186,7 @@ export function PackingCategoryCard({
     }
   };
   
-  const handleMenuAction = (action: 'import' | 'edit' | 'onedrive' | 'delete') => {
+  const handleMenuAction = (action: 'import' | 'edit' | 'onedrive' | 'kiosklink' | 'delete') => {
     setIsMenuOpen(false);
     switch (action) {
       case 'import':
@@ -196,6 +200,9 @@ export function PackingCategoryCard({
         break;
       case 'onedrive':
         onOneDriveConfig();
+        break;
+      case 'kiosklink':
+        setIsKioskLinkOpen(true);
         break;
       case 'delete':
         setIsDeleteOpen(true);
@@ -308,6 +315,15 @@ export function PackingCategoryCard({
                       Koble OneDrive
                     </>
                   )}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="justify-start gap-2 w-full"
+                  onClick={() => handleMenuAction('kiosklink')}
+                >
+                  <Link className="h-4 w-4" />
+                  {t('categories.kioskLink')}
                 </Button>
                 <div className="border-t my-1" />
                 <Button
@@ -490,6 +506,14 @@ export function PackingCategoryCard({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      
+      {/* Kiosk Link Dialog */}
+      <KioskLinkDialog
+        open={isKioskLinkOpen}
+        onOpenChange={setIsKioskLinkOpen}
+        category={category}
+        bakeryShortId={bakeryShortId}
+      />
     </>
   );
 }

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useQuery } from '@tanstack/react-query';
 import { Loader2, Settings, GripVertical } from 'lucide-react';
 import { Reorder, AnimatePresence, motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -9,11 +10,12 @@ import { PackingCategoryCard } from '@/components/packing/PackingCategoryCard';
 import { AddPackingCategoryCard } from '@/components/packing/AddPackingCategoryCard';
 import { OneDriveConfigDialog } from '@/components/categories/OneDriveConfigDialog';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 export default function Packing() {
   const { t } = useTranslation();
   const { toast } = useToast();
-  const { isBakeryAdmin, isSuperAdmin } = useAuthStore();
+  const { isBakeryAdmin, isSuperAdmin, getActiveBakeryId } = useAuthStore();
   
   const { data: categories = [], isLoading } = useCategories();
   const updateCategory = useUpdateCategory();
@@ -21,6 +23,25 @@ export default function Packing() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [orderedCategories, setOrderedCategories] = useState<Category[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  
+  // Fetch bakery short_id for kiosk links
+  const { data: bakery } = useQuery({
+    queryKey: ['bakery-short-id', getActiveBakeryId()],
+    queryFn: async () => {
+      const bakeryId = getActiveBakeryId();
+      if (!bakeryId) return null;
+      
+      const { data, error } = await supabase
+        .from('bakeries')
+        .select('short_id')
+        .eq('id', bakeryId)
+        .maybeSingle();
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!getActiveBakeryId(),
+  });
   
   const activeCategories = categories.filter(c => c.is_active);
   const isAdmin = isBakeryAdmin() || isSuperAdmin();
@@ -155,6 +176,7 @@ export default function Packing() {
                   category={category}
                   onOneDriveConfig={() => setOneDriveCategory(category)}
                   isEditMode={true}
+                  bakeryShortId={bakery?.short_id || ''}
                 />
               </Reorder.Item>
             ))}
@@ -192,6 +214,7 @@ export default function Packing() {
                   category={category}
                   onOneDriveConfig={() => setOneDriveCategory(category)}
                   isEditMode={false}
+                  bakeryShortId={bakery?.short_id || ''}
                 />
               </motion.div>
             ))}
