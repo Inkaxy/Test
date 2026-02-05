@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { DeviationDialog } from '@/components/packing/DeviationDialog';
+import { KioskCustomerTable } from '@/components/packing/KioskCustomerTable';
 import { useDisplaySettings, getDefaultDisplaySettings, DisplaySettings } from '@/hooks/useDisplayOrders';
 import { motion, AnimatePresence } from 'framer-motion';
 
