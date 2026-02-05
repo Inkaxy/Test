@@ -1,72 +1,82 @@
 
-# Plan: Brukeradministrasjon for Super Admin
+
+# Plan: Kiosk-lenke per pakkekategori
 
 ## Oversikt
-Legger til en ny seksjon i Super Admin-innstillingene som viser alle brukere i systemet, uavhengig av bakeri. Super Admin vil kunne se brukerens navn, tilknyttet bakeri, alle roller, og ha mulighet til å endre rolletilordninger.
+Legger til mulighet for å generere en dedikert kiosk-lenke for hver pakkekategori. Lenken gir tilgang til en strømlinjeformet pakkevisning som er låst til den spesifikke kategorien, uten navigasjon eller andre distraherende elementer.
 
 ## Dataflyt
 
 ```text
-+------------------+       +------------------+       +------------------+
-|    profiles      |       |   user_roles     |       |    bakeries      |
-+------------------+       +------------------+       +------------------+
-| user_id          |<----->| user_id          |       | id               |
-| display_name     |       | role             |<----->| name             |
-| bakery_id        |------>| bakery_id        |------>|                  |
-+------------------+       +------------------+       +------------------+
+PackingCategoryCard
+       │
+       ├── Meny-knapp (MoreVertical)
+       │       │
+       │       └── "Kiosk-lenke" (ny opsjon)
+       │               │
+       │               └── KioskLinkDialog (ny komponent)
+       │                       │
+       │                       ├── Viser full URL
+       │                       ├── QR-kode (qrcode.react er installert)
+       │                       ├── Kopier til utklippstavle
+       │                       └── Last ned QR-kode som bilde
+       │
+       └── URL-format:
+           └── Kundebasert: /kiosk/packing/{bakeryShortId}/{categoryId}
+           └── Produktbasert: /kiosk/packing/{bakeryShortId}/product/{categoryId}
 ```
 
 ## Implementasjon
 
-### Fase 1: Ny seksjon i SuperAdminSettings.tsx
+### Fase 1: Ny dialog-komponent for kiosk-lenke
 
-Legger til en ny Card-komponent under "Bakerioversikt" som viser alle brukere:
-
-**Ny seksjon "Brukeroversikt":**
-- Tabell med kolonner: Navn, Bakeri, Rolle(r), Handlinger
-- Søkefelt for å filtrere på navn
-- Filter for å vise brukere per bakeri eller alle
-- Badge-visning av roller (Super Admin, Bakeri Admin, Bakeri Bruker)
-
-### Fase 2: Dialog for rolleadministrasjon
-
-Ny komponent: `src/components/admin/UserRoleDialog.tsx`
+Ny fil: `src/components/packing/KioskLinkDialog.tsx`
 
 **Funksjonalitet:**
-- Åpnes når man klikker "Rediger roller" på en bruker
-- Viser brukerens nåværende roller
-- Dropdown for å legge til ny rolle (super_admin, bakery_admin, bakery_user)
-- For bakery_admin og bakery_user: velg hvilket bakeri rollen gjelder for
-- Mulighet for å fjerne eksisterende roller
-- Bekreftelsesdialog ved sletting av roller
+- Mottar kategori-info og bakeriets `short_id`
+- Genererer korrekt URL basert på `packing_mode`
+- Viser QR-kode med `qrcode.react` (allerede installert)
+- Kopier-knapp for å kopiere URL til utklippstavle
+- Last ned QR-kode som PNG-bilde
+- Valg mellom "dagens dato" eller "ingen dato" i URL
 
-### Fase 3: Databaseoperasjoner
-
-**Hent alle brukere:**
-```sql
-SELECT 
-  p.user_id, 
-  p.display_name, 
-  p.bakery_id,
-  b.name as bakery_name,
-  array_agg(ur.role) as roles
-FROM profiles p
-LEFT JOIN bakeries b ON b.id = p.bakery_id
-LEFT JOIN user_roles ur ON ur.user_id = p.user_id
-GROUP BY p.user_id, p.display_name, p.bakery_id, b.name
-ORDER BY p.display_name
+**Komponent-struktur:**
+```
+KioskLinkDialog
+├── Header med kategori-navn
+├── URL-felt med kopier-knapp
+├── Dato-valg (valgfritt)
+│   ├── Ingen dato (alltid dagens)
+│   └── Spesifikk dato
+├── QR-kode (stor, sentert)
+├── Last ned QR-knapp
+└── Tips om bruk
 ```
 
-**Legg til rolle:**
-```sql
-INSERT INTO user_roles (user_id, role, bakery_id) 
-VALUES ($1, $2, $3)
-```
+### Fase 2: Oppdater PackingCategoryCard
 
-**Fjern rolle:**
-```sql
-DELETE FROM user_roles WHERE id = $1
-```
+Endringer i `src/components/packing/PackingCategoryCard.tsx`:
+
+**Nye importer:**
+- `Link` ikon fra lucide-react
+- `KioskLinkDialog` komponent
+- Hook for å hente bakery short_id
+
+**Ny state:**
+- `isKioskLinkOpen` for dialog-visning
+
+**Ny meny-opsjon:**
+- "Kiosk-lenke" mellom "OneDrive" og "Slett"
+- Ikon: `Link` fra lucide-react
+
+**Ny handling:**
+- `handleMenuAction('kiosklink')` åpner KioskLinkDialog
+
+### Fase 3: Hook for å hente bakery short_id
+
+Ny hook eller utvide eksisterende for å hente bakeriets `short_id` basert på `bakery_id`.
+
+Alternativ: Hent via `useAuthStore` + en query.
 
 ### Fase 4: Oversettelser
 
@@ -74,18 +84,17 @@ Nye nøkler i `nb.json` og `en.json`:
 
 ```json
 {
-  "superAdmin": {
-    "allUsers": "Alle brukere",
-    "allUsersDescription": "Administrer brukere på tvers av alle bakerier",
-    "userRoles": "Brukerroller",
-    "editRoles": "Rediger roller",
-    "addRole": "Legg til rolle",
-    "removeRole": "Fjern rolle",
-    "confirmRemoveRole": "Er du sikker på at du vil fjerne denne rollen?",
-    "roleAdded": "Rolle lagt til",
-    "roleRemoved": "Rolle fjernet",
-    "selectBakeryForRole": "Velg bakeri for denne rollen",
-    "noBakery": "Ingen bakeri tilknyttet"
+  "categories": {
+    "kioskLink": "Kiosk-lenke",
+    "kioskLinkTitle": "Kiosk-lenke for {{category}}",
+    "kioskLinkDescription": "Bruk denne lenken på pakkestasjon for å låse til denne kategorien",
+    "copyLink": "Kopier lenke",
+    "linkCopied": "Lenke kopiert!",
+    "downloadQr": "Last ned QR-kode",
+    "qrDownloaded": "QR-kode lastet ned",
+    "includeDate": "Inkluder dato",
+    "noDateInfo": "Uten dato brukes alltid dagens dato",
+    "kioskTips": "Tips: Åpne lenken i fullskjerm-modus (F11) for beste opplevelse"
   }
 }
 ```
@@ -94,101 +103,146 @@ Nye nøkler i `nb.json` og `en.json`:
 
 | Fil | Endring |
 |-----|---------|
-| `src/pages/SuperAdminSettings.tsx` | Legger til brukeroversikt-seksjon og state for dialog |
-| `src/components/admin/UserRoleDialog.tsx` | Ny dialog for rolleadministrasjon |
-| `src/i18n/locales/nb.json` | Nye oversettelser |
-| `src/i18n/locales/en.json` | Nye oversettelser |
-
-## Sikkerhet
-
-- Alle operasjoner bruker eksisterende RLS-policies som krever `is_super_admin()`
-- Rolleendringer logges med `created_at` timestamp
-- Super Admin kan ikke fjerne sin egen super_admin-rolle (for å unngå å låse seg ute)
+| `src/components/packing/KioskLinkDialog.tsx` | Ny - Dialog med QR-kode og kopier-funksjon |
+| `src/components/packing/PackingCategoryCard.tsx` | Endres - Ny meny-opsjon og dialog-integrasjon |
+| `src/i18n/locales/nb.json` | Endres - Nye oversettelser |
+| `src/i18n/locales/en.json` | Endres - Nye oversettelser |
 
 ## UI-komponenter brukt
 
-- `Table`, `TableRow`, `TableCell` for brukerliste
-- `Dialog` for rolleredigering
-- `Select` for rollevalg og bakeri-valg
-- `Badge` for rollevisning
-- `Button` for handlinger
-- `Input` for søk
-- `AlertDialog` for bekreftelse ved sletting
-
----
+- `Dialog`, `DialogContent`, `DialogHeader`, `DialogTitle` for dialog
+- `Button` med variant="outline" for handlingsknapper
+- `QRCodeSVG` fra qrcode.react for QR-kode
+- `Input` med readonly for URL-visning
+- `Switch` eller `Checkbox` for dato-valg
+- `Badge` for å vise pakkemodus
+- Lucide-ikoner: `Link`, `Copy`, `Download`, `Check`
 
 ## Tekniske detaljer
 
-### Query for brukerliste (useQuery)
+### KioskLinkDialog Props
 
 ```typescript
-const { data: allUsers = [], isLoading: usersLoading } = useQuery({
-  queryKey: ['super-admin-all-users'],
+interface KioskLinkDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  category: Category;
+  bakeryShortId: string;
+}
+```
+
+### URL-generering
+
+```typescript
+const generateKioskUrl = (bakeryShortId: string, category: Category, date?: string) => {
+  const baseUrl = window.location.origin;
+  const modePath = category.packing_mode === 'product_based' 
+    ? `/kiosk/packing/${bakeryShortId}/product/${category.id}`
+    : `/kiosk/packing/${bakeryShortId}/${category.id}`;
+  
+  if (date) {
+    return `${baseUrl}${modePath}?date=${date}`;
+  }
+  return `${baseUrl}${modePath}`;
+};
+```
+
+### Kopier til utklippstavle
+
+```typescript
+const handleCopy = async () => {
+  await navigator.clipboard.writeText(kioskUrl);
+  toast({ title: t('categories.linkCopied') });
+  setCopied(true);
+  setTimeout(() => setCopied(false), 2000);
+};
+```
+
+### Last ned QR-kode
+
+```typescript
+const handleDownloadQr = () => {
+  const svg = document.getElementById('kiosk-qr-code');
+  if (!svg) return;
+  
+  const svgData = new XMLSerializer().serializeToString(svg);
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  const img = new Image();
+  
+  img.onload = () => {
+    canvas.width = img.width;
+    canvas.height = img.height;
+    ctx?.drawImage(img, 0, 0);
+    
+    const pngUrl = canvas.toDataURL('image/png');
+    const link = document.createElement('a');
+    link.download = `kiosk-${category.name}.png`;
+    link.href = pngUrl;
+    link.click();
+  };
+  
+  img.src = 'data:image/svg+xml;base64,' + btoa(svgData);
+  toast({ title: t('categories.qrDownloaded') });
+};
+```
+
+### Hente bakery short_id
+
+Utvide props til `PackingCategoryCard` eller lage en hook:
+
+```typescript
+// I Packing.tsx eller lignende forelder-komponent
+const { data: bakery } = useQuery({
+  queryKey: ['bakery', getActiveBakeryId()],
   queryFn: async () => {
-    // Hent alle profiler
-    const { data: profiles, error: profilesError } = await supabase
-      .from('profiles')
-      .select('user_id, display_name, bakery_id')
-      .order('display_name');
+    const bakeryId = getActiveBakeryId();
+    if (!bakeryId) return null;
     
-    if (profilesError) throw profilesError;
-    
-    // Hent alle roller
-    const { data: roles, error: rolesError } = await supabase
-      .from('user_roles')
-      .select('id, user_id, role, bakery_id');
-    
-    if (rolesError) throw rolesError;
-    
-    // Hent alle bakerier for mapping
-    const { data: bakeries } = await supabase
+    const { data, error } = await supabase
       .from('bakeries')
-      .select('id, name');
-    
-    // Kombiner data
-    return profiles.map(profile => ({
-      ...profile,
-      bakeryName: bakeries?.find(b => b.id === profile.bakery_id)?.name || null,
-      roles: roles?.filter(r => r.user_id === profile.user_id) || []
-    }));
-  },
-  enabled: isSuperAdmin(),
-});
-```
-
-### Mutasjon for å legge til rolle
-
-```typescript
-const addRoleMutation = useMutation({
-  mutationFn: async ({ userId, role, bakeryId }: AddRoleParams) => {
-    const { error } = await supabase
-      .from('user_roles')
-      .insert({ user_id: userId, role, bakery_id: bakeryId });
+      .select('id, short_id')
+      .eq('id', bakeryId)
+      .single();
     
     if (error) throw error;
+    return data;
   },
-  onSuccess: () => {
-    queryClient.invalidateQueries({ queryKey: ['super-admin-all-users'] });
-    toast.success(t('superAdmin.roleAdded'));
-  }
+  enabled: !!getActiveBakeryId(),
 });
 ```
 
-### Mutasjon for å fjerne rolle
+## Eksempel på ferdig UI
 
-```typescript
-const removeRoleMutation = useMutation({
-  mutationFn: async (roleId: string) => {
-    const { error } = await supabase
-      .from('user_roles')
-      .delete()
-      .eq('id', roleId);
-    
-    if (error) throw error;
-  },
-  onSuccess: () => {
-    queryClient.invalidateQueries({ queryKey: ['super-admin-all-users'] });
-    toast.success(t('superAdmin.roleRemoved'));
-  }
-});
 ```
+┌─────────────────────────────────────────────┐
+│  Kiosk-lenke for BRØD                        │
+├─────────────────────────────────────────────┤
+│                                             │
+│  Bruk denne lenken på pakkestasjon          │
+│  for å låse til denne kategorien            │
+│                                             │
+│  ┌─────────────────────────────────┐  [📋] │
+│  │ https://loaf...oad.lovable.app/ │        │
+│  │ kiosk/packing/testbakeri/xyz... │        │
+│  └─────────────────────────────────┘        │
+│                                             │
+│         ┌─────────────────┐                 │
+│         │   ███ ███ ███   │                 │
+│         │   █ ████  ██    │                 │
+│         │   ███  █  ███   │ (QR-kode)       │
+│         │   █ █ ███ █ █   │                 │
+│         │   ███ █ █ ███   │                 │
+│         └─────────────────┘                 │
+│                                             │
+│  [Produktbasert pakking]                    │
+│                                             │
+│  ┌──────────────────────────────────────┐   │
+│  │ ⚡ Tips: Åpne i fullskjerm (F11)     │   │
+│  └──────────────────────────────────────┘   │
+│                                             │
+│        [⬇️ Last ned QR-kode]                │
+│                                             │
+└─────────────────────────────────────────────┘
+```
+
