@@ -60,7 +60,7 @@ const navItems: NavItem[] = [
   { key: 'categories', icon: FolderOpen, href: '/categories', requiresAdmin: true },
   { key: 'users', icon: Users, href: '/users', requiresAdmin: true },
   { key: 'import', icon: Upload, href: '/import', requiresAdmin: true },
-  { key: 'displaySettings', icon: Monitor, href: '/display-settings', requiresAdmin: true },
+  { key: 'displaySettings', icon: Monitor, href: '/display-settings' },
   { key: 'bakeries', icon: Building2, href: '/bakeries', requiresSuperAdmin: true },
   { key: 'superAdmin', icon: Settings, href: '/super-admin', requiresSuperAdmin: true },
   { key: 'settings', icon: Settings, href: '/settings' },
