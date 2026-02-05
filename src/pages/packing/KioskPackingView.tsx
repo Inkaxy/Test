@@ -460,69 +460,160 @@ export default function KioskPackingView() {
     const currentCustomer = customers.find(c => c.id === selectedCustomer.id) || selectedCustomer;
     
     return (
-      <div className="min-h-screen bg-background p-4 space-y-4">
+      <div
+        ref={containerRef}
+        className="min-h-screen"
+        style={{
+          backgroundColor: settings.background_color,
+          color: settings.text_color,
+          padding: settings.padding || '1rem',
+        }}
+      >
         {/* Header */}
-        <div className="flex items-center gap-4 bg-card rounded-lg p-4 shadow-sm">
+        <header
+          className="flex flex-wrap items-center gap-4 mb-6 p-4 rounded-xl"
+          style={{
+            backgroundColor: settings.card_background_color,
+            borderRadius: settings.border_radius,
+          }}
+        >
           <Button 
             variant="ghost" 
             size="lg" 
             onClick={handleBack}
             className="h-16 w-16"
+            style={{ color: settings.text_color }}
           >
             <ArrowLeft className="h-8 w-8" />
           </Button>
           <div className="flex-1">
-            <h1 className="text-3xl font-bold">{currentCustomer.name}</h1>
-            <p className="text-xl text-muted-foreground">
+            <h1 
+              className="font-bold"
+              style={{ fontSize: settings.card_customer_name_font_size || settings.customer_name_font_size }}
+            >
+              {currentCustomer.name}
+            </h1>
+            <p className="opacity-70" style={{ fontSize: settings.card_product_font_size }}>
               {currentCustomer.customer_number} • {format(new Date(dateStr), 'PPP', { locale })}
             </p>
           </div>
-          <div className="flex items-center gap-3 text-muted-foreground">
-            <Clock className="h-6 w-6" />
-            <span className="text-2xl font-mono">{format(currentTime, 'HH:mm:ss')}</span>
-            {isConnected ? (
-              <Wifi className="h-6 w-6 text-success" />
-            ) : (
-              <WifiOff className="h-6 w-6 text-destructive" />
+          
+          <div className="flex items-center gap-4">
+            {settings.realtime_show_connection_status && (
+              <div className="flex items-center gap-2">
+                {isConnected ? (
+                  <Wifi className="h-5 w-5" style={{ color: settings.completed_color }} />
+                ) : (
+                  <WifiOff className="h-5 w-5" style={{ color: '#ef4444' }} />
+                )}
+              </div>
             )}
+            
+            {showClock && (
+              <div 
+                className="flex items-center gap-2 font-mono"
+                style={{ fontSize: settings.header_clock_font_size || '1.5rem' }}
+              >
+                <Clock className="h-5 w-5" />
+                {format(currentTime, clockFormat === '12h' ? 'hh:mm:ss a' : 'HH:mm:ss')}
+              </div>
+            )}
+            
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleManualRefresh}
+                className="h-10 w-10"
+                style={{ color: settings.text_color }}
+              >
+                <RefreshCw className="h-5 w-5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleFullscreen}
+                className="h-10 w-10"
+                style={{ color: settings.text_color }}
+              >
+                <Maximize className="h-5 w-5" />
+              </Button>
+            </div>
           </div>
-        </div>
+        </header>
         
         {/* Progress */}
-        <Card>
-          <CardContent className="py-6">
-            <div className="flex items-center justify-between mb-4">
-              <span className="text-2xl">
+        {settings.card_show_individual_progress && (
+          <div
+            className="mb-6 p-4 rounded-xl"
+            style={{
+              backgroundColor: settings.card_background_color,
+              borderRadius: settings.border_radius,
+            }}
+          >
+            <div className="flex items-center justify-between mb-3">
+              <span style={{ fontSize: settings.stats_label_font_size || '1rem' }}>
                 {t('packing.packingProgress', { packed: currentCustomer.packedOrders, total: currentCustomer.totalOrders })}
               </span>
-              <span className="text-4xl font-bold">{currentCustomer.progress}%</span>
+              <span className="font-bold" style={{ fontSize: settings.stats_value_font_size || '1.5rem' }}>
+                {currentCustomer.progress}%
+              </span>
             </div>
-            <Progress value={currentCustomer.progress} className="h-6" />
-          </CardContent>
-        </Card>
+            <Progress 
+              value={currentCustomer.progress} 
+              className="h-4"
+              style={{
+                height: settings.stats_progress_bar_height,
+                backgroundColor: `${settings.pending_color}40`,
+              }}
+            />
+          </div>
+        )}
         
         {/* Products - touch optimized for kiosk */}
-        <div className="space-y-4">
-          {currentCustomer.orders.map((order) => {
-            const status = order.packing_status?.status || 'pending';
-            
-            return (
-              <Card
-                key={order.id}
-                className={cn(
-                  'transition-all',
-                  status === 'packed' && 'bg-success/10 border-success/30',
-                  status === 'deviation' && 'bg-destructive/10 border-destructive/30'
-                )}
-              >
-                <CardContent className="p-6">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: settings.gap_size || '1rem' }}>
+          <AnimatePresence>
+            {currentCustomer.orders.map((order) => {
+              const status = order.packing_status?.status || 'pending';
+              const isPacked = status === 'packed' || status === 'deviation';
+              
+              return (
+                <motion.div
+                  key={order.id}
+                  initial={settings.animation_enabled ? { opacity: 0, scale: 0.98 } : false}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={settings.animation_enabled ? { opacity: 0, scale: 0.98 } : undefined}
+                  transition={{ duration: settings.animation_speed === 'fast' ? 0.15 : settings.animation_speed === 'slow' ? 0.5 : 0.3 }}
+                  className="p-6 rounded-xl transition-all"
+                  style={{
+                    backgroundColor: isPacked
+                      ? `${settings.completed_color}20`
+                      : settings.card_background_color,
+                    borderRadius: settings.border_radius,
+                    borderLeft: `${settings.card_border_width || '4px'} solid ${getStatusColor(isPacked ? 100 : 0)}`,
+                  }}
+                >
                   <div className="flex items-center gap-6">
                     <div className="flex-1 min-w-0">
-                      <p className="text-2xl font-medium">{order.product.name}</p>
-                      <div className="flex items-center gap-3 mt-2 text-muted-foreground">
-                        <span className="text-lg">{order.product.product_number}</span>
-                        <span>•</span>
-                        <span className="font-mono text-2xl font-bold">
+                      <p 
+                        className="font-medium"
+                        style={{ fontSize: settings.card_product_font_size || '1rem' }}
+                      >
+                        {order.product.name}
+                      </p>
+                      <div className="flex items-center gap-3 mt-2 opacity-70">
+                        {settings.card_show_product_numbers && (
+                          <>
+                            <span style={{ fontSize: settings.card_quantity_font_size }}>
+                              {order.product.product_number}
+                            </span>
+                            <span>•</span>
+                          </>
+                        )}
+                        <span 
+                          className="font-mono font-bold"
+                          style={{ fontSize: settings.card_quantity_font_size || '1rem' }}
+                        >
                           {getQuantityDisplay(order.quantity, order.product.pieces_per_tray)}
                         </span>
                       </div>
@@ -554,19 +645,21 @@ export default function KioskPackingView() {
                               quantity: order.quantity,
                             })}
                             className="h-16 w-16"
+                            style={{ color: settings.text_color }}
                           >
                             <AlertTriangle className="h-6 w-6" />
                           </Button>
                         </div>
                       )}
                       
-                      {(status === 'packed' || status === 'deviation') && order.packing_status?.id && (
+                      {isPacked && order.packing_status?.id && (
                         <Button
                           size="lg"
                           variant="ghost"
                           onClick={() => handleUndo(order.packing_status!.id)}
                           disabled={undoPacking.isPending}
                           className="h-14 text-lg"
+                          style={{ color: settings.text_color }}
                         >
                           <Undo2 className="h-6 w-6 mr-2" />
                           {t('packing.undoPacked')}
@@ -574,10 +667,10 @@ export default function KioskPackingView() {
                       )}
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
         </div>
         
         {/* Deviation dialog */}
