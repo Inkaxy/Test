@@ -71,6 +71,7 @@ export function PackingCategoryCard({
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [isKioskLinkOpen, setIsKioskLinkOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [editName, setEditName] = useState(category.name);
   const [editPackingMode, setEditPackingMode] = useState(category.packing_mode);
