@@ -327,6 +327,9 @@ export interface DisplaySettings {
   // Visningsmodus (pakkedisplay)
   packing_view_mode: 'cards' | 'table';
   
+  // Språk (Language)
+  packing_language: 'nb' | 'en';
+  
   // Tabell-spesifikke innstillinger
   table_row_height: 'compact' | 'normal' | 'touch';
   table_font_size: string;
