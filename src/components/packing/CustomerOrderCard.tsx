@@ -219,7 +219,7 @@ export function CustomerOrderCard({
                 <Button
                   size="lg"
                   variant="ghost"
-                  onClick={() => onUndo(order.packing_status!.id)}
+                  onClick={() => onUndo(order.packing_status!.id, order.id)}
                   disabled={isUndoing}
                   className="h-12 touch-manipulation"
                 >
