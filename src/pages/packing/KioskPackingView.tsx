@@ -103,9 +103,10 @@ function useKioskCustomersForDate(bakeryId: string | null, date: string, categor
         .eq('bakery_id', bakeryId)
         .eq('delivery_date', date);
       
-      if (categoryId) {
-        query = query.eq('product.category_id', categoryId);
-      }
+       // Filter by order category (orders.category_id is the source of truth for imported batches)
+       if (categoryId) {
+         query = query.eq('category_id', categoryId);
+       }
       
       const { data, error } = await query.order('customer(name)');
       
