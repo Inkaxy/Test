@@ -78,14 +78,14 @@ export function KioskCustomerTable({
             borderBottom: `2px solid ${settings.pending_color}40`,
           }}
         >
-          <div className="flex-1">{t('customers.customer')}</div>
+          <div className="flex-1">{t('packing.customer')}</div>
           {settings.table_show_order_count && (
             <div className="w-24 text-center">{t('packing.orders')}</div>
           )}
           {settings.table_show_progress_bar && (
-            <div className="w-48">{t('display.progress')}</div>
+            <div className="w-48">{t('dashboard.progress')}</div>
           )}
-          <div className="w-32 text-center">{t('packing.status')}</div>
+          <div className="w-32 text-center">{t('common.status')}</div>
         </div>
       )}
 
