@@ -22,11 +22,23 @@ export interface PackingRowStyleSettings {
   alternateRowColor?: string;
 }
 
+export type ReportFrequency = 'off' | 'daily' | 'weekly' | 'monthly';
+
+export interface EmailReportConfig {
+  enabled: boolean;
+  frequency: ReportFrequency;
+  recipients: string[];
+  include_deviations: boolean;
+  include_summary: boolean;
+  last_sent_at?: string;
+}
+
 export interface BakerySettings {
   auto_delete_enabled?: boolean;
   auto_delete_days?: number;
   deviation_config?: DeviationConfig;
   packing_row_style?: PackingRowStyleSettings;
+  email_report_config?: EmailReportConfig;
 }
 
 export function useBakerySettings() {
