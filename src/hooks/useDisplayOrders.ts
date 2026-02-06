@@ -356,6 +356,14 @@ export interface DisplaySettings {
   table_border_style: 'none' | 'subtle' | 'full';
   table_selection_color: string;
   
+  // Nye innstillinger for antalls-visning
+  table_quantity_display_size: 'small' | 'medium' | 'large' | 'huge';
+  table_quantity_font_weight: 'normal' | 'bold';
+  table_quantity_background_color: string;
+  table_quantity_text_color: string;
+  table_quantity_show_label: boolean;
+  table_quantity_border_style: 'none' | 'outline' | 'filled';
+  
   // Legacy support
   show_progress_bar: boolean;
   progress_bar_style: string;
@@ -486,6 +494,14 @@ export function getDefaultDisplaySettings(): DisplaySettings {
     table_quantity_position: 'inline',
     table_border_style: 'subtle',
     table_selection_color: '#3b82f6',
+    
+    // Nye antalls-innstillinger
+    table_quantity_display_size: 'large',
+    table_quantity_font_weight: 'bold',
+    table_quantity_background_color: '#3b82f630',
+    table_quantity_text_color: '#3b82f6',
+    table_quantity_show_label: false,
+    table_quantity_border_style: 'outline',
     
     // Legacy
     show_progress_bar: true,

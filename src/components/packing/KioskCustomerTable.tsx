@@ -43,6 +43,13 @@ const fontWeightClasses = {
   bold: 'font-bold',
 };
 
+const quantitySizeClasses = {
+  small: 'text-2xl',
+  medium: 'text-3xl',
+  large: 'text-4xl',
+  huge: 'text-5xl',
+};
+
 const borderStyleClasses = {
   none: '',
   subtle: 'border border-white/10',
@@ -186,18 +193,33 @@ export function KioskCustomerTable({
                   </div>
                 </div>
 
-                {/* Order Count */}
+                {/* Order Count - Highly Visible */}
                 {settings.table_show_order_count && (
-                  <div className="w-28 flex flex-col items-center">
-                    <span 
-                      className="font-mono font-bold text-2xl"
-                      style={{ color: settings.text_color }}
+                  <div className="w-36 flex items-center justify-center">
+                    <div 
+                      className={cn(
+                        'flex flex-col items-center justify-center rounded-xl py-3 px-4 transition-all',
+                        quantitySizeClasses[settings.table_quantity_display_size as keyof typeof quantitySizeClasses] || 'text-4xl',
+                        fontWeightClasses[settings.table_quantity_font_weight as keyof typeof fontWeightClasses || 'bold'],
+                        settings.table_quantity_border_style === 'outline' && 'border-2',
+                        settings.table_quantity_border_style === 'filled' && 'border-none',
+                      )}
+                      style={{
+                        backgroundColor: 
+                          settings.table_quantity_border_style === 'filled' 
+                            ? settings.table_quantity_background_color
+                            : 'transparent',
+                        color: settings.table_quantity_text_color || settings.packing_color,
+                        borderColor: settings.table_quantity_text_color || settings.packing_color,
+                      }}
                     >
-                      {customer.packedOrders}/{customer.totalOrders}
-                    </span>
-                    {settings.table_show_total_quantity && (
-                      <span className="text-xs opacity-60 mt-0.5">{t('packing.items')}</span>
-                    )}
+                      <span className="tabular-nums leading-tight font-mono">
+                        {customer.packedOrders}/{customer.totalOrders}
+                      </span>
+                      {settings.table_quantity_show_label && (
+                        <span className="text-xs mt-1 opacity-75">{t('packing.orders')}</span>
+                      )}
+                    </div>
                   </div>
                 )}
 
