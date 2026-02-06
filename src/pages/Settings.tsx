@@ -10,6 +10,7 @@ import { Loader2 } from 'lucide-react';
 import { useBakerySettings, useUpdateBakerySettings, type PackingRowStyleSettings } from '@/hooks/useBakerySettings';
 import { useToast } from '@/hooks/use-toast';
 import { DeviationSettingsCard } from '@/components/settings/DeviationSettingsCard';
+import { EmailReportSettingsCard } from '@/components/settings/EmailReportSettingsCard';
 import { PackingRowStyleSettings as PackingRowStyleSettingsCard } from '@/components/packing/PackingRowStyleSettings';
 
 export default function Settings() {
