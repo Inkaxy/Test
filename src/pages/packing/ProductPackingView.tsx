@@ -9,7 +9,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Package, Loader2, ArrowLeft, Check, AlertTriangle, Undo2, Clock, Wifi, WifiOff, Maximize, RefreshCw } from 'lucide-react';
+import { Package, Loader2, Check, AlertTriangle, Undo2, Clock, Wifi, WifiOff, RefreshCw } from 'lucide-react';
+import { BackButton } from '@/components/packing/BackButton';
 import { format } from 'date-fns';
 import { nb, enUS } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -470,15 +471,10 @@ export default function ProductPackingView() {
             borderRadius: settings.border_radius,
           }}
         >
-          <Button 
-            variant="ghost" 
-            size="lg" 
+          <BackButton 
+            settings={settings}
             onClick={handleBack}
-            className="h-16 w-16"
-            style={{ color: settings.text_color }}
-          >
-            <ArrowLeft className="h-8 w-8" />
-          </Button>
+          />
           <div className="flex-1">
             <h1 
               className="font-bold"
@@ -757,15 +753,10 @@ export default function ProductPackingView() {
         }}
       >
         <div className="flex items-center gap-4">
-          <Button 
-            variant="ghost" 
-            size="lg" 
+          <BackButton 
+            settings={settings}
             onClick={handleBack}
-            className="h-14 w-14"
-            style={{ color: settings.text_color }}
-          >
-            <ArrowLeft className="h-6 w-6" />
-          </Button>
+          />
           <div>
             {showBakeryName && (
               <h1 

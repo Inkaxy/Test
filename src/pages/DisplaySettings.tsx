@@ -1146,6 +1146,110 @@ export default function DisplaySettingsPage() {
                     </div>
                   </div>
                   
+                  {/* Tilbakeknapp */}
+                  <div className="border-t pt-4 space-y-4">
+                    <h4 className="text-sm font-medium">Tilbakeknapp</h4>
+                    
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label>Vis tilbakeknapp</Label>
+                        <p className="text-xs text-muted-foreground">Viser tilbakepil i headeren</p>
+                      </div>
+                      <Switch
+                        checked={settings.back_button_show ?? true}
+                        onCheckedChange={(v) => updateSetting('back_button_show', v)}
+                      />
+                    </div>
+                    
+                    {settings.back_button_show !== false && (
+                      <>
+                        <div className="space-y-2">
+                          <Label>Størrelse</Label>
+                          <Select 
+                            value={settings.back_button_size || 'large'} 
+                            onValueChange={(v) => updateSetting('back_button_size', v as 'small' | 'medium' | 'large' | 'huge')}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="small">Liten</SelectItem>
+                              <SelectItem value="medium">Medium</SelectItem>
+                              <SelectItem value="large">Stor</SelectItem>
+                              <SelectItem value="huge">Ekstra stor</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label>Stil</Label>
+                          <Select 
+                            value={settings.back_button_style || 'icon'} 
+                            onValueChange={(v) => updateSetting('back_button_style', v as 'icon' | 'icon-circle' | 'icon-square' | 'text' | 'text-icon')}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="icon">Kun ikon</SelectItem>
+                              <SelectItem value="icon-circle">Ikon i sirkel</SelectItem>
+                              <SelectItem value="icon-square">Ikon i firkant</SelectItem>
+                              <SelectItem value="text">Kun tekst</SelectItem>
+                              <SelectItem value="text-icon">Tekst og ikon</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        
+                        {(settings.back_button_style === 'icon-circle' || settings.back_button_style === 'icon-square') && (
+                          <div className="space-y-2">
+                            <Label>Bakgrunnsfarge</Label>
+                            <div className="flex gap-2">
+                              <Input
+                                type="color"
+                                value={settings.back_button_background_color || '#ffffff'}
+                                onChange={(e) => updateSetting('back_button_background_color', e.target.value)}
+                                className="w-12 h-10 p-1"
+                              />
+                              <Input
+                                value={settings.back_button_background_color || 'transparent'}
+                                onChange={(e) => updateSetting('back_button_background_color', e.target.value)}
+                                className="flex-1"
+                              />
+                            </div>
+                          </div>
+                        )}
+                        
+                        <div className="space-y-2">
+                          <Label>Ikonfarge (tom = arver tekstfarge)</Label>
+                          <div className="flex gap-2">
+                            <Input
+                              type="color"
+                              value={settings.back_button_icon_color || settings.text_color}
+                              onChange={(e) => updateSetting('back_button_icon_color', e.target.value)}
+                              className="w-12 h-10 p-1"
+                            />
+                            <Input
+                              value={settings.back_button_icon_color || ''}
+                              onChange={(e) => updateSetting('back_button_icon_color', e.target.value)}
+                              placeholder="Arver tekstfarge"
+                              className="flex-1"
+                            />
+                          </div>
+                        </div>
+                        
+                        {(settings.back_button_style === 'text' || settings.back_button_style === 'text-icon') && (
+                          <div className="space-y-2">
+                            <Label>Tekst</Label>
+                            <Input
+                              value={settings.back_button_text || 'Tilbake'}
+                              onChange={(e) => updateSetting('back_button_text', e.target.value)}
+                            />
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                  
                   {/* Fullskjerm & Wake Lock */}
                   <div className="border-t pt-4 space-y-4">
                     <h4 className="text-sm font-medium">Skjermkontroll</h4>

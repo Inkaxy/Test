@@ -4,7 +4,8 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { Package, Loader2, ArrowLeft, Check, Lock, Clock, Wifi, WifiOff, Maximize, RefreshCw, AlertTriangle, Undo2 } from 'lucide-react';
+import { Package, Loader2, Check, Lock, Clock, Wifi, WifiOff, RefreshCw, AlertTriangle, Undo2 } from 'lucide-react';
+import { BackButton } from '@/components/packing/BackButton';
 import { format } from 'date-fns';
 import { CustomerOrderCard } from '@/components/packing/CustomerOrderCard';
 import { useBakerySettings } from '@/hooks/useBakerySettings';
@@ -548,15 +549,10 @@ export default function KioskPackingView() {
             borderRadius: settings.border_radius,
           }}
         >
-          <Button 
-            variant="ghost" 
-            size="lg" 
+          <BackButton 
+            settings={settings}
             onClick={handleBack}
-            className="h-16 w-16"
-            style={{ color: settings.text_color }}
-          >
-            <ArrowLeft className="h-8 w-8" />
-          </Button>
+          />
           <div className="flex-1">
             <h1 
               className="font-bold"
