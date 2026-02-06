@@ -341,6 +341,21 @@ export interface DisplaySettings {
   table_sticky_header: boolean;
   table_touch_row_spacing: string;
   
+  // Nye tabell-forbedringer
+  table_header_background_color: string;
+  table_header_text_color: string;
+  table_header_font_size: string;
+  table_show_status_icons: boolean;
+  table_customer_name_font_weight: 'normal' | 'medium' | 'semibold' | 'bold';
+  table_touch_tap_feedback: boolean;
+  table_progress_bar_height: string;
+  table_row_hover_effect: boolean;
+  table_compact_on_mobile: boolean;
+  table_show_total_quantity: boolean;
+  table_quantity_position: 'inline' | 'separate';
+  table_border_style: 'none' | 'subtle' | 'full';
+  table_selection_color: string;
+  
   // Legacy support
   show_progress_bar: boolean;
   progress_bar_style: string;
@@ -456,6 +471,21 @@ export function getDefaultDisplaySettings(): DisplaySettings {
     table_alternate_row_color: '#f1f5f9',
     table_sticky_header: true,
     table_touch_row_spacing: '0.75rem',
+    
+    // Nye tabell-forbedringer
+    table_header_background_color: '#1e293b',
+    table_header_text_color: '#94a3b8',
+    table_header_font_size: '0.875rem',
+    table_show_status_icons: true,
+    table_customer_name_font_weight: 'bold',
+    table_touch_tap_feedback: true,
+    table_progress_bar_height: '0.75rem',
+    table_row_hover_effect: true,
+    table_compact_on_mobile: true,
+    table_show_total_quantity: false,
+    table_quantity_position: 'inline',
+    table_border_style: 'subtle',
+    table_selection_color: '#3b82f6',
     
     // Legacy
     show_progress_bar: true,

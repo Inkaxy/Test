@@ -1543,63 +1543,108 @@ export default function DisplaySettingsPage() {
                     
                     {/* Table-specific settings */}
                     {settings.packing_view_mode === 'table' && (
-                      <div className="border-t pt-4 space-y-4">
-                        <h4 className="text-sm font-medium">Tabell-innstillinger</h4>
+                      <div className="border-t pt-4 space-y-6">
+                        <h4 className="text-sm font-medium flex items-center gap-2">
+                          <LayoutGrid className="h-4 w-4" />
+                          Tabell-innstillinger
+                        </h4>
                         
-                        <div className="space-y-2">
-                          <Label>Radhøyde</Label>
-                          <Select 
-                            value={settings.table_row_height || 'touch'} 
-                            onValueChange={(v) => updateSetting('table_row_height', v as 'compact' | 'normal' | 'touch')}
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="compact">Kompakt</SelectItem>
-                              <SelectItem value="normal">Normal</SelectItem>
-                              <SelectItem value="touch">Touch-vennlig (anbefalt)</SelectItem>
-                            </SelectContent>
-                          </Select>
+                        {/* Layout & Størrelse */}
+                        <div className="space-y-4 p-4 rounded-lg bg-muted/30">
+                          <h5 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Layout & Størrelse</h5>
+                          
+                          <div className="space-y-2">
+                            <Label>Radhøyde</Label>
+                            <Select 
+                              value={settings.table_row_height || 'touch'} 
+                              onValueChange={(v) => updateSetting('table_row_height', v as 'compact' | 'normal' | 'touch')}
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="compact">Kompakt - Mindre plass</SelectItem>
+                                <SelectItem value="normal">Normal - Balansert</SelectItem>
+                                <SelectItem value="touch">Touch-vennlig (anbefalt)</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <Label>Fontstørrelse</Label>
+                            <Select 
+                              value={settings.table_font_size || '1.25rem'} 
+                              onValueChange={(v) => updateSetting('table_font_size', v)}
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="1rem">Liten</SelectItem>
+                                <SelectItem value="1.25rem">Normal</SelectItem>
+                                <SelectItem value="1.5rem">Stor</SelectItem>
+                                <SelectItem value="1.75rem">Ekstra stor</SelectItem>
+                                <SelectItem value="2rem">Veldig stor</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <Label>Mellomrom mellom rader</Label>
+                            <Select 
+                              value={settings.table_touch_row_spacing || '0.75rem'} 
+                              onValueChange={(v) => updateSetting('table_touch_row_spacing', v)}
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="0.5rem">Liten</SelectItem>
+                                <SelectItem value="0.75rem">Normal</SelectItem>
+                                <SelectItem value="1rem">Stor</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <Label>Kundenavn tykkelse</Label>
+                            <Select 
+                              value={settings.table_customer_name_font_weight || 'bold'} 
+                              onValueChange={(v) => updateSetting('table_customer_name_font_weight', v as 'normal' | 'medium' | 'semibold' | 'bold')}
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="normal">Normal</SelectItem>
+                                <SelectItem value="medium">Medium</SelectItem>
+                                <SelectItem value="semibold">Halvfet</SelectItem>
+                                <SelectItem value="bold">Fet</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <Label>Kantlinje-stil</Label>
+                            <Select 
+                              value={settings.table_border_style || 'subtle'} 
+                              onValueChange={(v) => updateSetting('table_border_style', v as 'none' | 'subtle' | 'full')}
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="none">Ingen</SelectItem>
+                                <SelectItem value="subtle">Subtil</SelectItem>
+                                <SelectItem value="full">Full</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
                         </div>
                         
-                        <div className="space-y-2">
-                          <Label>Fontstørrelse</Label>
-                          <Select 
-                            value={settings.table_font_size || '1.25rem'} 
-                            onValueChange={(v) => updateSetting('table_font_size', v)}
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="1rem">Liten</SelectItem>
-                              <SelectItem value="1.25rem">Normal</SelectItem>
-                              <SelectItem value="1.5rem">Stor</SelectItem>
-                              <SelectItem value="1.75rem">Ekstra stor</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        
-                        <div className="space-y-2">
-                          <Label>Mellomrom mellom rader</Label>
-                          <Select 
-                            value={settings.table_touch_row_spacing || '0.75rem'} 
-                            onValueChange={(v) => updateSetting('table_touch_row_spacing', v)}
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="0.5rem">Liten</SelectItem>
-                              <SelectItem value="0.75rem">Normal</SelectItem>
-                              <SelectItem value="1rem">Stor</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        
-                        <div className="border-t pt-4 space-y-4">
-                          <h4 className="text-sm font-medium">Vis i tabellen</h4>
+                        {/* Vis i tabellen */}
+                        <div className="space-y-4 p-4 rounded-lg bg-muted/30">
+                          <h5 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Vis i tabellen</h5>
                           
                           <div className="flex items-center justify-between">
                             <div>
@@ -1614,6 +1659,17 @@ export default function DisplaySettingsPage() {
                           
                           <div className="flex items-center justify-between">
                             <div>
+                              <Label>Antall ordrer</Label>
+                              <p className="text-xs text-muted-foreground">Vis pakket/totalt antall ordrer</p>
+                            </div>
+                            <Switch
+                              checked={settings.table_show_order_count ?? true}
+                              onCheckedChange={(v) => updateSetting('table_show_order_count', v)}
+                            />
+                          </div>
+                          
+                          <div className="flex items-center justify-between">
+                            <div>
                               <Label>Fremdriftsbar</Label>
                               <p className="text-xs text-muted-foreground">Visuell fremdriftsindikator</p>
                             </div>
@@ -1623,20 +1679,52 @@ export default function DisplaySettingsPage() {
                             />
                           </div>
                           
+                          {settings.table_show_progress_bar && (
+                            <div className="space-y-2 pl-4 border-l-2 border-muted">
+                              <Label>Fremdriftsbar høyde</Label>
+                              <Select 
+                                value={settings.table_progress_bar_height || '0.75rem'} 
+                                onValueChange={(v) => updateSetting('table_progress_bar_height', v)}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="0.5rem">Tynn</SelectItem>
+                                  <SelectItem value="0.75rem">Normal</SelectItem>
+                                  <SelectItem value="1rem">Tykk</SelectItem>
+                                  <SelectItem value="1.25rem">Ekstra tykk</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          )}
+                          
                           <div className="flex items-center justify-between">
                             <div>
-                              <Label>Antall ordrer</Label>
-                              <p className="text-xs text-muted-foreground">Vis totalt antall ordrer</p>
+                              <Label>Status-ikoner</Label>
+                              <p className="text-xs text-muted-foreground">Vis ikoner på status-badges</p>
                             </div>
                             <Switch
-                              checked={settings.table_show_order_count ?? true}
-                              onCheckedChange={(v) => updateSetting('table_show_order_count', v)}
+                              checked={settings.table_show_status_icons ?? true}
+                              onCheckedChange={(v) => updateSetting('table_show_status_icons', v)}
                             />
                           </div>
                         </div>
                         
-                        <div className="border-t pt-4 space-y-4">
-                          <h4 className="text-sm font-medium">Utseende</h4>
+                        {/* Utseende */}
+                        <div className="space-y-4 p-4 rounded-lg bg-muted/30">
+                          <h5 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Utseende</h5>
+                          
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <Label>Fast header</Label>
+                              <p className="text-xs text-muted-foreground">Header blir stående ved scrolling</p>
+                            </div>
+                            <Switch
+                              checked={settings.table_sticky_header ?? true}
+                              onCheckedChange={(v) => updateSetting('table_sticky_header', v)}
+                            />
+                          </div>
                           
                           <div className="flex items-center justify-between">
                             <div>
@@ -1650,22 +1738,70 @@ export default function DisplaySettingsPage() {
                           </div>
                           
                           {settings.table_alternate_rows && (
-                            <ColorInput 
-                              label="Alternativ radfarge" 
-                              value={settings.table_alternate_row_color || '#f1f5f9'}
-                              onChange={(v) => updateSetting('table_alternate_row_color', v)}
-                            />
+                            <div className="pl-4 border-l-2 border-muted">
+                              <ColorInput 
+                                label="Alternativ radfarge" 
+                                value={settings.table_alternate_row_color || '#f1f5f9'}
+                                onChange={(v) => updateSetting('table_alternate_row_color', v)}
+                              />
+                            </div>
                           )}
                           
                           <div className="flex items-center justify-between">
                             <div>
-                              <Label>Fast header</Label>
-                              <p className="text-xs text-muted-foreground">Header blir stående ved scrolling</p>
+                              <Label>Hover-effekt</Label>
+                              <p className="text-xs text-muted-foreground">Fremhev rad ved hover</p>
                             </div>
                             <Switch
-                              checked={settings.table_sticky_header ?? true}
-                              onCheckedChange={(v) => updateSetting('table_sticky_header', v)}
+                              checked={settings.table_row_hover_effect ?? true}
+                              onCheckedChange={(v) => updateSetting('table_row_hover_effect', v)}
                             />
+                          </div>
+                          
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <Label>Touch-feedback</Label>
+                              <p className="text-xs text-muted-foreground">Animasjon ved trykk på rad</p>
+                            </div>
+                            <Switch
+                              checked={settings.table_touch_tap_feedback ?? true}
+                              onCheckedChange={(v) => updateSetting('table_touch_tap_feedback', v)}
+                            />
+                          </div>
+                        </div>
+                        
+                        {/* Header-innstillinger */}
+                        <div className="space-y-4 p-4 rounded-lg bg-muted/30">
+                          <h5 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Header-innstillinger</h5>
+                          
+                          <ColorInput 
+                            label="Header bakgrunnsfarge" 
+                            value={settings.table_header_background_color || '#1e293b'}
+                            onChange={(v) => updateSetting('table_header_background_color', v)}
+                          />
+                          
+                          <ColorInput 
+                            label="Header tekstfarge" 
+                            value={settings.table_header_text_color || '#94a3b8'}
+                            onChange={(v) => updateSetting('table_header_text_color', v)}
+                          />
+                          
+                          <div className="space-y-2">
+                            <Label>Header fontstørrelse</Label>
+                            <Select 
+                              value={settings.table_header_font_size || '0.875rem'} 
+                              onValueChange={(v) => updateSetting('table_header_font_size', v)}
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="0.75rem">Liten</SelectItem>
+                                <SelectItem value="0.875rem">Normal</SelectItem>
+                                <SelectItem value="1rem">Stor</SelectItem>
+                                <SelectItem value="1.125rem">Ekstra stor</SelectItem>
+                              </SelectContent>
+                            </Select>
                           </div>
                         </div>
                       </div>
