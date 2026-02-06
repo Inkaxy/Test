@@ -1,215 +1,225 @@
 
-# Plan: E-postrapporter for avvik og pakkesesjoner
+# Visuell WYSIWYG-editor for Pakkedisplay
 
 ## Oversikt
 
-Implementere automatisk e-postutsending av avviksrapporter og pakkesammendrag til administrative brukere. Administratorer kan velge frekvens: daglig, ukentlig, månedlig, eller deaktivert.
+Implementere en visuell redigeringsmodus for pakkedisplayet som gir administratorer mulighet til å tilpasse utseendet direkte via drag-and-drop, inline-redigering og interaktiv forhåndsvisning - uten å måtte navigere gjennom innstillingsmenyer.
 
-## Arkitektur
+## Konsept
 
 ```text
-┌─────────────────────────────────────────────────────────────────┐
-│                     Innstillinger (Settings.tsx)                │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │  E-postrapporter                                         │   │
-│  │  ○ Av  ○ Daglig  ○ Ukentlig  ○ Månedlig                 │   │
-│  │  Mottakere: [admin1@bakeri.no, admin2@bakeri.no]        │   │
-│  └─────────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                  bakeries.settings (JSONB)                       │
-│  {                                                               │
-│    "email_report_config": {                                      │
-│      "enabled": true,                                            │
-│      "frequency": "daily" | "weekly" | "monthly",                │
-│      "recipients": ["email1@test.no", "email2@test.no"],         │
-│      "include_deviations": true,                                 │
-│      "include_summary": true,                                    │
-│      "last_sent_at": "2026-02-05T08:00:00Z"                     │
-│    }                                                             │
-│  }                                                               │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│             Edge Function: send-packing-report                   │
-│  - Kjøres via cron (daglig kl 06:00)                            │
-│  - Henter alle bakerier med aktiv e-postrapport                 │
-│  - Sjekker frequency og last_sent_at                            │
-│  - Samler avviksdata og pakkestatistikk                         │
-│  - Sender e-post via Resend                                      │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                     E-postinnhold                                │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │  📊 Pakkerapport - Bakeri AS                             │   │
-│  │  Periode: 05.02.2026                                     │   │
-│  │                                                          │   │
-│  │  SAMMENDRAG                                              │   │
-│  │  ├── Totalt pakket: 234 ordrer                          │   │
-│  │  ├── Avvik: 12 (5.1%)                                   │   │
-│  │  └── Fullføringsrate: 100%                              │   │
-│  │                                                          │   │
-│  │  AVVIK DETALJER                                          │   │
-│  │  ┌─────────────────────────────────────────────────┐    │   │
-│  │  │ Kunde      │ Produkt    │ Type   │ Notat       │    │   │
-│  │  │ Kafe Nord  │ Rundstykke │ Manko  │ -3 stk      │    │   │
-│  │  │ Restaurant │ Focaccia   │ Skade  │ Brent       │    │   │
-│  │  └─────────────────────────────────────────────────┘    │   │
-│  └─────────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  NÅVÆRENDE LØSNING                                                          │
+│  ┌──────────────────────────┐    ┌──────────────────────────────────┐      │
+│  │  Innstillinger           │    │  Forhåndsvisning (statisk)       │      │
+│  │  ├─ Topptekst           │    │                                   │      │
+│  │  ├─ Statistikk-kort     │ ➔  │  [Preview som ikke kan redigeres] │      │
+│  │  ├─ Kundekort           │    │                                   │      │
+│  │  └─ Utseende            │    │                                   │      │
+│  └──────────────────────────┘    └──────────────────────────────────┘      │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                      │
+                                      ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  NY WYSIWYG-LØSNING                                                         │
+│  ┌──────────────────────────────────────────────────────────────────┐      │
+│  │                    LIVE REDIGERBAR PREVIEW                        │      │
+│  │  ┌─────────────────────────────────────────────────────────┐     │      │
+│  │  │  [Klikk for å redigere header]                          │     │      │
+│  │  │  ┌──────────┐ ┌──────────┐ ┌──────────┐                │     │      │
+│  │  │  │ Drag meg │ │ Drag meg │ │ Drag meg │  ← Dra for     │     │      │
+│  │  │  │ Kunde 1  │ │ Kunde 2  │ │ Kunde 3  │    rekkefølge  │     │      │
+│  │  │  └──────────┘ └──────────┘ └──────────┘                │     │      │
+│  │  └─────────────────────────────────────────────────────────┘     │      │
+│  │                                                                   │      │
+│  │  ┌─ Svevende verktøylinje ─┐                                     │      │
+│  │  │ 🎨 Farger │ 📏 Størrelse │ 📐 Layout │ 💾 Lagre            │      │
+│  │  └─────────────────────────┘                                     │      │
+│  └──────────────────────────────────────────────────────────────────┘      │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-## Implementeringsdetaljer
+## Brukeropplevelse
 
-### Del 1: Utvide BakerySettings interface
+### 1. Aktivere redigeringsmodus
+- Ny knapp "Visuell redigering" på Display-innstillinger siden
+- Alternativt: Direkte tilgang fra pakkevisningen for admins (ikon i hjørnet)
 
-**Fil: `src/hooks/useBakerySettings.ts`**
+### 2. Interaktiv forhåndsvisning
+- Full-størrelse preview som matcher faktisk display
+- Alle elementer er interaktive og viser highlight ved hover
 
-Legg til ny konfigurasjon for e-postrapporter:
+### 3. Redigeringsmetoder
+
+**a) Direkte manipulering (klikk/velg)**
+- Klikk på et element for å velge det
+- Svevende panel viser relevante innstillinger for valgt element
+- Endringer vises umiddelbart
+
+**b) Inline-redigering**
+- Dobbeltklikk på tekst for å redigere direkte
+- Endrer fontstørrelser med håndtak (dra for å skalere)
+
+**c) Drag-and-drop layout**
+- Dra kolonner for å endre antall
+- Dra elementer for å omorganisere rekkefølge
+
+**d) Kontekstmeny (høyreklikk)**
+- Vis/skjul element
+- Dupliser stil
+- Tilbakestill til standard
+
+### 4. Svevende verktøylinje
+Alltid synlig panel nederst eller på siden med:
+- Fargepalett (tema og enkeltfarger)
+- Størrelsesinnstillinger
+- Toggle for elementer (vis/skjul)
+- Lagre / Forkast / Forhåndsvis på enhet
+
+## Teknisk arkitektur
+
+### Nye komponenter
+
+| Komponent | Beskrivelse |
+|-----------|-------------|
+| `VisualDisplayEditor.tsx` | Hovedkomponent for WYSIWYG-editoren |
+| `EditorCanvas.tsx` | Redigerbar forhåndsvisning med seleksjon |
+| `EditableElement.tsx` | Wrapper for hvert redigerbart element |
+| `EditorToolbar.tsx` | Svevende verktøylinje |
+| `ElementInspector.tsx` | Panel med innstillinger for valgt element |
+| `ColorPickerPopover.tsx` | Fargevelger med presets og custom |
+| `SizeSlider.tsx` | Slider for fontstørrelser og dimensjoner |
+
+### Redigerbare elementer
+
+Følgende deler av displayet kan redigeres visuelt:
+
+| Element | Redigerbare egenskaper |
+|---------|----------------------|
+| **Header** | Vis/skjul bakernavn, kategori, klokke, dato; Fontstørrelser |
+| **Statistikk-kort** | Vis/skjul progress, teller; Bar-stil og høyde |
+| **Kundekort** | Vis/skjul nummer, produkter, progress; Fonter; Border-radius |
+| **Layout** | Kolonner (1-6); Gap; Padding |
+| **Farger** | Bakgrunn, kort-bakgrunn, tekst, status-farger |
+| **Produktrad** | Radhøyde; Alternerende farger; Font-størrelse |
+
+### State-håndtering
+
+Editoren bruker lokal state som synkroniseres med eksisterende `DisplaySettings`:
 
 ```typescript
-export type ReportFrequency = 'off' | 'daily' | 'weekly' | 'monthly';
-
-export interface EmailReportConfig {
-  enabled: boolean;
-  frequency: ReportFrequency;
-  recipients: string[];
-  include_deviations: boolean;
-  include_summary: boolean;
-  last_sent_at?: string;
-}
-
-export interface BakerySettings {
-  // ... eksisterende felt
-  email_report_config?: EmailReportConfig;
+interface EditorState {
+  settings: DisplaySettings;
+  selectedElement: string | null;
+  isDirty: boolean;
+  history: DisplaySettings[]; // For undo/redo
+  historyIndex: number;
 }
 ```
 
-### Del 2: UI for e-postinnstillinger
+### Seleksjonslogikk
 
-**Ny fil: `src/components/settings/EmailReportSettingsCard.tsx`**
-
-Inneholder:
-- Av/På-bryter for e-postrapporter
-- RadioGroup for frekvens (Daglig, Ukentlig, Månedlig)
-- Input-felt for å legge til mottakere (e-postadresser)
-- Liste over nåværende mottakere med slett-knapp
-- Avkrysningsbokser for hva som skal inkluderes (avvik, sammendrag)
-- "Send testrapport"-knapp
-
-### Del 3: Oppdatere Settings-siden
-
-**Fil: `src/pages/Settings.tsx`**
-
-Importer og legg til `EmailReportSettingsCard` komponenten mellom DeviationSettingsCard og PackingRowStyleSettings.
-
-### Del 4: Edge Function for sending av rapport
-
-**Ny fil: `supabase/functions/send-packing-report/index.ts`**
+Hvert redigerbart element wrapper seg med `EditableElement`:
 
 ```typescript
-// Pseudokode for edge function
-Deno.serve(async (req) => {
-  // 1. Hent alle bakerier med email_report_config.enabled = true
-  
-  // 2. For hver bakeri:
-  //    - Sjekk frequency og last_sent_at
-  //    - Hvis det er på tide å sende:
-  //      a. Hent avviksdata for perioden
-  //      b. Hent pakkestatistikk
-  //      c. Generer HTML-rapport
-  //      d. Send via Resend
-  //      e. Oppdater last_sent_at
-  
-  // 3. Returner status
-});
+<EditableElement
+  id="header-bakery-name"
+  label="Bakerinavn"
+  settingKeys={['header_show_bakery_name', 'header_bakery_font_size']}
+  onSelect={() => setSelectedElement('header-bakery-name')}
+  isSelected={selectedElement === 'header-bakery-name'}
+>
+  <h1>{bakeryName}</h1>
+</EditableElement>
 ```
 
-**Rapportdata som hentes:**
-- Ordrer med `packing_status.status = 'deviation'` for perioden
-- Join med `customers` og `products` for navn
-- Beregn totalt pakket, avvik-prosent, fullføringsrate
+### Integrasjon med eksisterende system
 
-### Del 5: Cron-jobb for daglig kjøring
-
-**Fil: `supabase/config.toml`**
-
-Legg til ny function-konfigurasjon:
-```toml
-[functions.send-packing-report]
-verify_jwt = false
-```
-
-**Database cron-jobb** (kjøres via Supabase SQL):
-Planlegg kjøring kl 06:00 hver dag som kaller edge function.
-
-### Del 6: Resend API-nøkkel
-
-E-postsending krever Resend API-nøkkel. Brukeren må:
-1. Opprette konto på resend.com
-2. Verifisere domene
-3. Generere API-nøkkel
-4. Legge inn nøkkelen som secret: `RESEND_API_KEY`
-
----
+Editoren bruker de samme `DisplaySettings` og `useDisplaySettings` hook:
+- Ingen endring i databaseskjema
+- Samme innstillinger lagres
+- Eksisterende accordion-basert UI forblir som "Avansert"-alternativ
 
 ## Filendringer
 
 | Fil | Endring |
 |-----|---------|
-| `src/hooks/useBakerySettings.ts` | Utvid interface med EmailReportConfig |
-| `src/components/settings/EmailReportSettingsCard.tsx` | Ny komponent for UI |
-| `src/pages/Settings.tsx` | Importer og bruk EmailReportSettingsCard |
-| `supabase/functions/send-packing-report/index.ts` | Ny edge function |
-| `supabase/config.toml` | Legg til function-konfigurasjon |
+| `src/pages/DisplaySettings.tsx` | Legg til "Visuell redigering"-knapp |
+| `src/components/display-editor/VisualDisplayEditor.tsx` | Ny - Hovedkomponent |
+| `src/components/display-editor/EditorCanvas.tsx` | Ny - Redigerbar canvas |
+| `src/components/display-editor/EditableElement.tsx` | Ny - Element-wrapper |
+| `src/components/display-editor/EditorToolbar.tsx` | Ny - Verktøylinje |
+| `src/components/display-editor/ElementInspector.tsx` | Ny - Egenskapspanel |
+| `src/components/display-editor/ColorPicker.tsx` | Ny - Fargevelger |
+| `src/components/display-editor/useEditorState.ts` | Ny - Editor state hook |
+| `src/components/display-editor/index.ts` | Ny - Eksporter |
+
+## Verktøylinje-funksjoner
+
+### Hovedseksjoner
+
+1. **Tema-velger** - Presets: Mørk, Lys, Høy-kontrast, Custom
+2. **Farger** - Quick-access til hovedfarger med fargevelger
+3. **Layout** - Kolonner, gap, padding som sliders
+4. **Toggle** - Vis/skjul for hovedseksjoner
+5. **Handlinger** - Lagre, Forkast, Undo, Redo
+
+### Kontekstsensitiv inspector
+
+Når et element er valgt vises relevante innstillinger:
+
+**Eksempel: Header valgt**
+- Fontstørrelse (slider eller presets)
+- Vis/skjul individuelle elementer
+- Tekstfarge (arv fra tema eller custom)
+
+**Eksempel: Kundekort valgt**
+- Border-radius (slider)
+- Border-tykkelse
+- Bakgrunnsfarge
+- Shadow on/off
+
+## Mobilstøtte
+
+Editoren er responsiv:
+- På tablet: Full funksjonalitet med touch-optimerte kontroller
+- På mobil: Redusert modus med fokus på essensielle innstillinger
+
+## Undo/Redo
+
+Implementeres med history-array:
+- Hver endring lagrer en snapshot
+- Cmd/Ctrl+Z for undo, Cmd/Ctrl+Shift+Z for redo
+- Maks 50 steg i historikk
+
+## Keyboard shortcuts
+
+| Snarvei | Handling |
+|---------|----------|
+| `Esc` | Avbryt valg / Lukk editor |
+| `Cmd+S` | Lagre endringer |
+| `Cmd+Z` | Angre |
+| `Cmd+Shift+Z` | Gjør om |
+| `Delete` | Skjul valgt element |
+| `1-6` | Sett antall kolonner |
+
+## Fremtidig utvidelse
+
+Denne arkitekturen åpner for:
+- Dra-og-slipp rekkefølge av elementer
+- Egendefinerte CSS-variabler
+- Tema-eksport/import
+- Flere display-layouts (ikke bare grid)
+- Widgets (logo, tekst-blokker)
 
 ---
 
-## Tekniske detaljer
+## Implementeringsrekkefølge
 
-### E-postmal (HTML)
-Rapporten formateres som en profesjonell HTML-e-post med:
-- Bakerilogo (hvis tilgjengelig)
-- Tydelig overskrift med dato/periode
-- Oppsummeringsboks med nøkkeltall
-- Tabell over avvik med kunde, produkt, type og notat
-- Bunntekst med lenke til systemet
+1. **Fase 1**: Grunnleggende editor med seleksjon og inspector
+2. **Fase 2**: Fargepalett og tema-presets
+3. **Fase 3**: Live preview med alle innstillinger
+4. **Fase 4**: Undo/redo og keyboard shortcuts
+5. **Fase 5**: Mobile-optimalisering
 
-### Frekvenslogikk
-
-| Frekvens | Periode som rapporteres |
-|----------|------------------------|
-| Daglig | Gårsdagen |
-| Ukentlig | Siste 7 dager (sendes mandag) |
-| Månedlig | Forrige måned (sendes 1. i måneden) |
-
-### Feilhåndtering
-- Hvis e-postsending feiler, logg feilen og prøv igjen ved neste kjøring
-- Ikke oppdater `last_sent_at` før sending er bekreftet
-- Send feilvarsel til systemadministrator ved gjentatte feil
-
----
-
-## Brukeropplevelse
-
-1. Administrator går til **Innstillinger**
-2. Finner ny seksjon **E-postrapporter**
-3. Aktiverer rapportering og velger frekvens
-4. Legger til e-postadresser for mottakere
-5. Kan sende en testrapport umiddelbart
-6. Rapporter sendes automatisk basert på valgt frekvens
-
----
-
-## Forutsetninger
-
-Før implementering må brukeren:
-1. Opprette Resend-konto og verifisere domene
-2. Legge inn `RESEND_API_KEY` som secret
-
-Skal jeg starte med denne implementeringen?
+Hver fase kan leveres separat og testes.
