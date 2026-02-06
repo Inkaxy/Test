@@ -643,6 +643,7 @@ export default function CustomerPackingView() {
           customers={customers}
           settings={settings}
           onSelectCustomer={handleSelectCustomer}
+          onPackOrder={handleMarkPacked}
           locks={locks}
           currentUserId={user?.id}
         />

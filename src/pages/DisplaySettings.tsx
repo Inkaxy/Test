@@ -1890,6 +1890,17 @@ export default function DisplaySettingsPage() {
                               onCheckedChange={(v) => updateSetting('table_touch_tap_feedback', v)}
                             />
                           </div>
+                          
+                          <div className="flex items-center justify-between border-t pt-4 mt-2">
+                            <div>
+                              <Label className="text-primary font-semibold">Klikkbar rad pakker produkt</Label>
+                              <p className="text-xs text-muted-foreground">Marker produktet som pakket ved å klikke på hele raden</p>
+                            </div>
+                            <Switch
+                              checked={settings.table_row_click_to_pack ?? false}
+                              onCheckedChange={(v) => updateSetting('table_row_click_to_pack', v)}
+                            />
+                          </div>
                         </div>
                         
                         {/* Header-innstillinger */}

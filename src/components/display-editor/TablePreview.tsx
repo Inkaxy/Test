@@ -344,9 +344,21 @@ export function TablePreview({ settings }: TablePreviewProps) {
         className="mb-3 p-3 rounded-lg"
         style={{ backgroundColor: settings.card_background_color }}
       >
-        <div className="flex items-center gap-2 mb-2 text-[10px] font-semibold uppercase tracking-wider" style={{ color: settings.text_color, opacity: 0.5 }}>
-          <Users className="h-3 w-3" />
-          KUNDETABELL
+        <div className="flex items-center justify-between gap-2 mb-2">
+          <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wider" style={{ color: settings.text_color, opacity: 0.5 }}>
+            <Users className="h-3 w-3" />
+            KUNDETABELL
+          </div>
+          {settings.table_row_click_to_pack && (
+            <Badge 
+              variant="outline" 
+              className="text-[8px] px-1.5 py-0.5 gap-1"
+              style={{ borderColor: settings.completed_color, color: settings.completed_color }}
+            >
+              <Check className="h-2 w-2" />
+              Klikk pakker
+            </Badge>
+          )}
         </div>
 
         {/* Sticky Header */}

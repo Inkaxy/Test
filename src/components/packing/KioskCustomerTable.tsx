@@ -7,10 +7,27 @@ import { cn } from '@/lib/utils';
 import { DisplaySettings } from '@/hooks/useDisplayOrders';
 import { CustomerLock, isLockedByCurrentUser, isLockedByOther } from '@/hooks/useCustomerLocks';
 
+interface OrderWithProduct {
+  id: string;
+  quantity: number;
+  product: {
+    id: string;
+    name: string;
+    product_number: string;
+    pieces_per_tray: number | null;
+    category_id: string | null;
+  };
+  packing_status: {
+    id: string;
+    status: string;
+  } | null;
+}
+
 interface CustomerWithOrders {
   id: string;
   name: string;
   customer_number: string;
+  orders?: OrderWithProduct[];
   totalOrders: number;
   packedOrders: number;
   progress: number;
@@ -20,6 +37,7 @@ interface KioskCustomerTableProps {
   customers: CustomerWithOrders[];
   settings: DisplaySettings;
   onSelectCustomer: (customer: CustomerWithOrders) => void;
+  onPackOrder?: (orderId: string, packingStatusId?: string) => void;
   locks?: CustomerLock[];
   currentUserId?: string;
 }
@@ -60,6 +78,7 @@ export function KioskCustomerTable({
   customers,
   settings,
   onSelectCustomer,
+  onPackOrder,
   locks = [],
   currentUserId,
 }: KioskCustomerTableProps) {
@@ -162,7 +181,21 @@ export function KioskCustomerTable({
                   borderLeft: `${settings.card_border_width || '4px'} solid ${statusColor}`,
                   fontSize: settings.table_font_size,
                 }}
-                onClick={() => !lockedByOther && onSelectCustomer(customer)}
+                onClick={() => {
+                  if (lockedByOther) return;
+                  
+                  // If click-to-pack is enabled and there are unpacked orders, pack the first one
+                  if (settings.table_row_click_to_pack && onPackOrder && customer.orders && customer.orders.length > 0) {
+                    const unpackedOrder = customer.orders.find(o => o.packing_status?.status !== 'packed' && o.packing_status?.status !== 'deviation');
+                    if (unpackedOrder) {
+                      onPackOrder(unpackedOrder.id, unpackedOrder.packing_status?.id);
+                      return;
+                    }
+                  }
+                  
+                  // Otherwise, navigate to customer detail view
+                  onSelectCustomer(customer);
+                }}
               >
                 {/* Customer Name & Number */}
                 <div className="flex-1 flex items-center gap-4 min-w-0">
