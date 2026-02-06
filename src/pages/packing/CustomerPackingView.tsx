@@ -4,8 +4,9 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { Lock, Users, Package, Loader2, Check, AlertTriangle, Undo2, Clock, Wifi, WifiOff, RefreshCw } from 'lucide-react';
+import { Lock, Users, Package, Loader2, Check, AlertTriangle, Undo2, Clock, Wifi, WifiOff } from 'lucide-react';
 import { BackButton } from '@/components/packing/BackButton';
+import { RefreshButton } from '@/components/packing/RefreshButton';
 import { format } from 'date-fns';
 import { nb, enUS } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -352,17 +353,10 @@ export default function CustomerPackingView() {
               </div>
             )}
             
-            <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleManualRefresh}
-                className="h-10 w-10"
-                style={{ color: settings.text_color }}
-              >
-                <RefreshCw className="h-5 w-5" />
-              </Button>
-            </div>
+            <RefreshButton 
+              settings={settings}
+              onClick={handleManualRefresh}
+            />
           </div>
         </header>
         
@@ -539,17 +533,10 @@ export default function CustomerPackingView() {
             </div>
           )}
           
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleManualRefresh}
-              className="h-10 w-10"
-              style={{ color: settings.text_color }}
-            >
-              <RefreshCw className="h-5 w-5" />
-            </Button>
-          </div>
+          <RefreshButton 
+            settings={settings}
+            onClick={handleManualRefresh}
+          />
         </div>
       </header>
 

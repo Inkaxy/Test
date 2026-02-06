@@ -409,6 +409,14 @@ export interface DisplaySettings {
   back_button_icon_color: string;
   back_button_text: string;
   
+  // Oppdateringsknapp-innstillinger
+  refresh_button_show: boolean;
+  refresh_button_size: 'small' | 'medium' | 'large' | 'huge';
+  refresh_button_style: 'icon' | 'icon-circle' | 'icon-square' | 'text' | 'text-icon';
+  refresh_button_background_color: string;
+  refresh_button_icon_color: string;
+  refresh_button_text: string;
+  
   // Legacy support
   show_progress_bar: boolean;
   progress_bar_style: string;
@@ -592,6 +600,14 @@ export function getDefaultDisplaySettings(): DisplaySettings {
     back_button_background_color: 'transparent',
     back_button_icon_color: '',
     back_button_text: 'Tilbake',
+    
+    // Oppdateringsknapp-innstillinger
+    refresh_button_show: true,
+    refresh_button_size: 'medium',
+    refresh_button_style: 'icon',
+    refresh_button_background_color: 'transparent',
+    refresh_button_icon_color: '',
+    refresh_button_text: 'Oppdater',
     
     // Legacy
     show_progress_bar: true,
