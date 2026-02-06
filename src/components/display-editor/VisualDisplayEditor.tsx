@@ -166,6 +166,7 @@ export function VisualDisplayEditor({
             onSelectElement={selectElement}
             bakeryName={bakeryName}
             categoryName={categoryName}
+            onReorderCustomers={() => {}} // Reorder is handled within EditorCanvas for preview purposes
           />
         </div>
 

@@ -1,6 +1,6 @@
-import React from 'react';
-import { motion } from 'framer-motion';
-import { Package, CheckCircle, Clock } from 'lucide-react';
+import React, { useState } from 'react';
+import { motion, Reorder } from 'framer-motion';
+import { Package, CheckCircle, Clock, GripVertical } from 'lucide-react';
 import { DisplaySettings } from '@/hooks/useDisplayOrders';
 import { EditableElement } from './EditableElement';
 import { format } from 'date-fns';
@@ -12,6 +12,7 @@ interface EditorCanvasProps {
   onSelectElement: (id: string | null) => void;
   bakeryName?: string;
   categoryName?: string;
+  onReorderCustomers?: (reorderedIds: string[]) => void;
 }
 
 // Mock data for preview
@@ -62,7 +63,15 @@ export function EditorCanvas({
   onSelectElement,
   bakeryName = 'Ditt Bakeri',
   categoryName = 'Kategorinavn',
+  onReorderCustomers,
 }: EditorCanvasProps) {
+  const [customerOrder, setCustomerOrder] = useState(MOCK_CUSTOMERS.map(c => c.id));
+
+  const handleReorder = (newOrder: string[]) => {
+    setCustomerOrder(newOrder);
+    onReorderCustomers?.(newOrder);
+  };
+
   const now = new Date();
   const formattedTime = settings.header_clock_format === '24h' 
     ? format(now, 'HH:mm')
@@ -285,130 +294,151 @@ export function EditorCanvas({
         isSelected={selectedElement === 'layout-grid'}
         onSelect={() => onSelectElement('layout-grid')}
       >
-        <div 
+        <Reorder.Group 
+          axis="y"
+          values={customerOrder}
+          onReorder={handleReorder}
           className={`grid ${getGridCols()}`}
           style={{ gap: settings.gap_size }}
         >
-          {MOCK_CUSTOMERS.map((customer) => {
+          {customerOrder.map((customerId) => {
+            const customer = MOCK_CUSTOMERS.find(c => c.id === customerId);
+            if (!customer) return null;
+
             const customerPacked = customer.orders.filter(o => o.packed).length;
             const customerTotal = customer.orders.length;
             const customerProgress = Math.round((customerPacked / customerTotal) * 100);
             const isComplete = customerProgress === 100;
 
             return (
-              <EditableElement
+              <Reorder.Item 
                 key={customer.id}
-                id={`card-${customer.id}`}
-                label="Kundekort"
-                isSelected={selectedElement === `card-${customer.id}` || selectedElement === 'layout-card'}
-                onSelect={() => onSelectElement('layout-card')}
+                value={customer.id}
+                className="relative group cursor-grab active:cursor-grabbing"
               >
-                <motion.div
-                  className="p-4 transition-all"
-                  style={{
-                    backgroundColor: settings.card_background_color,
-                    borderRadius: settings.border_radius,
-                    borderLeft: `${settings.card_border_width} solid ${isComplete ? settings.completed_color : settings.pending_color}`,
-                  }}
-                  whileHover={{ scale: 1.02 }}
+                <EditableElement
+                  id={`card-${customer.id}`}
+                  label="Kundekort"
+                  isSelected={selectedElement === `card-${customer.id}` || selectedElement === 'layout-card'}
+                  onSelect={() => onSelectElement('layout-card')}
                 >
-                  {/* Customer header */}
-                  <div className="flex items-start justify-between mb-3">
-                    <div>
-                      <h3 
-                        style={{ 
-                          color: settings.text_color,
-                          fontSize: settings.card_customer_name_font_size,
-                        }}
-                        className="font-semibold"
-                      >
-                        {customer.name}
-                      </h3>
-                      {settings.card_show_customer_number && (
-                        <span 
-                          className="text-sm opacity-50"
-                          style={{ color: settings.text_color }}
-                        >
-                          #{customer.customer_number}
-                        </span>
-                      )}
+                  <div className="relative">
+                    {/* Drag handle */}
+                    <div className="absolute -left-8 top-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <GripVertical 
+                        className="h-5 w-5" 
+                        style={{ color: settings.text_color }}
+                      />
                     </div>
-                    
-                    {isComplete ? (
-                      <CheckCircle 
-                        className="h-5 w-5"
-                        style={{ color: settings.completed_color }}
-                      />
-                    ) : (
-                      <Clock 
-                        className="h-5 w-5 opacity-50"
-                        style={{ color: settings.pending_color }}
-                      />
-                    )}
-                  </div>
-                  
-                  {/* Products */}
-                  {settings.card_show_product_list && (
-                    <div className="space-y-1 mb-3">
-                      {customer.orders.map((order, i) => (
+
+                    <motion.div
+                      className="p-4 transition-all"
+                      style={{
+                        backgroundColor: settings.card_background_color,
+                        borderRadius: settings.border_radius,
+                        borderLeft: `${settings.card_border_width} solid ${isComplete ? settings.completed_color : settings.pending_color}`,
+                      }}
+                      whileHover={{ scale: 1.02 }}
+                    >
+                      {/* Customer header */}
+                      <div className="flex items-start justify-between mb-3">
+                        <div>
+                          <h3 
+                            style={{ 
+                              color: settings.text_color,
+                              fontSize: settings.card_customer_name_font_size,
+                            }}
+                            className="font-semibold"
+                          >
+                            {customer.name}
+                          </h3>
+                          {settings.card_show_customer_number && (
+                            <span 
+                              className="text-sm opacity-50"
+                              style={{ color: settings.text_color }}
+                            >
+                              #{customer.customer_number}
+                            </span>
+                          )}
+                        </div>
+                        
+                        {isComplete ? (
+                          <CheckCircle 
+                            className="h-5 w-5"
+                            style={{ color: settings.completed_color }}
+                          />
+                        ) : (
+                          <Clock 
+                            className="h-5 w-5 opacity-50"
+                            style={{ color: settings.pending_color }}
+                          />
+                        )}
+                      </div>
+                      
+                      {/* Products */}
+                      {settings.card_show_product_list && (
+                        <div className="space-y-1 mb-3">
+                          {customer.orders.map((order, i) => (
+                            <div 
+                              key={i}
+                              className="flex items-center justify-between"
+                              style={{
+                                opacity: order.packed ? 0.5 : 1,
+                                textDecoration: order.packed ? 'line-through' : 'none',
+                              }}
+                            >
+                              <span 
+                                style={{ 
+                                  color: settings.text_color,
+                                  fontSize: settings.card_product_font_size,
+                                }}
+                              >
+                                {order.product}
+                              </span>
+                              <span 
+                                style={{ 
+                                  color: settings.text_color,
+                                  fontSize: settings.card_quantity_font_size,
+                                }}
+                                className="font-mono"
+                              >
+                                {order.quantity}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      
+                      {/* Progress */}
+                      {settings.card_show_individual_progress && (
                         <div 
-                          key={i}
-                          className="flex items-center justify-between"
-                          style={{
-                            opacity: order.packed ? 0.5 : 1,
-                            textDecoration: order.packed ? 'line-through' : 'none',
-                          }}
+                          className="flex items-center gap-2"
+                          style={{ fontSize: settings.card_progress_font_size }}
                         >
-                          <span 
-                            style={{ 
-                              color: settings.text_color,
-                              fontSize: settings.card_product_font_size,
-                            }}
+                          <div 
+                            className="flex-1 h-1.5 rounded-full overflow-hidden"
+                            style={{ backgroundColor: `${settings.text_color}20` }}
                           >
-                            {order.product}
-                          </span>
-                          <span 
-                            style={{ 
-                              color: settings.text_color,
-                              fontSize: settings.card_quantity_font_size,
-                            }}
-                            className="font-mono"
-                          >
-                            {order.quantity}
+                            <div
+                              className="h-full rounded-full transition-all"
+                              style={{ 
+                                width: `${customerProgress}%`,
+                                backgroundColor: isComplete ? settings.completed_color : settings.packing_color,
+                              }}
+                            />
+                          </div>
+                          <span style={{ color: settings.text_color }}>
+                            {customerPacked}/{customerTotal}
                           </span>
                         </div>
-                      ))}
-                    </div>
-                  )}
-                  
-                  {/* Progress */}
-                  {settings.card_show_individual_progress && (
-                    <div 
-                      className="flex items-center gap-2"
-                      style={{ fontSize: settings.card_progress_font_size }}
-                    >
-                      <div 
-                        className="flex-1 h-1.5 rounded-full overflow-hidden"
-                        style={{ backgroundColor: `${settings.text_color}20` }}
-                      >
-                        <div
-                          className="h-full rounded-full transition-all"
-                          style={{ 
-                            width: `${customerProgress}%`,
-                            backgroundColor: isComplete ? settings.completed_color : settings.packing_color,
-                          }}
-                        />
-                      </div>
-                      <span style={{ color: settings.text_color }}>
-                        {customerPacked}/{customerTotal}
-                      </span>
-                    </div>
-                  )}
-                </motion.div>
-              </EditableElement>
+                      )}
+                    </motion.div>
+                  </div>
+                </EditableElement>
+              </Reorder.Item>
             );
           })}
-        </div>
+        </Reorder.Group>
       </EditableElement>
     </div>
   );
