@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { 
   Undo2, Redo2, Save, X, RotateCcw, 
-  Palette, LayoutGrid, Sun, Moon, Contrast
+  Palette, LayoutGrid, Sun, Moon, Contrast, ChevronDown
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -13,6 +13,12 @@ import { ColorPicker } from './ColorPicker';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 interface EditorToolbarProps {
   settings: DisplaySettings;
