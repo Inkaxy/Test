@@ -499,6 +499,115 @@ export function ElementInspector({
       );
     }
     
+    // View mode
+    if (settingKey === 'packing_view_mode') {
+      return (
+        <div key={settingKey} className="space-y-2">
+          <Label className="text-sm">Visningsmodus</Label>
+          <Select
+            value={value as string}
+            onValueChange={(v) => onUpdateSetting(settingKey, v as never)}
+          >
+            <SelectTrigger className="w-full bg-background">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="bg-popover z-50">
+              <SelectItem value="cards">Kort</SelectItem>
+              <SelectItem value="table">Tabell</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      );
+    }
+    
+    // Table row height
+    if (settingKey === 'table_row_height') {
+      return (
+        <div key={settingKey} className="space-y-2">
+          <Label className="text-sm">Radhøyde</Label>
+          <Select
+            value={value as string}
+            onValueChange={(v) => onUpdateSetting(settingKey, v as never)}
+          >
+            <SelectTrigger className="w-full bg-background">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="bg-popover z-50">
+              <SelectItem value="compact">Kompakt</SelectItem>
+              <SelectItem value="normal">Normal</SelectItem>
+              <SelectItem value="touch">Touch-optimalisert</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      );
+    }
+    
+    // Table font size
+    if (settingKey === 'table_font_size') {
+      return (
+        <SizeSlider
+          key={settingKey}
+          label="Tabell skriftstørrelse"
+          value={value as string}
+          onChange={(v) => onUpdateSetting(settingKey, v as never)}
+          presets={FONT_SIZE_PRESETS}
+          min={0.75}
+          max={2.5}
+        />
+      );
+    }
+    
+    // Table touch row spacing
+    if (settingKey === 'table_touch_row_spacing') {
+      return (
+        <SizeSlider
+          key={settingKey}
+          label="Radavstand"
+          value={value as string}
+          onChange={(v) => onUpdateSetting(settingKey, v as never)}
+          min={0.25}
+          max={2}
+        />
+      );
+    }
+    
+    // Table show toggles
+    if (settingKey === 'table_show_customer_number' || 
+        settingKey === 'table_show_progress_bar' || 
+        settingKey === 'table_show_order_count' ||
+        settingKey === 'table_alternate_rows' ||
+        settingKey === 'table_sticky_header') {
+      const labelMap: Record<string, string> = {
+        table_show_customer_number: 'Vis kundenummer',
+        table_show_progress_bar: 'Vis fremdriftslinje',
+        table_show_order_count: 'Vis ordreantall',
+        table_alternate_rows: 'Zebra-striping',
+        table_sticky_header: 'Fast header',
+      };
+      
+      return (
+        <div key={settingKey} className="flex items-center justify-between py-2 px-1 rounded hover:bg-muted/50 transition-colors">
+          <Label className="text-sm cursor-pointer">{labelMap[settingKey] || settingKey}</Label>
+          <Switch
+            checked={Boolean(value)}
+            onCheckedChange={(v) => onUpdateSetting(settingKey, v as never)}
+          />
+        </div>
+      );
+    }
+    
+    // Table alternate row color
+    if (settingKey === 'table_alternate_row_color') {
+      return (
+        <ColorPicker
+          key={settingKey}
+          label="Zebra-farge"
+          value={value as string}
+          onChange={(v) => onUpdateSetting(settingKey, v as never)}
+        />
+      );
+    }
+    
     return null;
   };
 

@@ -330,21 +330,55 @@ export function EditorCanvas({
               <Move className="h-5 w-5 text-muted-foreground" />
             </div>
             
+            {/* View mode toggle */}
             <EditableElement
-              id="layout-grid"
-              label="Rutenett"
-              isSelected={selectedElement === 'layout-grid'}
-              onSelect={() => onSelectElement('layout-grid')}
+              id="layout-view-mode"
+              label="Visningsmodus"
+              isSelected={selectedElement === 'layout-view-mode'}
+              onSelect={() => onSelectElement('layout-view-mode')}
+              className="mb-4"
             >
-              <CustomerGrid 
-                settings={settings}
-                customerOrder={customerOrder}
-                selectedElement={selectedElement}
-                onSelectElement={onSelectElement}
-                onReorder={handleReorder}
-                getGridCols={getGridCols}
-              />
+              <div 
+                className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm"
+                style={{ 
+                  backgroundColor: settings.card_background_color,
+                  color: settings.text_color 
+                }}
+              >
+                {settings.packing_view_mode === 'cards' ? '🎴 Kortvisning' : '📊 Tabellvisning'}
+              </div>
             </EditableElement>
+            
+            {settings.packing_view_mode === 'table' ? (
+              <EditableElement
+                id="layout-table"
+                label="Tabell"
+                isSelected={selectedElement === 'layout-table'}
+                onSelect={() => onSelectElement('layout-table')}
+              >
+                <CustomerTable 
+                  settings={settings}
+                  selectedElement={selectedElement}
+                  onSelectElement={onSelectElement}
+                />
+              </EditableElement>
+            ) : (
+              <EditableElement
+                id="layout-grid"
+                label="Rutenett"
+                isSelected={selectedElement === 'layout-grid'}
+                onSelect={() => onSelectElement('layout-grid')}
+              >
+                <CustomerGrid 
+                  settings={settings}
+                  customerOrder={customerOrder}
+                  selectedElement={selectedElement}
+                  onSelectElement={onSelectElement}
+                  onReorder={handleReorder}
+                  getGridCols={getGridCols}
+                />
+              </EditableElement>
+            )}
           </div>
         );
       
@@ -675,5 +709,142 @@ function CustomerGrid({
         );
       })}
     </Reorder.Group>
+  );
+}
+
+// CustomerTable component
+interface CustomerTableProps {
+  settings: DisplaySettings;
+  selectedElement: string | null;
+  onSelectElement: (id: string | null) => void;
+}
+
+function CustomerTable({ 
+  settings, 
+  selectedElement, 
+  onSelectElement 
+}: CustomerTableProps) {
+  const getRowHeight = () => {
+    const heights: Record<string, string> = {
+      compact: '2.5rem',
+      normal: '3.5rem',
+      touch: '4.5rem',
+    };
+    return heights[settings.table_row_height] || '3.5rem';
+  };
+
+  return (
+    <div 
+      className="rounded-lg overflow-hidden"
+      style={{ backgroundColor: settings.card_background_color }}
+    >
+      {/* Table Header */}
+      {settings.table_sticky_header && (
+        <div 
+          className="flex items-center px-4 font-medium border-b"
+          style={{ 
+            height: getRowHeight(),
+            backgroundColor: settings.card_background_color,
+            color: settings.text_color,
+            fontSize: settings.table_font_size,
+            borderColor: `${settings.text_color}20`,
+          }}
+        >
+          <div className="flex-1">Kunde</div>
+          {settings.table_show_customer_number && (
+            <div className="w-24 text-center">Kundenr.</div>
+          )}
+          {settings.table_show_order_count && (
+            <div className="w-20 text-center">Ordrer</div>
+          )}
+          {settings.table_show_progress_bar && (
+            <div className="w-32 text-center">Fremdrift</div>
+          )}
+          <div className="w-24 text-center">Status</div>
+        </div>
+      )}
+      
+      {/* Table Rows */}
+      {MOCK_CUSTOMERS.map((customer, index) => {
+        const customerPacked = customer.orders.filter(o => o.packed).length;
+        const customerTotal = customer.orders.length;
+        const customerProgress = Math.round((customerPacked / customerTotal) * 100);
+        const isComplete = customerProgress === 100;
+        
+        const rowBg = settings.table_alternate_rows && index % 2 === 1 
+          ? settings.table_alternate_row_color 
+          : 'transparent';
+
+        return (
+          <div 
+            key={customer.id}
+            className="flex items-center px-4 border-b last:border-b-0 transition-colors hover:opacity-90"
+            style={{ 
+              height: getRowHeight(),
+              backgroundColor: rowBg,
+              color: settings.text_color,
+              fontSize: settings.table_font_size,
+              borderColor: `${settings.text_color}10`,
+              paddingTop: settings.table_touch_row_spacing,
+              paddingBottom: settings.table_touch_row_spacing,
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelectElement('layout-table');
+            }}
+          >
+            <div className="flex-1 font-medium truncate">
+              {customer.name}
+            </div>
+            
+            {settings.table_show_customer_number && (
+              <div 
+                className="w-24 text-center opacity-70"
+                style={{ fontSize: `calc(${settings.table_font_size} * 0.85)` }}
+              >
+                {customer.customer_number}
+              </div>
+            )}
+            
+            {settings.table_show_order_count && (
+              <div className="w-20 text-center">
+                {customerTotal}
+              </div>
+            )}
+            
+            {settings.table_show_progress_bar && (
+              <div className="w-32 px-2">
+                <div 
+                  className="h-2 rounded-full overflow-hidden"
+                  style={{ backgroundColor: `${settings.text_color}20` }}
+                >
+                  <div 
+                    className="h-full rounded-full transition-all"
+                    style={{ 
+                      width: `${customerProgress}%`,
+                      backgroundColor: isComplete ? settings.completed_color : settings.pending_color,
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+            
+            <div className="w-24 flex justify-center">
+              {isComplete ? (
+                <CheckCircle 
+                  className="h-5 w-5" 
+                  style={{ color: settings.completed_color }}
+                />
+              ) : (
+                <Clock 
+                  className="h-5 w-5" 
+                  style={{ color: settings.pending_color }}
+                />
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
   );
 }
