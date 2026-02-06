@@ -2039,6 +2039,220 @@ export default function DisplaySettingsPage() {
                               onCheckedChange={(v) => updateSetting('table_show_status_icons', v)}
                             />
                           </div>
+                          
+                          {/* Status-kolonne innstillinger */}
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <Label>Vis status-kolonne</Label>
+                              <p className="text-xs text-muted-foreground">Status-badge for hver kunde</p>
+                            </div>
+                            <Switch
+                              checked={settings.table_show_status ?? true}
+                              onCheckedChange={(v) => updateSetting('table_show_status', v)}
+                            />
+                          </div>
+                          
+                          {settings.table_show_status !== false && (
+                            <div className="border-t pt-4 space-y-4 p-4 rounded-lg bg-green-500/10">
+                              <h5 className="text-xs font-semibold uppercase tracking-wide text-green-600 flex items-center gap-2">
+                                <span className="text-lg">🏷️</span>
+                                Status-badge
+                              </h5>
+                              
+                              <div className="space-y-2">
+                                <Label>Fontstørrelse</Label>
+                                <Select 
+                                  value={settings.table_status_font_size || '1rem'} 
+                                  onValueChange={(v) => updateSetting('table_status_font_size', v)}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="0.75rem">Liten</SelectItem>
+                                    <SelectItem value="0.875rem">Medium</SelectItem>
+                                    <SelectItem value="1rem">Normal</SelectItem>
+                                    <SelectItem value="1.125rem">Stor</SelectItem>
+                                    <SelectItem value="1.25rem">Ekstra stor</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              
+                              <div className="space-y-2">
+                                <Label>Badge-stil</Label>
+                                <Select 
+                                  value={settings.table_status_badge_style || 'outline'} 
+                                  onValueChange={(v) => updateSetting('table_status_badge_style', v as 'filled' | 'outline' | 'minimal')}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="filled">Fylt bakgrunn</SelectItem>
+                                    <SelectItem value="outline">Kun kant</SelectItem>
+                                    <SelectItem value="minimal">Minimalistisk</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              
+                              <div className="space-y-2">
+                                <Label>Padding</Label>
+                                <Select 
+                                  value={settings.table_status_badge_padding || '0.5rem 1rem'} 
+                                  onValueChange={(v) => updateSetting('table_status_badge_padding', v)}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="0.25rem 0.5rem">Kompakt</SelectItem>
+                                    <SelectItem value="0.5rem 1rem">Normal</SelectItem>
+                                    <SelectItem value="0.75rem 1.5rem">Romslig</SelectItem>
+                                    <SelectItem value="1rem 2rem">Stor</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
+                          )}
+                          
+                          {/* Pil/chevron innstillinger */}
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <Label>Vis navigasjonspil</Label>
+                              <p className="text-xs text-muted-foreground">Pil til høyre for klikk-indikasjon</p>
+                            </div>
+                            <Switch
+                              checked={settings.table_show_chevron ?? true}
+                              onCheckedChange={(v) => updateSetting('table_show_chevron', v)}
+                            />
+                          </div>
+                          
+                          {settings.table_show_chevron !== false && (
+                            <div className="space-y-2 pl-4 border-l-2 border-muted">
+                              <Label>Pilstørrelse</Label>
+                              <Select 
+                                value={settings.table_chevron_size || 'medium'} 
+                                onValueChange={(v) => updateSetting('table_chevron_size', v as 'small' | 'medium' | 'large')}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="small">Liten</SelectItem>
+                                  <SelectItem value="medium">Medium</SelectItem>
+                                  <SelectItem value="large">Stor</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          )}
+                        </div>
+                        
+                        {/* Fontstørrelser og kolonnebredder */}
+                        <div className="space-y-4 p-4 rounded-lg bg-muted/30">
+                          <h5 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Fontstørrelser</h5>
+                          
+                          <div className="space-y-2">
+                            <Label>Kundenavn</Label>
+                            <Select 
+                              value={settings.table_customer_name_font_size || '1.125rem'} 
+                              onValueChange={(v) => updateSetting('table_customer_name_font_size', v)}
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="1rem">Normal</SelectItem>
+                                <SelectItem value="1.125rem">Litt større</SelectItem>
+                                <SelectItem value="1.25rem">Stor</SelectItem>
+                                <SelectItem value="1.5rem">Ekstra stor</SelectItem>
+                                <SelectItem value="1.75rem">Veldig stor</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <Label>Generell tabell-font</Label>
+                            <Select 
+                              value={settings.table_font_size || '1.125rem'} 
+                              onValueChange={(v) => updateSetting('table_font_size', v)}
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="0.875rem">Liten</SelectItem>
+                                <SelectItem value="1rem">Normal</SelectItem>
+                                <SelectItem value="1.125rem">Litt større</SelectItem>
+                                <SelectItem value="1.25rem">Stor</SelectItem>
+                                <SelectItem value="1.5rem">Ekstra stor</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                        
+                        {/* Kolonnebredder */}
+                        <div className="space-y-4 p-4 rounded-lg bg-muted/30">
+                          <h5 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Kolonnebredder</h5>
+                          
+                          {settings.table_show_order_count && (
+                            <div className="space-y-2">
+                              <Label>Ordrer-kolonne</Label>
+                              <Select 
+                                value={settings.table_order_column_width || '9rem'} 
+                                onValueChange={(v) => updateSetting('table_order_column_width', v)}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="7rem">Smal (7rem)</SelectItem>
+                                  <SelectItem value="9rem">Normal (9rem)</SelectItem>
+                                  <SelectItem value="11rem">Bred (11rem)</SelectItem>
+                                  <SelectItem value="14rem">Ekstra bred (14rem)</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          )}
+                          
+                          {settings.table_show_progress_bar && (
+                            <div className="space-y-2">
+                              <Label>Fremdrift-kolonne</Label>
+                              <Select 
+                                value={settings.table_progress_column_width || '14rem'} 
+                                onValueChange={(v) => updateSetting('table_progress_column_width', v)}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="10rem">Smal (10rem)</SelectItem>
+                                  <SelectItem value="14rem">Normal (14rem)</SelectItem>
+                                  <SelectItem value="18rem">Bred (18rem)</SelectItem>
+                                  <SelectItem value="22rem">Ekstra bred (22rem)</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          )}
+                          
+                          {settings.table_show_status !== false && (
+                            <div className="space-y-2">
+                              <Label>Status-kolonne</Label>
+                              <Select 
+                                value={settings.table_status_column_width || '9rem'} 
+                                onValueChange={(v) => updateSetting('table_status_column_width', v)}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="7rem">Smal (7rem)</SelectItem>
+                                  <SelectItem value="9rem">Normal (9rem)</SelectItem>
+                                  <SelectItem value="11rem">Bred (11rem)</SelectItem>
+                                  <SelectItem value="14rem">Ekstra bred (14rem)</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          )}
                         </div>
                         
                         {/* Utseende */}

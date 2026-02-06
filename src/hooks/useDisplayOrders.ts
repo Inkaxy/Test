@@ -365,6 +365,24 @@ export interface DisplaySettings {
   table_quantity_show_label: boolean;
   table_quantity_border_style: 'none' | 'outline' | 'filled';
   
+  // Status-kolonne innstillinger
+  table_show_status: boolean;
+  table_status_font_size: string;
+  table_status_badge_style: 'filled' | 'outline' | 'minimal';
+  table_status_badge_padding: string;
+  
+  // Pil/chevron-innstillinger
+  table_show_chevron: boolean;
+  table_chevron_size: 'small' | 'medium' | 'large';
+  
+  // Kundenavn-innstillinger
+  table_customer_name_font_size: string;
+  
+  // Kolonnebredder
+  table_order_column_width: string;
+  table_progress_column_width: string;
+  table_status_column_width: string;
+  
   // Produktkort-innstillinger (når kunden pakkes)
   product_card_layout: 'horizontal' | 'vertical';
   product_card_name_font_size: string;
@@ -556,6 +574,24 @@ export function getDefaultDisplaySettings(): DisplaySettings {
     table_quantity_text_color: '#3b82f6',
     table_quantity_show_label: false,
     table_quantity_border_style: 'outline',
+    
+    // Status-kolonne innstillinger
+    table_show_status: true,
+    table_status_font_size: '1rem',
+    table_status_badge_style: 'outline',
+    table_status_badge_padding: '0.5rem 1rem',
+    
+    // Pil/chevron-innstillinger
+    table_show_chevron: true,
+    table_chevron_size: 'medium',
+    
+    // Kundenavn-innstillinger
+    table_customer_name_font_size: '1.125rem',
+    
+    // Kolonnebredder
+    table_order_column_width: '9rem',
+    table_progress_column_width: '14rem',
+    table_status_column_width: '9rem',
     
     // Produktkort-innstillinger
     product_card_layout: 'horizontal',
