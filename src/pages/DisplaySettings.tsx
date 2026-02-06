@@ -320,6 +320,16 @@ export default function DisplaySettingsPage() {
         </div>
         
         <div className="flex items-center gap-2">
+          {/* Visual Editor button */}
+          <Button 
+            variant="default"
+            onClick={() => setIsVisualEditorOpen(true)}
+            className="bg-gradient-to-r from-primary to-primary/80"
+          >
+            <Paintbrush className="h-4 w-4 mr-2" />
+            Visuell redigering
+          </Button>
+
           {/* Copy/Reset dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
