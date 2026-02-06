@@ -1,6 +1,6 @@
-import React from 'react';
-import { motion } from 'framer-motion';
-import { Package, CheckCircle, Clock } from 'lucide-react';
+import React, { useState } from 'react';
+import { motion, Reorder } from 'framer-motion';
+import { Package, CheckCircle, Clock, GripVertical } from 'lucide-react';
 import { DisplaySettings } from '@/hooks/useDisplayOrders';
 import { EditableElement } from './EditableElement';
 import { format } from 'date-fns';
@@ -12,6 +12,7 @@ interface EditorCanvasProps {
   onSelectElement: (id: string | null) => void;
   bakeryName?: string;
   categoryName?: string;
+  onReorderCustomers?: (reorderedIds: string[]) => void;
 }
 
 // Mock data for preview
