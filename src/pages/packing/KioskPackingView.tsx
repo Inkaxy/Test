@@ -875,6 +875,7 @@ export default function KioskPackingView() {
           customers={customers}
           settings={settings}
           onSelectCustomer={(customer) => setSelectedCustomer(customer as CustomerWithOrders)}
+          onPackOrder={handleMarkPacked}
         />
       ) : (
         <div

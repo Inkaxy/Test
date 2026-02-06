@@ -355,6 +355,7 @@ export interface DisplaySettings {
   table_quantity_position: 'inline' | 'separate';
   table_border_style: 'none' | 'subtle' | 'full';
   table_selection_color: string;
+  table_row_click_to_pack: boolean;
   
   // Nye innstillinger for antalls-visning
   table_quantity_display_size: 'small' | 'medium' | 'large' | 'huge';
@@ -522,6 +523,7 @@ export function getDefaultDisplaySettings(): DisplaySettings {
     table_quantity_position: 'inline',
     table_border_style: 'subtle',
     table_selection_color: '#3b82f6',
+    table_row_click_to_pack: false,
     
     // Nye antalls-innstillinger
     table_quantity_display_size: 'large',
