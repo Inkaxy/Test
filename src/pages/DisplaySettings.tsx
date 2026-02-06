@@ -18,8 +18,10 @@ import { useCategories } from '@/hooks/useCategories';
 import { DisplaySettings, getDefaultDisplaySettings, DisplayType, DISPLAY_TYPES } from '@/hooks/useDisplayOrders';
 import { 
   Monitor, Smartphone, ExternalLink, Loader2, Users, Package, 
-  Type, BarChart3, LayoutGrid, Sparkles, Layout, Zap, Bell, Copy, RotateCcw, Table2, Check
+  Type, BarChart3, LayoutGrid, Sparkles, Layout, Zap, Bell, Copy, RotateCcw, Table2, Check,
+  ArrowLeft, Clock, RefreshCw, Wifi
 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { TablePreview } from '@/components/display-editor/TablePreview';
 import { ThemePresetMenu, ThemePreset } from '@/components/display-editor/ThemePresetMenu';
 import { ProductCardSettingsPanel } from '@/components/display-editor/ProductCardSettingsPanel';
@@ -2843,49 +2845,160 @@ export default function DisplaySettingsPage() {
                         padding: settings.padding,
                       }}
                     >
-                      {/* Header */}
-                      <div className="flex items-center justify-between mb-4">
-                        <div>
-                          {settings.header_show_bakery_name && (
-                            <h3 className="font-bold" style={{ fontSize: settings.header_bakery_font_size, color: settings.text_color }}>
-                              {bakery?.name || 'Bakeri'}
-                            </h3>
+                      {/* Header with all controls */}
+                      <div 
+                        className="flex items-center justify-between mb-4 p-3 rounded-lg"
+                        style={{ backgroundColor: settings.card_background_color }}
+                      >
+                        <div className="flex items-center gap-3">
+                          {/* Back Button */}
+                          {settings.back_button_show !== false && (
+                            <div 
+                              className={cn(
+                                "flex items-center justify-center shrink-0",
+                                settings.back_button_style === 'icon-circle' && "rounded-full",
+                                settings.back_button_style === 'icon-square' && "rounded-md",
+                              )}
+                              style={{ 
+                                backgroundColor: (settings.back_button_style === 'icon-circle' || settings.back_button_style === 'icon-square') 
+                                  ? (settings.back_button_background_color || 'transparent') 
+                                  : 'transparent',
+                                color: settings.back_button_icon_color || settings.text_color,
+                                width: settings.back_button_size === 'small' ? '28px' 
+                                  : settings.back_button_size === 'medium' ? '32px'
+                                  : settings.back_button_size === 'large' ? '40px' 
+                                  : '48px',
+                                height: settings.back_button_size === 'small' ? '28px' 
+                                  : settings.back_button_size === 'medium' ? '32px'
+                                  : settings.back_button_size === 'large' ? '40px' 
+                                  : '48px',
+                              }}
+                            >
+                              <ArrowLeft className={cn(
+                                settings.back_button_size === 'small' && 'h-4 w-4',
+                                settings.back_button_size === 'medium' && 'h-5 w-5',
+                                settings.back_button_size === 'large' && 'h-6 w-6',
+                                settings.back_button_size === 'huge' && 'h-8 w-8',
+                              )} />
+                            </div>
                           )}
-                          {settings.header_show_category_name && (
-                            <p className="text-sm" style={{ color: settings.text_color, opacity: 0.7 }}>
-                              Småvarer
-                            </p>
+                          <div>
+                            {settings.header_show_bakery_name && (
+                              <h3 className="font-bold" style={{ fontSize: `calc(${settings.header_bakery_font_size} * 0.7)`, color: settings.text_color }}>
+                                {bakery?.name || 'Bakeri'}
+                              </h3>
+                            )}
+                            {settings.header_show_category_name && (
+                              <p style={{ fontSize: `calc(${settings.header_category_font_size || '1rem'} * 0.7)`, color: settings.text_color, opacity: 0.7 }}>
+                                Småvarer
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center gap-3">
+                          {/* Connection status */}
+                          {settings.realtime_show_connection_status && (
+                            <Wifi className="h-4 w-4" style={{ color: settings.completed_color }} />
+                          )}
+                          
+                          {/* Clock */}
+                          {settings.header_show_clock && (
+                            <div className="flex items-center gap-1">
+                              <Clock className="h-4 w-4 opacity-60" style={{ color: settings.text_color }} />
+                              <span 
+                                className="font-mono"
+                                style={{ fontSize: `calc(${settings.header_clock_font_size} * 0.7)`, color: settings.text_color }}
+                              >
+                                14:32
+                              </span>
+                            </div>
+                          )}
+                          
+                          {/* Date */}
+                          {settings.header_show_date && (
+                            <span 
+                              style={{ fontSize: `calc(${settings.header_date_font_size || '1rem'} * 0.7)`, color: settings.text_color, opacity: 0.7 }}
+                            >
+                              Torsdag 6. feb
+                            </span>
+                          )}
+                          
+                          {/* Refresh Button */}
+                          {settings.refresh_button_show !== false && (
+                            <div 
+                              className={cn(
+                                "flex items-center justify-center shrink-0",
+                                settings.refresh_button_style === 'icon-circle' && "rounded-full",
+                                settings.refresh_button_style === 'icon-square' && "rounded-md",
+                              )}
+                              style={{ 
+                                backgroundColor: (settings.refresh_button_style === 'icon-circle' || settings.refresh_button_style === 'icon-square') 
+                                  ? (settings.refresh_button_background_color || 'transparent') 
+                                  : 'transparent',
+                                color: settings.refresh_button_icon_color || settings.text_color,
+                                width: settings.refresh_button_size === 'small' ? '24px' 
+                                  : settings.refresh_button_size === 'medium' ? '28px'
+                                  : settings.refresh_button_size === 'large' ? '36px' 
+                                  : '44px',
+                                height: settings.refresh_button_size === 'small' ? '24px' 
+                                  : settings.refresh_button_size === 'medium' ? '28px'
+                                  : settings.refresh_button_size === 'large' ? '36px' 
+                                  : '44px',
+                              }}
+                            >
+                              <RefreshCw className={cn(
+                                settings.refresh_button_size === 'small' && 'h-3 w-3',
+                                settings.refresh_button_size === 'medium' && 'h-4 w-4',
+                                settings.refresh_button_size === 'large' && 'h-5 w-5',
+                                settings.refresh_button_size === 'huge' && 'h-7 w-7',
+                              )} />
+                            </div>
                           )}
                         </div>
-                        {settings.header_show_clock && (
-                          <span 
-                            className="font-mono"
-                            style={{ fontSize: settings.header_clock_font_size, color: settings.text_color }}
-                          >
-                            14:32
-                          </span>
-                        )}
                       </div>
                       
-                      {/* Stats */}
-                      {settings.stats_show_total_progress && (
-                        <div 
-                          className="rounded-lg p-3 mb-4"
-                          style={{ backgroundColor: settings.card_background_color }}
-                        >
-                          <div className="flex justify-between text-sm mb-2" style={{ color: settings.text_color }}>
-                            <span>Totalt</span>
-                            <span className="font-bold">2/4 kunder ferdig</span>
-                          </div>
-                          <div
-                            className="h-3 rounded-full"
-                            style={{ backgroundColor: `${settings.pending_color}40`, height: settings.stats_progress_bar_height }}
-                          >
-                            <div
-                              className="h-full rounded-full transition-all"
-                              style={{ width: '50%', backgroundColor: settings.packing_color }}
-                            />
-                          </div>
+                      {/* Stats section */}
+                      {(settings.stats_show_total_progress || settings.stats_show_packed_count || settings.stats_show_remaining_count) && (
+                        <div className="grid grid-cols-3 gap-2 mb-4">
+                          {settings.stats_show_total_progress && (
+                            <div 
+                              className="rounded-lg p-2"
+                              style={{ backgroundColor: settings.card_background_color }}
+                            >
+                              <p className="text-xs opacity-70" style={{ color: settings.text_color, fontSize: `calc(${settings.stats_label_font_size || '0.75rem'} * 0.8)` }}>Total</p>
+                              <p className="font-bold" style={{ color: settings.text_color, fontSize: `calc(${settings.stats_value_font_size || '1.25rem'} * 0.7)` }}>50%</p>
+                              {settings.stats_progress_bar_style !== 'none' && (
+                                <div
+                                  className="h-1.5 rounded-full mt-1"
+                                  style={{ backgroundColor: `${settings.pending_color}40`, height: `calc(${settings.stats_progress_bar_height} * 0.7)` }}
+                                >
+                                  <div
+                                    className="h-full rounded-full"
+                                    style={{ width: '50%', backgroundColor: settings.packing_color }}
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          )}
+                          {settings.stats_show_packed_count && (
+                            <div 
+                              className="rounded-lg p-2"
+                              style={{ backgroundColor: settings.card_background_color }}
+                            >
+                              <p className="text-xs opacity-70" style={{ color: settings.text_color, fontSize: `calc(${settings.stats_label_font_size || '0.75rem'} * 0.8)` }}>Pakket</p>
+                              <p className="font-bold" style={{ color: settings.completed_color, fontSize: `calc(${settings.stats_value_font_size || '1.25rem'} * 0.7)` }}>8/17</p>
+                            </div>
+                          )}
+                          {settings.stats_show_remaining_count && (
+                            <div 
+                              className="rounded-lg p-2"
+                              style={{ backgroundColor: settings.card_background_color }}
+                            >
+                              <p className="text-xs opacity-70" style={{ color: settings.text_color, fontSize: `calc(${settings.stats_label_font_size || '0.75rem'} * 0.8)` }}>Gjenstår</p>
+                              <p className="font-bold" style={{ color: settings.packing_color, fontSize: `calc(${settings.stats_value_font_size || '1.25rem'} * 0.7)` }}>9</p>
+                            </div>
+                          )}
                         </div>
                       )}
 
@@ -2905,7 +3018,10 @@ export default function DisplaySettingsPage() {
                         ].map((customer) => (
                           <div
                             key={customer.name}
-                            className="p-3 transition-all"
+                            className={cn(
+                              "p-3 transition-all",
+                              settings.card_compact_mode && "p-2"
+                            )}
                             style={{
                               backgroundColor: settings.card_background_color,
                               borderRadius: settings.border_radius,
@@ -2921,7 +3037,7 @@ export default function DisplaySettingsPage() {
                               <h4 
                                 className="font-bold truncate"
                                 style={{ 
-                                  fontSize: settings.card_customer_name_font_size,
+                                  fontSize: `calc(${settings.card_customer_name_font_size || settings.customer_name_font_size} * 0.6)`,
                                   color: settings.text_color,
                                 }}
                               >
