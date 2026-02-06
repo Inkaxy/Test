@@ -1699,6 +1699,76 @@ export default function DisplaySettingsPage() {
                             </div>
                           )}
                           
+                          {/* Antall-spesifikke innstillinger */}
+                          {settings.table_show_order_count && (
+                            <div className="border-t pt-4 space-y-4 p-4 rounded-lg bg-blue-500/10">
+                              <h5 className="text-xs font-semibold uppercase tracking-wide text-blue-600 flex items-center gap-2">
+                                <span className="text-lg">📊</span>
+                                Antall-visning (Viktigste info!)
+                              </h5>
+                              
+                              <div className="space-y-2">
+                                <Label>Størrelse</Label>
+                                <Select 
+                                  value={settings.table_quantity_display_size || 'large'} 
+                                  onValueChange={(v) => updateSetting('table_quantity_display_size', v as 'small' | 'medium' | 'large' | 'huge')}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="small">Liten (2xl)</SelectItem>
+                                    <SelectItem value="medium">Medium (3xl)</SelectItem>
+                                    <SelectItem value="large">Stor (4xl) - Anbefalt</SelectItem>
+                                    <SelectItem value="huge">Veldig stor (5xl)</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              
+                              <div className="space-y-2">
+                                <Label>Stil</Label>
+                                <Select 
+                                  value={settings.table_quantity_border_style || 'outline'} 
+                                  onValueChange={(v) => updateSetting('table_quantity_border_style', v as 'none' | 'outline' | 'filled')}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="none">Ingen bakgrunn</SelectItem>
+                                    <SelectItem value="outline">Outline (kant)</SelectItem>
+                                    <SelectItem value="filled">Filled (fylt)</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              
+                              <ColorInput 
+                                label="Farge" 
+                                value={settings.table_quantity_text_color || '#3b82f6'}
+                                onChange={(v) => updateSetting('table_quantity_text_color', v)}
+                              />
+                              
+                              {(settings.table_quantity_border_style === 'filled' || settings.table_quantity_border_style === 'outline') && (
+                                <ColorInput 
+                                  label="Bakgrunnsfarge" 
+                                  value={settings.table_quantity_background_color || '#3b82f630'}
+                                  onChange={(v) => updateSetting('table_quantity_background_color', v)}
+                                />
+                              )}
+                              
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <Label>Vis "ordrer"-label</Label>
+                                  <p className="text-xs text-muted-foreground">Tekst under tallet</p>
+                                </div>
+                                <Switch
+                                  checked={settings.table_quantity_show_label ?? false}
+                                  onCheckedChange={(v) => updateSetting('table_quantity_show_label', v)}
+                                />
+                              </div>
+                            </div>
+                          )}
+                          
                           <div className="flex items-center justify-between">
                             <div>
                               <Label>Status-ikoner</Label>
