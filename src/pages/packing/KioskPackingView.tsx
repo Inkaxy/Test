@@ -4,8 +4,9 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { Package, Loader2, Check, Lock, Clock, Wifi, WifiOff, RefreshCw, AlertTriangle, Undo2 } from 'lucide-react';
+import { Package, Loader2, Check, Lock, Clock, Wifi, WifiOff, AlertTriangle, Undo2 } from 'lucide-react';
 import { BackButton } from '@/components/packing/BackButton';
+import { RefreshButton } from '@/components/packing/RefreshButton';
 import { format } from 'date-fns';
 import { CustomerOrderCard } from '@/components/packing/CustomerOrderCard';
 import { useBakerySettings } from '@/hooks/useBakerySettings';
@@ -586,17 +587,10 @@ export default function KioskPackingView() {
               </div>
             )}
             
-            <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleManualRefresh}
-                className="h-10 w-10"
-                style={{ color: settings.text_color }}
-              >
-                <RefreshCw className="h-5 w-5" />
-              </Button>
-            </div>
+            <RefreshButton 
+              settings={settings}
+              onClick={handleManualRefresh}
+            />
           </div>
         </header>
         
@@ -772,17 +766,10 @@ export default function KioskPackingView() {
             </div>
           )}
           
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleManualRefresh}
-              className="h-10 w-10"
-              style={{ color: settings.text_color }}
-            >
-              <RefreshCw className="h-5 w-5" />
-            </Button>
-          </div>
+          <RefreshButton 
+            settings={settings}
+            onClick={handleManualRefresh}
+          />
         </div>
       </header>
 

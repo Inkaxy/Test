@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { useState, useEffect } from 'react';
-import { Check, Lock, Users, Package, ChevronRight, Clock, Calendar, BarChart3, CheckCircle2, Circle, AlertTriangle, Undo2, ArrowLeft } from 'lucide-react';
+import { Check, Lock, Users, Package, ChevronRight, Clock, Calendar, BarChart3, CheckCircle2, Circle, AlertTriangle, Undo2, ArrowLeft, RefreshCw } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -313,6 +313,55 @@ export function TablePreview({ settings }: TablePreviewProps) {
                   <span style={{ fontSize: `calc(${settings.header_date_font_size || '0.875rem'} * 0.6)` }} className="capitalize">
                     {formatDate()}
                   </span>
+                </div>
+              )}
+              {/* Refresh Button Preview */}
+              {settings.refresh_button_show !== false && (
+                <div 
+                  className={cn(
+                    "flex items-center justify-center shrink-0",
+                    settings.refresh_button_style === 'icon-circle' && "rounded-full",
+                    settings.refresh_button_style === 'icon-square' && "rounded-md",
+                    (settings.refresh_button_style === 'text' || settings.refresh_button_style === 'text-icon') && "px-2 gap-1"
+                  )}
+                  style={{ 
+                    backgroundColor: (settings.refresh_button_style === 'icon-circle' || settings.refresh_button_style === 'icon-square') 
+                      ? (settings.refresh_button_background_color || 'transparent') 
+                      : 'transparent',
+                    color: settings.refresh_button_icon_color || settings.text_color,
+                    width: settings.refresh_button_style === 'text' || settings.refresh_button_style === 'text-icon' 
+                      ? 'auto' 
+                      : settings.refresh_button_size === 'small' ? '20px' 
+                      : settings.refresh_button_size === 'medium' ? '24px'
+                      : settings.refresh_button_size === 'large' ? '28px' 
+                      : '36px',
+                    height: settings.refresh_button_style === 'text' || settings.refresh_button_style === 'text-icon' 
+                      ? 'auto' 
+                      : settings.refresh_button_size === 'small' ? '20px' 
+                      : settings.refresh_button_size === 'medium' ? '24px'
+                      : settings.refresh_button_size === 'large' ? '28px' 
+                      : '36px',
+                  }}
+                >
+                  {settings.refresh_button_style !== 'text' && (
+                    <RefreshCw className={cn(
+                      settings.refresh_button_size === 'small' && 'h-3 w-3',
+                      settings.refresh_button_size === 'medium' && 'h-4 w-4',
+                      settings.refresh_button_size === 'large' && 'h-5 w-5',
+                      settings.refresh_button_size === 'huge' && 'h-6 w-6',
+                    )} />
+                  )}
+                  {(settings.refresh_button_style === 'text' || settings.refresh_button_style === 'text-icon') && (
+                    <span className={cn(
+                      "font-medium",
+                      settings.refresh_button_size === 'small' && 'text-[8px]',
+                      settings.refresh_button_size === 'medium' && 'text-[10px]',
+                      settings.refresh_button_size === 'large' && 'text-xs',
+                      settings.refresh_button_size === 'huge' && 'text-sm',
+                    )}>
+                      {settings.refresh_button_text || 'Oppdater'}
+                    </span>
+                  )}
                 </div>
               )}
             </div>
