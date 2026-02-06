@@ -136,6 +136,9 @@ export default function Settings() {
       {/* Deviation settings */}
       <DeviationSettingsCard />
       
+      {/* Email report settings */}
+      <EmailReportSettingsCard />
+      
       {/* Packing row style settings */}
       <PackingRowStyleSettingsCard
         alternateRowsEnabled={alternateRowsEnabled}

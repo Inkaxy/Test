@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.sync-onedrive-cron]
 verify_jwt = false
+
+[functions.send-packing-report]
+verify_jwt = false
