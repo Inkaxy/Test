@@ -5,6 +5,8 @@ export { EditorCanvas } from './EditorCanvas';
 export { EditorToolbar } from './EditorToolbar';
 export { EditableElement } from './EditableElement';
 export { InlineTextEditor } from './InlineTextEditor';
+export { ImageUpload } from './ImageUpload';
+export { FloatingColorPicker } from './FloatingColorPicker';
 export { ElementInspector } from './ElementInspector';
 export { ColorPicker } from './ColorPicker';
 export { SizeSlider, FONT_SIZE_PRESETS } from './SizeSlider';

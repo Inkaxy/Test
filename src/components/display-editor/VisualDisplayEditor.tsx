@@ -7,6 +7,7 @@ import { useEditorState } from './useEditorState';
 import { EditorCanvas } from './EditorCanvas';
 import { EditorToolbar } from './EditorToolbar';
 import { ElementInspector } from './ElementInspector';
+import { FloatingColorPicker } from './FloatingColorPicker';
 import { THEME_PRESETS } from './types';
 
 interface VisualDisplayEditorProps {
@@ -117,6 +118,20 @@ export function VisualDisplayEditor({
     }
   }, []);
 
+  // Color configuration for floating picker
+  const colorConfig = [
+    { key: 'background_color', label: 'Bakgrunn', value: state.settings.background_color },
+    { key: 'card_background_color', label: 'Kortbakgrunn', value: state.settings.card_background_color },
+    { key: 'text_color', label: 'Tekstfarge', value: state.settings.text_color },
+    { key: 'completed_color', label: 'Ferdig', value: state.settings.completed_color },
+    { key: 'pending_color', label: 'Venter', value: state.settings.pending_color },
+    { key: 'packing_color', label: 'Pakkes', value: state.settings.packing_color },
+  ];
+
+  const handleColorChange = (key: string, value: string) => {
+    updateSetting(key as keyof DisplaySettings, value);
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -134,7 +149,7 @@ export function VisualDisplayEditor({
             <div>
               <h2 className="font-semibold">Visuell redigering</h2>
               <p className="text-xs text-muted-foreground">
-                Klikk på elementer for å redigere
+                Klikk på elementer for å redigere • Dobbeltklikk for å redigere tekst
               </p>
             </div>
           </div>
@@ -156,17 +171,29 @@ export function VisualDisplayEditor({
         </div>
       </div>
 
+      {/* Floating color picker on left side */}
+      <FloatingColorPicker
+        colors={colorConfig}
+        onChange={handleColorChange}
+        position="left"
+      />
+
       {/* Main content */}
       <div className="flex h-full pt-14 pb-20">
         {/* Canvas */}
-        <div className="flex-1 overflow-auto">
+        <div className="flex-1 overflow-auto pl-16">
           <EditorCanvas
             settings={state.settings}
             selectedElement={state.selectedElement}
             onSelectElement={selectElement}
+            onSettingsChange={(updates) => {
+              Object.entries(updates).forEach(([key, value]) => {
+                updateSetting(key as keyof DisplaySettings, value);
+              });
+            }}
             bakeryName={bakeryName}
             categoryName={categoryName}
-            onReorderCustomers={() => {}} // Reorder is handled within EditorCanvas for preview purposes
+            onReorderCustomers={() => {}}
           />
         </div>
 
