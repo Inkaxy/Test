@@ -30,6 +30,7 @@ export interface EmailReportConfig {
   recipients: string[];
   include_deviations: boolean;
   include_summary: boolean;
+  send_time?: string; // HH:MM format, e.g. "06:00"
   last_sent_at?: string;
 }
 
