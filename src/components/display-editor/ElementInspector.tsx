@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ChevronDown, ChevronUp, Settings2, Palette, Type, Layout, Sparkles, ArrowUpDown } from 'lucide-react';
+import { X, ChevronDown, ChevronUp, Settings2, Palette, Type, Layout, Sparkles, ArrowUpDown, Image as ImageIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
@@ -11,6 +11,7 @@ import { DisplaySettings } from '@/hooks/useDisplayOrders';
 import { EDITABLE_ELEMENTS, EditableElementConfig } from './types';
 import { ColorPicker } from './ColorPicker';
 import { SizeSlider, FONT_SIZE_PRESETS } from './SizeSlider';
+import { ImageUpload } from './ImageUpload';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
@@ -23,9 +24,10 @@ interface ElementInspectorProps {
 }
 
 // Group settings by type for better organization
-type SettingGroup = 'visibility' | 'typography' | 'colors' | 'layout' | 'animation' | 'sorting';
+type SettingGroup = 'visibility' | 'typography' | 'colors' | 'layout' | 'animation' | 'sorting' | 'images';
 
 function getSettingGroup(key: keyof DisplaySettings): SettingGroup {
+  if (key.includes('logo_') || key.includes('background_image')) return 'images';
   if (key.includes('show_') || key.includes('enabled')) return 'visibility';
   if (key.includes('font_size') || key.includes('format')) return 'typography';
   if (key.includes('color')) return 'colors';
@@ -41,6 +43,7 @@ const GROUP_ICONS: Record<SettingGroup, React.ReactNode> = {
   layout: <Layout className="h-4 w-4" />,
   animation: <Sparkles className="h-4 w-4" />,
   sorting: <ArrowUpDown className="h-4 w-4" />,
+  images: <ImageIcon className="h-4 w-4" />,
 };
 
 const GROUP_LABELS: Record<SettingGroup, string> = {
@@ -50,6 +53,7 @@ const GROUP_LABELS: Record<SettingGroup, string> = {
   layout: 'Layout',
   animation: 'Animasjoner',
   sorting: 'Sortering',
+  images: 'Bilder',
 };
 
 export function ElementInspector({
@@ -391,10 +395,114 @@ export function ElementInspector({
       );
     }
     
+    // Logo URL
+    if (settingKey === 'logo_url') {
+      return (
+        <ImageUpload
+          key={settingKey}
+          label="Logo"
+          value={value as string | null}
+          onChange={(v) => onUpdateSetting(settingKey, v as never)}
+          folderPath="logos"
+          aspectRatio="auto"
+        />
+      );
+    }
+    
+    // Background image URL
+    if (settingKey === 'background_image_url') {
+      return (
+        <ImageUpload
+          key={settingKey}
+          label="Bakgrunnsbilde"
+          value={value as string | null}
+          onChange={(v) => onUpdateSetting(settingKey, v as never)}
+          folderPath="backgrounds"
+          aspectRatio="16:9"
+        />
+      );
+    }
+    
+    // Logo position
+    if (settingKey === 'logo_position') {
+      return (
+        <div key={settingKey} className="space-y-2">
+          <Label className="text-sm">Logo-posisjon</Label>
+          <Select
+            value={value as string}
+            onValueChange={(v) => onUpdateSetting(settingKey, v as never)}
+          >
+            <SelectTrigger className="w-full bg-background">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="bg-popover z-50">
+              <SelectItem value="left">Venstre</SelectItem>
+              <SelectItem value="center">Senter</SelectItem>
+              <SelectItem value="right">Høyre</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      );
+    }
+    
+    // Logo size
+    if (settingKey === 'logo_size') {
+      return (
+        <SizeSlider
+          key={settingKey}
+          label="Logo-størrelse"
+          value={value as string}
+          onChange={(v) => onUpdateSetting(settingKey, v as never)}
+          min={1}
+          max={8}
+        />
+      );
+    }
+    
+    // Background image opacity
+    if (settingKey === 'background_image_opacity') {
+      return (
+        <div key={settingKey} className="space-y-2">
+          <div className="flex items-center justify-between">
+            <Label className="text-sm">Gjennomsiktighet</Label>
+            <span className="text-xs text-muted-foreground">{Math.round((value as number) * 100)}%</span>
+          </div>
+          <Slider
+            value={[(value as number)]}
+            onValueChange={([v]) => onUpdateSetting(settingKey, v as never)}
+            min={0}
+            max={1}
+            step={0.05}
+            className="w-full"
+          />
+        </div>
+      );
+    }
+    
+    // Background image blur
+    if (settingKey === 'background_image_blur') {
+      return (
+        <div key={settingKey} className="space-y-2">
+          <div className="flex items-center justify-between">
+            <Label className="text-sm">Uskarphet</Label>
+            <span className="text-xs text-muted-foreground">{value}px</span>
+          </div>
+          <Slider
+            value={[(value as number)]}
+            onValueChange={([v]) => onUpdateSetting(settingKey, v as never)}
+            min={0}
+            max={20}
+            step={1}
+            className="w-full"
+          />
+        </div>
+      );
+    }
+    
     return null;
   };
 
-  const orderedGroups: SettingGroup[] = ['visibility', 'typography', 'colors', 'layout', 'animation', 'sorting'];
+  const orderedGroups: SettingGroup[] = ['images', 'visibility', 'typography', 'colors', 'layout', 'animation', 'sorting'];
   const availableGroups = orderedGroups.filter(g => groupedSettings[g]?.length > 0);
 
   return (

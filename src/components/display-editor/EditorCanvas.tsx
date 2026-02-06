@@ -131,6 +131,23 @@ export function EditorCanvas({
             </div>
             
             <div className="flex items-center gap-4">
+              {/* Logo */}
+              {settings.logo_url && settings.logo_position === 'left' && (
+                <EditableElement
+                  id="header-logo"
+                  label="Logo"
+                  isSelected={selectedElement === 'header-logo'}
+                  onSelect={() => onSelectElement('header-logo')}
+                >
+                  <img 
+                    src={settings.logo_url} 
+                    alt="Logo" 
+                    style={{ height: settings.logo_size }}
+                    className="object-contain"
+                  />
+                </EditableElement>
+              )}
+              
               <EditableElement
                 id="header-bakery-name"
                 label="Bakerinavn"
@@ -210,7 +227,42 @@ export function EditorCanvas({
               </EditableElement>
             </div>
             
+            {/* Center Logo */}
+            {settings.logo_url && settings.logo_position === 'center' && (
+              <EditableElement
+                id="header-logo"
+                label="Logo"
+                isSelected={selectedElement === 'header-logo'}
+                onSelect={() => onSelectElement('header-logo')}
+                className="absolute left-1/2 -translate-x-1/2"
+              >
+                <img 
+                  src={settings.logo_url} 
+                  alt="Logo" 
+                  style={{ height: settings.logo_size }}
+                  className="object-contain"
+                />
+              </EditableElement>
+            )}
+            
             <div className="flex items-center gap-4">
+              {/* Right Logo */}
+              {settings.logo_url && settings.logo_position === 'right' && (
+                <EditableElement
+                  id="header-logo"
+                  label="Logo"
+                  isSelected={selectedElement === 'header-logo'}
+                  onSelect={() => onSelectElement('header-logo')}
+                >
+                  <img 
+                    src={settings.logo_url} 
+                    alt="Logo" 
+                    style={{ height: settings.logo_size }}
+                    className="object-contain"
+                  />
+                </EditableElement>
+              )}
+              
               <EditableElement
                 id="header-clock"
                 label="Klokke"
@@ -303,29 +355,54 @@ export function EditorCanvas({
 
   return (
     <div 
-      className="min-h-screen w-full transition-colors duration-300 pl-14"
+      className="min-h-screen w-full transition-colors duration-300 pl-14 relative overflow-hidden"
       style={{ 
         backgroundColor: settings.background_color,
         padding: settings.padding,
       }}
       onClick={() => onSelectElement(null)}
     >
-      <Reorder.Group 
-        axis="y" 
-        values={sectionOrder} 
-        onReorder={handleSectionReorder}
-        className="flex flex-col"
-      >
-        {sectionOrder.map((sectionId) => (
-          <Reorder.Item
-            key={sectionId}
-            value={sectionId}
-            className="cursor-grab active:cursor-grabbing"
-          >
-            {renderSection(sectionId)}
-          </Reorder.Item>
-        ))}
-      </Reorder.Group>
+      {/* Background Image */}
+      {settings.background_image_url && (
+        <EditableElement
+          id="layout-background"
+          label="Bakgrunnsbilde"
+          isSelected={selectedElement === 'layout-background'}
+          onSelect={() => onSelectElement('layout-background')}
+          className="absolute inset-0 pointer-events-auto z-0"
+        >
+          <div 
+            className="absolute inset-0"
+            style={{
+              backgroundImage: `url(${settings.background_image_url})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              opacity: settings.background_image_opacity,
+              filter: settings.background_image_blur > 0 ? `blur(${settings.background_image_blur}px)` : undefined,
+            }}
+          />
+        </EditableElement>
+      )}
+      
+      {/* Content */}
+      <div className="relative z-10">
+        <Reorder.Group 
+          axis="y" 
+          values={sectionOrder} 
+          onReorder={handleSectionReorder}
+          className="flex flex-col"
+        >
+          {sectionOrder.map((sectionId) => (
+            <Reorder.Item
+              key={sectionId}
+              value={sectionId}
+              className="cursor-grab active:cursor-grabbing"
+            >
+              {renderSection(sectionId)}
+            </Reorder.Item>
+          ))}
+        </Reorder.Group>
+      </div>
     </div>
   );
 }

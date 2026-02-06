@@ -18,6 +18,12 @@ export interface EditableElementConfig {
 export const EDITABLE_ELEMENTS: EditableElementConfig[] = [
   // Header elements
   { 
+    id: 'header-logo', 
+    label: 'Logo', 
+    category: 'header', 
+    settingKeys: ['logo_url', 'logo_position', 'logo_size'] 
+  },
+  { 
     id: 'header-bakery-name', 
     label: 'Bakerinavn', 
     category: 'header', 
@@ -40,6 +46,14 @@ export const EDITABLE_ELEMENTS: EditableElementConfig[] = [
     label: 'Dato', 
     category: 'header', 
     settingKeys: ['header_show_date', 'header_date_font_size', 'text_color'] 
+  },
+  
+  // Background
+  { 
+    id: 'layout-background', 
+    label: 'Bakgrunnsbilde', 
+    category: 'layout', 
+    settingKeys: ['background_image_url', 'background_image_opacity', 'background_image_blur', 'background_color'] 
   },
   
   // Stats elements
