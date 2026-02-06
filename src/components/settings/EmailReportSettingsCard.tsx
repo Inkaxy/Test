@@ -40,6 +40,7 @@ export function EmailReportSettingsCard() {
       setRecipients(config.recipients || []);
       setIncludeDeviations(config.include_deviations ?? true);
       setIncludeSummary(config.include_summary ?? true);
+      setSendTime(config.send_time || '06:00');
     }
   }, [settings]);
   
