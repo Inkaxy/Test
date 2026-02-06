@@ -240,7 +240,7 @@ export const DISPLAY_TYPES: Record<DisplayType, { label: string; description: st
 
 export type CustomerSortMode = 'name' | 'progress' | 'customer_number';
 export type CustomerSortDirection = 'asc' | 'desc';
-export type ThemePreset = 'dark' | 'light' | 'high-contrast' | 'custom';
+export type ThemePreset = 'dark' | 'light' | 'high-contrast' | 'bakery' | 'industrial' | 'minimalist' | 'ocean' | 'sunset' | 'forest' | 'custom';
 
 export interface DisplaySettings {
   // Topptekst (Header)
