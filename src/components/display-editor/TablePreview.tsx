@@ -599,10 +599,14 @@ export function TablePreview({ settings }: TablePreviewProps) {
                           <Button 
                             size="sm" 
                             className={cn(btnClasses, 'gap-1')}
-                            style={{ backgroundColor: settings.completed_color }}
+                            style={{ 
+                              backgroundColor: settings.pack_button_background_color || settings.completed_color,
+                              color: settings.pack_button_text_color || '#ffffff',
+                              borderRadius: settings.pack_button_border_radius || '0.25rem',
+                            }}
                           >
-                            <Check className="h-3 w-3" />
-                            {buttonStyle === 'full' && <span>Pakk</span>}
+                            {(settings.pack_button_show_icon ?? true) && <Check className="h-3 w-3" />}
+                            {buttonStyle === 'full' && <span>{settings.pack_button_text || 'Pakket'}</span>}
                           </Button>
                           <Button size="sm" variant="outline" className="h-6 w-6 p-0">
                             <AlertTriangle className="h-3 w-3" />
