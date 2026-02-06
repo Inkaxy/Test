@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { 
   Undo2, Redo2, Save, X, RotateCcw, 
-  Palette, LayoutGrid, Sun, Moon, Contrast
+  Palette, LayoutGrid, Sun, Moon, Contrast, ChevronDown
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -13,6 +13,12 @@ import { ColorPicker } from './ColorPicker';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 interface EditorToolbarProps {
   settings: DisplaySettings;
@@ -86,64 +92,71 @@ export function EditorToolbar({
           
           <Separator orientation="vertical" className="h-6" />
           
-          {/* Theme presets */}
-          <div className="flex items-center gap-1">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant={settings.theme_preset === 'dark' ? 'secondary' : 'ghost'}
-                  size="icon"
-                  onClick={() => onApplyTheme('dark')}
-                  className="h-9 w-9 rounded-full"
-                >
-                  <Moon className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Mørkt tema</TooltipContent>
-            </Tooltip>
-            
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant={settings.theme_preset === 'light' ? 'secondary' : 'ghost'}
-                  size="icon"
-                  onClick={() => onApplyTheme('light')}
-                  className="h-9 w-9 rounded-full"
-                >
-                  <Sun className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Lyst tema</TooltipContent>
-            </Tooltip>
-            
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant={settings.theme_preset === 'high-contrast' ? 'secondary' : 'ghost'}
-                  size="icon"
-                  onClick={() => onApplyTheme('high-contrast')}
-                  className="h-9 w-9 rounded-full"
-                >
-                  <Contrast className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Høy kontrast</TooltipContent>
-            </Tooltip>
-          </div>
-          
-          <Separator orientation="vertical" className="h-6" />
-          
-          {/* Quick colors */}
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-9 w-9 rounded-full"
-              >
-                <Palette className="h-4 w-4" />
-              </Button>
-            </PopoverTrigger>
+           {/* Theme presets */}
+           <DropdownMenu>
+             <DropdownMenuTrigger asChild>
+               <Button
+                 variant="ghost"
+                 size="icon"
+                 className="h-9 w-9 rounded-full"
+               >
+                 <Palette className="h-4 w-4" />
+                 <ChevronDown className="h-3 w-3 ml-1" />
+               </Button>
+             </DropdownMenuTrigger>
+             <DropdownMenuContent align="start" side="top">
+               <DropdownMenuItem onClick={() => onApplyTheme('dark')}>
+                 <span className="w-3 h-3 rounded-full mr-2" style={{ backgroundColor: '#1a1a2e' }} />
+                 Mørkt tema
+               </DropdownMenuItem>
+               <DropdownMenuItem onClick={() => onApplyTheme('light')}>
+                 <span className="w-3 h-3 rounded-full mr-2" style={{ backgroundColor: '#f8fafc' }} />
+                 Lyst tema
+               </DropdownMenuItem>
+               <DropdownMenuItem onClick={() => onApplyTheme('high-contrast')}>
+                 <span className="w-3 h-3 rounded-full mr-2" style={{ backgroundColor: '#000000' }} />
+                 Høy kontrast
+               </DropdownMenuItem>
+               <DropdownMenuItem onClick={() => onApplyTheme('bakery')}>
+                 <span className="w-3 h-3 rounded-full mr-2" style={{ backgroundColor: '#fef3c7' }} />
+                 Bakeri-tema
+               </DropdownMenuItem>
+               <DropdownMenuItem onClick={() => onApplyTheme('industrial')}>
+                 <span className="w-3 h-3 rounded-full mr-2" style={{ backgroundColor: '#27272a' }} />
+                 Industrielt
+               </DropdownMenuItem>
+               <DropdownMenuItem onClick={() => onApplyTheme('minimalist')}>
+                 <span className="w-3 h-3 rounded-full mr-2" style={{ backgroundColor: '#ffffff' }} />
+                 Minimalistisk
+               </DropdownMenuItem>
+               <DropdownMenuItem onClick={() => onApplyTheme('ocean')}>
+                 <span className="w-3 h-3 rounded-full mr-2" style={{ backgroundColor: '#001f3f' }} />
+                 Hav
+               </DropdownMenuItem>
+               <DropdownMenuItem onClick={() => onApplyTheme('sunset')}>
+                 <span className="w-3 h-3 rounded-full mr-2" style={{ backgroundColor: '#1e3a8a' }} />
+                 Solnedgang
+               </DropdownMenuItem>
+               <DropdownMenuItem onClick={() => onApplyTheme('forest')}>
+                 <span className="w-3 h-3 rounded-full mr-2" style={{ backgroundColor: '#1b4332' }} />
+                 Skog
+               </DropdownMenuItem>
+             </DropdownMenuContent>
+           </DropdownMenu>
+           
+           <Separator orientation="vertical" className="h-6" />
+           
+           {/* Quick colors */}
+           <Popover>
+             <PopoverTrigger asChild>
+               <Button
+                 variant="ghost"
+                 size="icon"
+                 className="h-9 w-9 rounded-full"
+               >
+                 <Palette className="h-4 w-4" />
+               </Button>
+             </PopoverTrigger>
             <PopoverContent className="w-72" align="center" side="top">
               <div className="space-y-3">
                 <Label className="text-sm font-medium">Hurtigfarger</Label>
