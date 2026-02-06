@@ -149,7 +149,10 @@
     "fullTrays": "hele brett",
     "loosePieces": "løse stk",
     "perTray": "per brett",
-    "piecesTotal": "stykker totalt"
+    "piecesTotal": "stykker totalt",
+    "noCustomersToday": "Det er ingen kunder å vise i dag",
+    "items": "varer",
+    "inProgress": "Pågår"
   },
   "products": {
     "title": "Produkter",

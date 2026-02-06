@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, Lock, Users } from 'lucide-react';
+import { Check, Lock, Users, Package, ChevronRight } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -25,15 +25,28 @@ interface KioskCustomerTableProps {
 }
 
 const rowHeightClasses = {
-  compact: 'py-2',
-  normal: 'py-4',
-  touch: 'py-6 min-h-[4rem]',
+  compact: 'py-3',
+  normal: 'py-5',
+  touch: 'py-7 min-h-[5rem]',
 };
 
 const rowSpacingClasses = {
   '0.5rem': 'mb-2',
   '0.75rem': 'mb-3',
   '1rem': 'mb-4',
+};
+
+const fontWeightClasses = {
+  normal: 'font-normal',
+  medium: 'font-medium',
+  semibold: 'font-semibold',
+  bold: 'font-bold',
+};
+
+const borderStyleClasses = {
+  none: '',
+  subtle: 'border border-white/10',
+  full: 'border-2 border-white/20',
 };
 
 export function KioskCustomerTable({
@@ -65,27 +78,36 @@ export function KioskCustomerTable({
     return t('packing.pending');
   };
 
+  const progressBarHeight = settings.table_progress_bar_height || '0.75rem';
+
   return (
     <div className="w-full">
       {/* Sticky Header */}
       {settings.table_sticky_header && (
         <div
-          className="sticky top-0 z-10 flex items-center px-4 py-3 font-semibold rounded-t-xl"
+          className="sticky top-0 z-10 flex items-center px-5 py-4 font-semibold rounded-t-xl shadow-lg backdrop-blur-sm"
           style={{
-            backgroundColor: settings.card_background_color,
-            color: settings.text_color,
-            fontSize: settings.table_font_size,
+            backgroundColor: settings.table_header_background_color || settings.card_background_color,
+            color: settings.table_header_text_color || settings.text_color,
+            fontSize: settings.table_header_font_size || '0.875rem',
             borderBottom: `2px solid ${settings.pending_color}40`,
           }}
         >
-          <div className="flex-1">{t('packing.customer')}</div>
+          <div className="flex-1 flex items-center gap-2">
+            <Users className="h-4 w-4 opacity-60" />
+            {t('packing.customer')}
+          </div>
           {settings.table_show_order_count && (
-            <div className="w-24 text-center">{t('packing.orders')}</div>
+            <div className="w-28 text-center flex items-center justify-center gap-2">
+              <Package className="h-4 w-4 opacity-60" />
+              {t('packing.orders')}
+            </div>
           )}
           {settings.table_show_progress_bar && (
-            <div className="w-48">{t('dashboard.progress')}</div>
+            <div className="w-56">{t('dashboard.progress')}</div>
           )}
-          <div className="w-32 text-center">{t('common.status')}</div>
+          <div className="w-36 text-center">{t('common.status')}</div>
+          <div className="w-10" /> {/* Space for chevron */}
         </div>
       )}
 
@@ -113,11 +135,15 @@ export function KioskCustomerTable({
                       ? 0.5
                       : 0.3,
                 }}
+                whileTap={settings.table_touch_tap_feedback && !lockedByOther ? { scale: 0.985 } : undefined}
                 className={cn(
-                  'flex items-center px-4 transition-all touch-manipulation',
+                  'flex items-center px-5 transition-all touch-manipulation select-none',
                   rowHeightClasses[settings.table_row_height],
                   rowSpacingClasses[settings.table_touch_row_spacing as keyof typeof rowSpacingClasses] || 'mb-3',
-                  lockedByOther ? 'cursor-not-allowed' : 'cursor-pointer active:scale-[0.99]'
+                  borderStyleClasses[settings.table_border_style || 'subtle'],
+                  lockedByOther ? 'cursor-not-allowed' : 'cursor-pointer',
+                  settings.table_row_hover_effect && !lockedByOther && 'hover:brightness-110 hover:shadow-lg',
+                  isComplete && 'opacity-75'
                 )}
                 style={{
                   backgroundColor:
@@ -132,76 +158,122 @@ export function KioskCustomerTable({
                 onClick={() => !lockedByOther && onSelectCustomer(customer)}
               >
                 {/* Customer Name & Number */}
-                <div className="flex-1 flex items-center gap-3">
-                  <Users className="h-5 w-5 opacity-50" />
-                  <div>
-                    <p className="font-bold truncate">{customer.name}</p>
+                <div className="flex-1 flex items-center gap-4 min-w-0">
+                  <div 
+                    className="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0"
+                    style={{ backgroundColor: `${statusColor}30` }}
+                  >
+                    <Users className="h-6 w-6" style={{ color: statusColor }} />
+                  </div>
+                  <div className="min-w-0">
+                    <p 
+                      className={cn(
+                        "truncate leading-tight",
+                        fontWeightClasses[settings.table_customer_name_font_weight || 'bold']
+                      )}
+                      style={{ fontSize: settings.table_font_size }}
+                    >
+                      {customer.name}
+                    </p>
                     {settings.table_show_customer_number && (
-                      <p className="text-sm opacity-60">#{customer.customer_number}</p>
+                      <p 
+                        className="text-sm opacity-60 leading-tight mt-0.5"
+                        style={{ fontSize: `calc(${settings.table_font_size} * 0.75)` }}
+                      >
+                        #{customer.customer_number}
+                      </p>
                     )}
                   </div>
                 </div>
 
                 {/* Order Count */}
                 {settings.table_show_order_count && (
-                  <div className="w-24 text-center font-mono font-bold">
-                    {customer.totalOrders}
+                  <div className="w-28 flex flex-col items-center">
+                    <span 
+                      className="font-mono font-bold text-2xl"
+                      style={{ color: settings.text_color }}
+                    >
+                      {customer.packedOrders}/{customer.totalOrders}
+                    </span>
+                    {settings.table_show_total_quantity && (
+                      <span className="text-xs opacity-60 mt-0.5">{t('packing.items')}</span>
+                    )}
                   </div>
                 )}
 
                 {/* Progress Bar */}
                 {settings.table_show_progress_bar && (
-                  <div className="w-48 flex items-center gap-3">
-                    <Progress
-                      value={customer.progress}
-                      className="flex-1 h-3"
-                      style={{
-                        backgroundColor: `${settings.pending_color}40`,
+                  <div className="w-56 flex items-center gap-4 px-2">
+                    <div className="flex-1">
+                      <Progress
+                        value={customer.progress}
+                        className="w-full"
+                        style={{
+                          height: progressBarHeight,
+                          backgroundColor: `${settings.pending_color}40`,
+                        }}
+                      />
+                    </div>
+                    <span 
+                      className="font-mono font-bold w-14 text-right tabular-nums"
+                      style={{ 
+                        fontSize: settings.table_font_size,
+                        color: statusColor,
                       }}
-                    />
-                    <span className="font-mono font-bold w-12 text-right">
+                    >
                       {customer.progress}%
                     </span>
                   </div>
                 )}
 
                 {/* Status */}
-                <div className="w-32 flex justify-center">
+                <div className="w-36 flex justify-center">
                   {lockedByOther && (
-                    <Badge variant="secondary" className="gap-1 px-3 py-1">
-                      <Lock className="h-4 w-4" />
+                    <Badge variant="secondary" className="gap-2 px-4 py-2 text-base">
+                      {settings.table_show_status_icons && <Lock className="h-4 w-4" />}
                       {t('packing.locked')}
                     </Badge>
                   )}
                   {lockedByMe && (
                     <Badge
-                      className="gap-1 px-3 py-1"
+                      className="gap-2 px-4 py-2 text-base"
                       style={{ backgroundColor: settings.packing_color, color: '#fff' }}
                     >
-                      <Lock className="h-4 w-4" />
+                      {settings.table_show_status_icons && <Lock className="h-4 w-4" />}
                       {t('packing.yourLock')}
                     </Badge>
                   )}
                   {isComplete && !lockedByMe && !lockedByOther && (
                     <Badge
-                      className="gap-1 px-3 py-1"
+                      className="gap-2 px-4 py-2 text-base"
                       style={{ backgroundColor: settings.completed_color, color: '#fff' }}
                     >
-                      <Check className="h-4 w-4" />
+                      {settings.table_show_status_icons && <Check className="h-5 w-5" />}
                       {t('packing.complete')}
                     </Badge>
                   )}
                   {!isComplete && !lockedByMe && !lockedByOther && (
                     <Badge
-                      variant="outline"
-                      className="px-3 py-1"
+                      className="gap-2 px-4 py-2 text-base"
                       style={{ 
+                        backgroundColor: customer.progress > 0 ? `${settings.packing_color}20` : 'transparent',
                         borderColor: statusColor, 
+                        borderWidth: '2px',
                         color: settings.text_color,
                       }}
                     >
                       {customer.progress > 0 ? t('packing.inProgress') : t('packing.pending')}
                     </Badge>
+                  )}
+                </div>
+                
+                {/* Chevron indicator for touch */}
+                <div className="w-10 flex justify-center">
+                  {!lockedByOther && !isComplete && (
+                    <ChevronRight 
+                      className="h-6 w-6 opacity-40"
+                      style={{ color: settings.text_color }}
+                    />
                   )}
                 </div>
               </motion.div>
@@ -213,11 +285,16 @@ export function KioskCustomerTable({
       {/* Empty state */}
       {customers.length === 0 && (
         <div
-          className="flex flex-col items-center justify-center py-16 text-center"
-          style={{ color: settings.text_color, opacity: 0.6 }}
+          className="flex flex-col items-center justify-center py-20 text-center rounded-xl"
+          style={{ 
+            color: settings.text_color, 
+            opacity: 0.6,
+            backgroundColor: settings.card_background_color,
+          }}
         >
-          <Users className="h-16 w-16 mb-4" />
-          <p className="text-xl">{t('dashboard.noOrders')}</p>
+          <Users className="h-20 w-20 mb-6" />
+          <p className="text-2xl font-medium">{t('dashboard.noOrders')}</p>
+          <p className="text-lg mt-2 opacity-75">{t('packing.noCustomersToday')}</p>
         </div>
       )}
     </div>

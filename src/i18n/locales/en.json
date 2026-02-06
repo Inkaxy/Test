@@ -149,7 +149,10 @@
     "fullTrays": "full trays",
     "loosePieces": "loose pcs",
     "perTray": "per tray",
-    "piecesTotal": "pieces total"
+    "piecesTotal": "pieces total",
+    "noCustomersToday": "No customers to display today",
+    "items": "items",
+    "inProgress": "In progress"
   },
   "products": {
     "title": "Products",
