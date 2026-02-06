@@ -4,6 +4,7 @@ export { DraggableSection } from './DraggableSection';
 export { EditorCanvas } from './EditorCanvas';
 export { EditorToolbar } from './EditorToolbar';
 export { EditableElement } from './EditableElement';
+export { InlineTextEditor } from './InlineTextEditor';
 export { ElementInspector } from './ElementInspector';
 export { ColorPicker } from './ColorPicker';
 export { SizeSlider, FONT_SIZE_PRESETS } from './SizeSlider';
