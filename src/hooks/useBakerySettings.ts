@@ -38,6 +38,7 @@ export interface BakerySettings {
   auto_delete_days?: number;
   deviation_config?: DeviationConfig;
   packing_row_style?: PackingRowStyleSettings;
+  email_report_config?: EmailReportConfig;
 }
 
 export function useBakerySettings() {
