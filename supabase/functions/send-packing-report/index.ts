@@ -136,10 +136,14 @@ Deno.serve(async (req) => {
 
 function shouldSendReport(config: EmailReportConfig, now: Date): boolean {
   const lastSent = config.last_sent_at ? new Date(config.last_sent_at) : null;
-  const hour = now.getHours();
+  const currentHour = now.getHours();
   
-  // Only send around 06:00
-  if (hour !== 6) {
+  // Parse configured send time (default to 06:00)
+  const sendTimeStr = config.send_time || '06:00';
+  const [sendHour] = sendTimeStr.split(':').map(Number);
+  
+  // Only send at the configured hour (with 5-minute tolerance since cron runs every 5 mins)
+  if (currentHour !== sendHour) {
     return false;
   }
 
