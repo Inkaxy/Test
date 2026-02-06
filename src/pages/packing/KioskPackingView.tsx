@@ -723,7 +723,7 @@ export default function KioskPackingView() {
         }}
       >
         <div>
-          {showBakeryName && (
+          {showBakeryName && bakery && (
             <h1 
               className="font-bold"
               style={{ fontSize: settings.header_bakery_font_size || '1.875rem' }}
@@ -733,11 +733,19 @@ export default function KioskPackingView() {
           )}
           {showCategoryName && category && (
             <p 
-              className="opacity-80"
-              style={{ fontSize: settings.header_category_font_size || '1.25rem' }}
+              className={showBakeryName ? "opacity-80" : "font-bold"}
+              style={{ fontSize: showBakeryName ? (settings.header_category_font_size || '1.25rem') : (settings.header_bakery_font_size || '1.875rem') }}
             >
               {category.name}
             </p>
+          )}
+          {!showBakeryName && !showCategoryName && (
+            <h1 
+              className="font-bold"
+              style={{ fontSize: settings.header_bakery_font_size || '1.875rem' }}
+            >
+              {t('packing.customerBased')}
+            </h1>
           )}
         </div>
         
