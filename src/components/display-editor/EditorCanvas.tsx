@@ -63,8 +63,9 @@ export function EditorCanvas({
   onSelectElement,
   bakeryName = 'Ditt Bakeri',
   categoryName = 'Kategorinavn',
+  onReorderCustomers,
 }: EditorCanvasProps) {
-  const now = new Date();
+  const [customerOrder, setCustomerOrder] = useState(MOCK_CUSTOMERS.map(c => c.id));
   const formattedTime = settings.header_clock_format === '24h' 
     ? format(now, 'HH:mm')
     : format(now, 'h:mm a');
