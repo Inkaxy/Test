@@ -4,8 +4,10 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { Users, Package, Loader2, ArrowLeft, Check, AlertTriangle, Undo2, Clock, Wifi, WifiOff, Maximize, RefreshCw } from 'lucide-react';
+import { Package, Loader2, ArrowLeft, Check, Lock, Clock, Wifi, WifiOff, Maximize, RefreshCw, AlertTriangle, Undo2 } from 'lucide-react';
 import { format } from 'date-fns';
+import { CustomerOrderCard } from '@/components/packing/CustomerOrderCard';
+import { useBakerySettings } from '@/hooks/useBakerySettings';
 import { nb, enUS } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -369,6 +371,7 @@ export default function KioskPackingView() {
   );
   const { data: displaySettings } = useDisplaySettings(bakery?.id || null, categoryId, 'packing');
   const settings: DisplaySettings = displaySettings || getDefaultDisplaySettings();
+  const { data: bakerySettings } = useBakerySettings();
   
   // Apply sorting based on display settings
   const customers = useMemo(() => {
@@ -638,104 +641,32 @@ export default function KioskPackingView() {
           </div>
         )}
         
-        {/* Products - touch optimized for kiosk */}
+        {/* Products - using shared CustomerOrderCard component for consistency */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: settings.gap_size || '1rem' }}>
           <AnimatePresence>
-            {currentCustomer.orders.map((order) => {
-              const status = order.packing_status?.status || 'pending';
-              const isPacked = status === 'packed' || status === 'deviation';
+            {currentCustomer.orders.map((order, index) => {
+              const alternateRowsEnabled = bakerySettings?.packing_row_style?.alternateRowsEnabled || false;
+              const alternateRowColor = bakerySettings?.packing_row_style?.alternateRowColor || 'amber';
               
               return (
-                <motion.div
+                <CustomerOrderCard
                   key={order.id}
-                  initial={settings.animation_enabled ? { opacity: 0, scale: 0.98 } : false}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={settings.animation_enabled ? { opacity: 0, scale: 0.98 } : undefined}
-                  transition={{ duration: settings.animation_speed === 'fast' ? 0.15 : settings.animation_speed === 'slow' ? 0.5 : 0.3 }}
-                  className="p-6 rounded-xl transition-all"
-                  style={{
-                    backgroundColor: isPacked
-                      ? `${settings.completed_color}20`
-                      : settings.card_background_color,
-                    borderRadius: settings.border_radius,
-                    borderLeft: `${settings.card_border_width || '4px'} solid ${getStatusColor(isPacked ? 100 : 0)}`,
-                  }}
-                >
-                  <div className="flex items-center gap-6">
-                    <div className="flex-1 min-w-0">
-                      <p 
-                        className="font-medium"
-                        style={{ fontSize: settings.card_product_font_size || '1rem' }}
-                      >
-                        {order.product.name}
-                      </p>
-                      <div className="flex items-center gap-3 mt-2 opacity-70">
-                        {settings.card_show_product_numbers && (
-                          <>
-                            <span style={{ fontSize: settings.card_quantity_font_size }}>
-                              {order.product.product_number}
-                            </span>
-                            <span>•</span>
-                          </>
-                        )}
-                        <span 
-                          className="font-mono font-bold"
-                          style={{ fontSize: settings.card_quantity_font_size || '1rem' }}
-                        >
-                          {getQuantityDisplay(order.quantity, order.product.pieces_per_tray)}
-                        </span>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-4">
-                      {getStatusBadge(status)}
-                      
-                      {status === 'pending' && (
-                        <div className="flex gap-3">
-                          <Button
-                            size="lg"
-                            onClick={() => handleMarkPacked(order.id, order.packing_status?.id)}
-                            disabled={markAsPacked.isPending}
-                            className="h-16 px-8 text-xl gap-3"
-                          >
-                            <Check className="h-6 w-6" />
-                            {t('packing.markAsPacked')}
-                          </Button>
-                          
-                          <Button
-                            size="lg"
-                            variant="outline"
-                            onClick={() => setDeviationOrder({ 
-                              id: order.id, 
-                              packingStatusId: order.packing_status?.id,
-                              productName: order.product.name,
-                              customerName: currentCustomer.name,
-                              quantity: order.quantity,
-                            })}
-                            className="h-16 w-16"
-                            style={{ color: settings.text_color }}
-                          >
-                            <AlertTriangle className="h-6 w-6" />
-                          </Button>
-                        </div>
-                      )}
-                      
-                      {isPacked && order.packing_status?.id && (
-                        <Button
-                          size="lg"
-                          variant="ghost"
-                          onClick={() => handleUndo(order.packing_status!.id, order.id)}
-                          disabled={undoPacking.isPending}
-                          className="h-14 text-lg"
-                          style={{ color: settings.text_color }}
-                        >
-                          <Undo2 className="h-6 w-6 mr-2" />
-                          {t('packing.undoPacked')}
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                </motion.div>
+                  order={order}
+                  index={index}
+                  isAlternate={alternateRowsEnabled && index % 2 === 1}
+                  alternateRowColor={alternateRowColor}
+                  onMarkPacked={(orderId, packingStatusId) => handleMarkPacked(orderId, packingStatusId)}
+                  onReportDeviation={(o) => setDeviationOrder({ 
+                    id: o.id, 
+                    packingStatusId: o.packing_status?.id,
+                    productName: o.product.name,
+                    customerName: currentCustomer.name,
+                    quantity: o.quantity,
+                  })}
+                  onUndo={handleUndo}
+                  isMarkingPacked={markAsPacked.isPending}
+                  isUndoing={undoPacking.isPending}
+                />
               );
             })}
           </AnimatePresence>
