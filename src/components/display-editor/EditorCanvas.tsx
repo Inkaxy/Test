@@ -3,6 +3,7 @@ import { motion, Reorder } from 'framer-motion';
 import { Package, CheckCircle, Clock, GripVertical, Move } from 'lucide-react';
 import { DisplaySettings } from '@/hooks/useDisplayOrders';
 import { EditableElement } from './EditableElement';
+import { InlineTextEditor } from './InlineTextEditor';
 import { format } from 'date-fns';
 import { nb } from 'date-fns/locale';
 
@@ -12,10 +13,13 @@ interface EditorCanvasProps {
   settings: DisplaySettings;
   selectedElement: string | null;
   onSelectElement: (id: string | null) => void;
+  onSettingsChange?: (updates: Partial<DisplaySettings>) => void;
   bakeryName?: string;
   categoryName?: string;
   onReorderCustomers?: (reorderedIds: string[]) => void;
   onReorderSections?: (sectionOrder: SectionId[]) => void;
+  onBakeryNameChange?: (name: string) => void;
+  onCategoryNameChange?: (name: string) => void;
 }
 
 // Mock data for preview
@@ -64,13 +68,21 @@ export function EditorCanvas({
   settings,
   selectedElement,
   onSelectElement,
+  onSettingsChange,
   bakeryName = 'Ditt Bakeri',
   categoryName = 'Kategorinavn',
   onReorderCustomers,
   onReorderSections,
+  onBakeryNameChange,
+  onCategoryNameChange,
 }: EditorCanvasProps) {
   const [customerOrder, setCustomerOrder] = useState(MOCK_CUSTOMERS.map(c => c.id));
   const [sectionOrder, setSectionOrder] = useState<SectionId[]>(['header', 'stats', 'grid']);
+  const [editingElement, setEditingElement] = useState<string | null>(null);
+  
+  // Local state for inline editing preview names
+  const [localBakeryName, setLocalBakeryName] = useState(bakeryName);
+  const [localCategoryName, setLocalCategoryName] = useState(categoryName);
 
   const handleReorder = (newOrder: string[]) => {
     setCustomerOrder(newOrder);
@@ -124,17 +136,38 @@ export function EditorCanvas({
                 label="Bakerinavn"
                 isSelected={selectedElement === 'header-bakery-name'}
                 isHidden={!settings.header_show_bakery_name}
+                isEditable={true}
+                isEditing={editingElement === 'header-bakery-name'}
                 onSelect={() => onSelectElement('header-bakery-name')}
+                onDoubleClick={() => setEditingElement('header-bakery-name')}
               >
-                <h1 
-                  style={{ 
-                    fontSize: settings.header_bakery_font_size,
-                    color: settings.text_color,
-                  }}
-                  className="font-bold"
-                >
-                  {bakeryName}
-                </h1>
+                {editingElement === 'header-bakery-name' ? (
+                  <InlineTextEditor
+                    value={localBakeryName}
+                    onChange={(value) => {
+                      setLocalBakeryName(value);
+                      onBakeryNameChange?.(value);
+                    }}
+                    isEditing={true}
+                    onStartEdit={() => {}}
+                    onEndEdit={() => setEditingElement(null)}
+                    style={{ 
+                      fontSize: settings.header_bakery_font_size,
+                      color: settings.text_color,
+                      fontWeight: 'bold',
+                    }}
+                  />
+                ) : (
+                  <h1 
+                    style={{ 
+                      fontSize: settings.header_bakery_font_size,
+                      color: settings.text_color,
+                    }}
+                    className="font-bold"
+                  >
+                    {localBakeryName}
+                  </h1>
+                )}
               </EditableElement>
               
               <EditableElement
@@ -142,17 +175,38 @@ export function EditorCanvas({
                 label="Kategorinavn"
                 isSelected={selectedElement === 'header-category'}
                 isHidden={!settings.header_show_category_name}
+                isEditable={true}
+                isEditing={editingElement === 'header-category'}
                 onSelect={() => onSelectElement('header-category')}
+                onDoubleClick={() => setEditingElement('header-category')}
               >
-                <span 
-                  style={{ 
-                    fontSize: settings.header_category_font_size,
-                    color: settings.text_color,
-                  }}
-                  className="opacity-70"
-                >
-                  {categoryName}
-                </span>
+                {editingElement === 'header-category' ? (
+                  <InlineTextEditor
+                    value={localCategoryName}
+                    onChange={(value) => {
+                      setLocalCategoryName(value);
+                      onCategoryNameChange?.(value);
+                    }}
+                    isEditing={true}
+                    onStartEdit={() => {}}
+                    onEndEdit={() => setEditingElement(null)}
+                    style={{ 
+                      fontSize: settings.header_category_font_size,
+                      color: settings.text_color,
+                      opacity: 0.7,
+                    }}
+                  />
+                ) : (
+                  <span 
+                    style={{ 
+                      fontSize: settings.header_category_font_size,
+                      color: settings.text_color,
+                    }}
+                    className="opacity-70"
+                  >
+                    {localCategoryName}
+                  </span>
+                )}
               </EditableElement>
             </div>
             
