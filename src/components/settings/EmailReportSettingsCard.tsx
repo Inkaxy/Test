@@ -29,6 +29,7 @@ export function EmailReportSettingsCard() {
   const [newEmail, setNewEmail] = useState('');
   const [includeDeviations, setIncludeDeviations] = useState(true);
   const [includeSummary, setIncludeSummary] = useState(true);
+  const [sendTime, setSendTime] = useState('06:00');
   const [isSending, setIsSending] = useState(false);
   
   useEffect(() => {
