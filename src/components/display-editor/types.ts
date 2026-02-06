@@ -100,6 +100,16 @@ export const EDITABLE_ELEMENTS: EditableElementConfig[] = [
     ] 
   },
   
+  // View mode
+  {
+    id: 'layout-view-mode',
+    label: 'Visningsmodus',
+    category: 'layout',
+    settingKeys: [
+      'packing_view_mode'
+    ]
+  },
+  
   // Layout elements
   { 
     id: 'layout-grid', 
@@ -114,6 +124,24 @@ export const EDITABLE_ELEMENTS: EditableElementConfig[] = [
       'auto_scroll_speed',
       'auto_scroll_pause_on_hover'
     ] 
+  },
+  
+  // Table settings
+  {
+    id: 'layout-table',
+    label: 'Tabellinnstillinger',
+    category: 'layout',
+    settingKeys: [
+      'table_row_height',
+      'table_font_size',
+      'table_show_customer_number',
+      'table_show_progress_bar',
+      'table_show_order_count',
+      'table_alternate_rows',
+      'table_alternate_row_color',
+      'table_sticky_header',
+      'table_touch_row_spacing'
+    ]
   },
   
   // Appearance
