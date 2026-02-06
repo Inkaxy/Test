@@ -38,9 +38,10 @@ export interface Order {
 export function updateOrderStatusInCustomersCache(
   customers: CustomerWithOrders[],
   orderId: string,
-  newStatus: 'packed' | 'pending' | 'deviation'
+  newStatus: 'packed' | 'pending' | 'deviation',
+  sortOptions?: { completedLast?: boolean; sortMode?: string; sortDirection?: string }
 ): CustomerWithOrders[] {
-  return customers.map(customer => {
+  const updatedCustomers = customers.map(customer => {
     const orderIndex = customer.orders.findIndex(o => o.id === orderId);
     if (orderIndex === -1) return customer;
     
@@ -66,6 +67,38 @@ export function updateOrderStatusInCustomersCache(
       packedOrders: packedCount,
       progress: Math.round((packedCount / customer.totalOrders) * 100),
     };
+  });
+  
+  // Re-sort customers based on sortOptions (default: completed last)
+  const completedLast = sortOptions?.completedLast ?? true;
+  const sortMode = sortOptions?.sortMode || 'priority';
+  const sortDirection = sortOptions?.sortDirection || 'asc';
+  const multiplier = sortDirection === 'desc' ? -1 : 1;
+  
+  return updatedCustomers.sort((a, b) => {
+    // Handle completed customers last if enabled
+    if (completedLast) {
+      if (a.progress === 100 && b.progress !== 100) return 1;
+      if (a.progress !== 100 && b.progress === 100) return -1;
+    }
+    
+    // Then sort by selected mode
+    switch (sortMode) {
+      case 'progress':
+        return (a.progress - b.progress) * multiplier;
+      case 'name':
+        return a.name.localeCompare(b.name, 'nb') * multiplier;
+      case 'customer_number':
+        return a.customer_number.localeCompare(b.customer_number, 'nb', { numeric: true }) * multiplier;
+      case 'priority':
+      default:
+        const priorityA = a.priority ?? 50;
+        const priorityB = b.priority ?? 50;
+        if (priorityA !== priorityB) {
+          return (priorityA - priorityB) * multiplier;
+        }
+        return a.customer_number.localeCompare(b.customer_number, 'nb', { numeric: true }) * multiplier;
+    }
   });
 }
 
@@ -216,26 +249,43 @@ export function useMarkAsPacked() {
     },
     onMutate: async ({ orderId, deliveryDate, categoryId }) => {
       const bakeryId = getActiveBakeryId();
-      const queryKey = ['customers-for-date', deliveryDate, bakeryId, categoryId];
       
-      // Cancel outgoing refetches
-      await queryClient.cancelQueries({ queryKey });
-      
-      // Snapshot previous value
-      const previousData = queryClient.getQueryData(queryKey);
-      
-      // Optimistically update cache
-      queryClient.setQueryData(queryKey, (old: CustomerWithOrders[] | undefined) => {
-        if (!old) return old;
-        return updateOrderStatusInCustomersCache(old, orderId, 'packed');
+      // Find all matching queries to get sortOptions from the queryKey
+      const matchingQueries = queryClient.getQueriesData<CustomerWithOrders[]>({ 
+        queryKey: ['customers-for-date', deliveryDate, bakeryId, categoryId],
+        exact: false 
       });
       
-      return { previousData, queryKey };
+      const previousDataMap: Map<string, CustomerWithOrders[]> = new Map();
+      
+      for (const [queryKey, data] of matchingQueries) {
+        if (!data) continue;
+        
+        // sortOptions is the 5th element in the queryKey (index 4)
+        const sortOptions = queryKey[4] as { completedLast?: boolean; sortMode?: string; sortDirection?: string } | undefined;
+        
+        // Store previous data for rollback
+        previousDataMap.set(JSON.stringify(queryKey), data);
+        
+        // Cancel outgoing refetches for this query
+        await queryClient.cancelQueries({ queryKey });
+        
+        // Optimistically update cache with sorting
+        queryClient.setQueryData(queryKey, (old: CustomerWithOrders[] | undefined) => {
+          if (!old) return old;
+          return updateOrderStatusInCustomersCache(old, orderId, 'packed', sortOptions);
+        });
+      }
+      
+      return { previousDataMap };
     },
     onError: (_err, _variables, context) => {
       // Rollback on error
-      if (context?.previousData && context?.queryKey) {
-        queryClient.setQueryData(context.queryKey, context.previousData);
+      if (context?.previousDataMap) {
+        for (const [keyStr, data] of context.previousDataMap) {
+          const queryKey = JSON.parse(keyStr);
+          queryClient.setQueryData(queryKey, data);
+        }
       }
     },
     onSettled: (_data, _error, variables) => {
@@ -439,21 +489,42 @@ export function useUndoPacking() {
       if (!orderId) return {};
       
       const bakeryId = getActiveBakeryId();
-      const queryKey = ['customers-for-date', deliveryDate, bakeryId, categoryId];
       
-      await queryClient.cancelQueries({ queryKey });
-      const previousData = queryClient.getQueryData(queryKey);
-      
-      queryClient.setQueryData(queryKey, (old: CustomerWithOrders[] | undefined) => {
-        if (!old) return old;
-        return updateOrderStatusInCustomersCache(old, orderId, 'pending');
+      // Find all matching queries to get sortOptions from the queryKey
+      const matchingQueries = queryClient.getQueriesData<CustomerWithOrders[]>({ 
+        queryKey: ['customers-for-date', deliveryDate, bakeryId, categoryId],
+        exact: false 
       });
       
-      return { previousData, queryKey };
+      const previousDataMap: Map<string, CustomerWithOrders[]> = new Map();
+      
+      for (const [queryKey, data] of matchingQueries) {
+        if (!data) continue;
+        
+        // sortOptions is the 5th element in the queryKey (index 4)
+        const sortOptions = queryKey[4] as { completedLast?: boolean; sortMode?: string; sortDirection?: string } | undefined;
+        
+        // Store previous data for rollback
+        previousDataMap.set(JSON.stringify(queryKey), data);
+        
+        // Cancel outgoing refetches for this query
+        await queryClient.cancelQueries({ queryKey });
+        
+        // Optimistically update cache with sorting
+        queryClient.setQueryData(queryKey, (old: CustomerWithOrders[] | undefined) => {
+          if (!old) return old;
+          return updateOrderStatusInCustomersCache(old, orderId, 'pending', sortOptions);
+        });
+      }
+      
+      return { previousDataMap };
     },
     onError: (_err, _variables, context) => {
-      if (context?.previousData && context?.queryKey) {
-        queryClient.setQueryData(context.queryKey, context.previousData);
+      if (context?.previousDataMap) {
+        for (const [keyStr, data] of context.previousDataMap) {
+          const queryKey = JSON.parse(keyStr);
+          queryClient.setQueryData(queryKey, data);
+        }
       }
     },
     onSettled: (_data, _error, variables) => {
