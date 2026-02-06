@@ -285,6 +285,33 @@ export function EmailReportSettingsCard() {
                   )}
                 </div>
                 
+                {/* Send time selection */}
+                {frequency !== 'off' && (
+                  <div className="space-y-3">
+                    <Label className="flex items-center gap-2">
+                      <Clock className="h-4 w-4" />
+                      {i18n.language === 'nb' ? 'Sendetidspunkt' : 'Send time'}
+                    </Label>
+                    <Select value={sendTime} onValueChange={handleSendTimeChange}>
+                      <SelectTrigger className="w-[180px]">
+                        <SelectValue placeholder={i18n.language === 'nb' ? 'Velg tid' : 'Select time'} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {timeOptions.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      {i18n.language === 'nb'
+                        ? 'Velg når rapporten skal sendes automatisk.'
+                        : 'Choose when the report should be sent automatically.'}
+                    </p>
+                  </div>
+                )}
+                
                 {/* Recipients */}
                 <div className="space-y-3">
                   <Label>{i18n.language === 'nb' ? 'Mottakere' : 'Recipients'}</Label>
