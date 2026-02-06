@@ -93,6 +93,7 @@ export function EmailReportSettingsCard() {
       recipients,
       include_deviations: includeDeviations,
       include_summary: includeSummary,
+      send_time: sendTime,
       ...updates,
     };
     
