@@ -18,7 +18,7 @@ import { useCategories } from '@/hooks/useCategories';
 import { DisplaySettings, getDefaultDisplaySettings, DisplayType, DISPLAY_TYPES } from '@/hooks/useDisplayOrders';
 import { 
   Monitor, Smartphone, ExternalLink, Loader2, Users, Package, 
-  Type, BarChart3, LayoutGrid, Sparkles, Layout, Zap, Bell, Copy, RotateCcw, Paintbrush
+  Type, BarChart3, LayoutGrid, Sparkles, Layout, Zap, Bell, Copy, RotateCcw
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -28,7 +28,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu';
-import { VisualDisplayEditor } from '@/components/display-editor';
 
 export default function DisplaySettingsPage() {
   const { t } = useTranslation();
@@ -51,7 +50,6 @@ export default function DisplaySettingsPage() {
     urlCategoryId || null
   );
   const [settings, setSettings] = useState<DisplaySettings>(getDefaultDisplaySettings());
-  const [isVisualEditorOpen, setIsVisualEditorOpen] = useState(false);
   
   const { data: categories = [] } = useCategories();
   
@@ -320,16 +318,6 @@ export default function DisplaySettingsPage() {
         </div>
         
         <div className="flex items-center gap-2">
-          {/* Visual Editor button */}
-          <Button 
-            variant="default"
-            onClick={() => setIsVisualEditorOpen(true)}
-            className="bg-gradient-to-r from-primary to-primary/80"
-          >
-            <Paintbrush className="h-4 w-4 mr-2" />
-            Visuell redigering
-          </Button>
-
           {/* Copy/Reset dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -2110,46 +2098,6 @@ export default function DisplaySettingsPage() {
             </CardContent>
           </Card>
         </div>
-      )}
-
-      {/* Visual Display Editor */}
-      {isVisualEditorOpen && (
-        <VisualDisplayEditor
-          initialSettings={settings}
-          displayType={selectedDisplayType}
-          categoryId={selectedCategoryId}
-          bakeryName={bakery?.name}
-          categoryName={filteredCategories.find(c => c.id === selectedCategoryId)?.name || 'Alle kategorier'}
-          isSaving={saveMutation.isPending}
-          onSave={async (newSettings) => {
-            setSettings(newSettings);
-            const settingsJson = JSON.parse(JSON.stringify(newSettings));
-            
-            if (existingSettings?.id) {
-              await supabase
-                .from('display_settings')
-                .update({ settings: settingsJson })
-                .eq('id', existingSettings.id);
-            } else {
-              await supabase
-                .from('display_settings')
-                .insert([{
-                  bakery_id: bakeryId,
-                  category_id: selectedCategoryId,
-                  display_type: selectedDisplayType,
-                  settings: settingsJson,
-                }]);
-            }
-            
-            queryClient.invalidateQueries({ queryKey: ['display-settings'] });
-            queryClient.invalidateQueries({ queryKey: ['display-settings-admin'] });
-            toast({
-              title: 'Innstillinger lagret',
-              description: 'Display-innstillingene ble oppdatert',
-            });
-          }}
-          onClose={() => setIsVisualEditorOpen(false)}
-        />
       )}
     </div>
   );
