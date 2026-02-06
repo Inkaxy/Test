@@ -18,7 +18,7 @@ import { useCategories } from '@/hooks/useCategories';
 import { DisplaySettings, getDefaultDisplaySettings, DisplayType, DISPLAY_TYPES } from '@/hooks/useDisplayOrders';
 import { 
   Monitor, Smartphone, ExternalLink, Loader2, Users, Package, 
-  Type, BarChart3, LayoutGrid, Sparkles, Layout, Zap, Bell, Copy, RotateCcw, Table2
+  Type, BarChart3, LayoutGrid, Sparkles, Layout, Zap, Bell, Copy, RotateCcw, Table2, Check
 } from 'lucide-react';
 import { TablePreview } from '@/components/display-editor/TablePreview';
 import { ThemePresetMenu, ThemePreset } from '@/components/display-editor/ThemePresetMenu';
@@ -1953,6 +1953,97 @@ export default function DisplaySettingsPage() {
                           checked={settings.customer_sort_completed_last ?? true}
                           onCheckedChange={(v) => updateSetting('customer_sort_completed_last', v)}
                         />
+                      </div>
+                    </div>
+                    
+                    {/* Pakkeknapp-innstillinger */}
+                    <div className="space-y-4 p-4 rounded-lg bg-muted/30">
+                      <h5 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Pakkeknapp</h5>
+                      
+                      <div className="space-y-2">
+                        <Label>Knapptekst</Label>
+                        <Input
+                          value={settings.pack_button_text || 'Pakket'}
+                          onChange={(e) => updateSetting('pack_button_text', e.target.value)}
+                          placeholder="Pakket"
+                        />
+                      </div>
+                      
+                      <ColorInput 
+                        label="Bakgrunnsfarge" 
+                        value={settings.pack_button_background_color || '#22c55e'}
+                        onChange={(v) => updateSetting('pack_button_background_color', v)}
+                      />
+                      
+                      <ColorInput 
+                        label="Tekstfarge" 
+                        value={settings.pack_button_text_color || '#ffffff'}
+                        onChange={(v) => updateSetting('pack_button_text_color', v)}
+                      />
+                      
+                      <div className="space-y-2">
+                        <Label>Størrelse</Label>
+                        <Select 
+                          value={settings.pack_button_size || 'large'} 
+                          onValueChange={(v) => updateSetting('pack_button_size', v as 'normal' | 'large' | 'huge')}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="normal">Normal</SelectItem>
+                            <SelectItem value="large">Stor</SelectItem>
+                            <SelectItem value="huge">Ekstra stor</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label>Hjørneradius</Label>
+                        <Select 
+                          value={settings.pack_button_border_radius || '0.5rem'} 
+                          onValueChange={(v) => updateSetting('pack_button_border_radius', v)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="0.25rem">Liten</SelectItem>
+                            <SelectItem value="0.5rem">Normal</SelectItem>
+                            <SelectItem value="0.75rem">Stor</SelectItem>
+                            <SelectItem value="9999px">Avrundet (pill)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <Label>Vis ikon</Label>
+                          <p className="text-xs text-muted-foreground">Vis hake-ikon på knappen</p>
+                        </div>
+                        <Switch
+                          checked={settings.pack_button_show_icon ?? true}
+                          onCheckedChange={(v) => updateSetting('pack_button_show_icon', v)}
+                        />
+                      </div>
+                      
+                      {/* Live preview av knappen */}
+                      <div className="pt-3 border-t">
+                        <Label className="text-xs text-muted-foreground mb-2 block">Forhåndsvisning</Label>
+                        <Button
+                          className="gap-2 font-medium"
+                          style={{
+                            backgroundColor: settings.pack_button_background_color || '#22c55e',
+                            color: settings.pack_button_text_color || '#ffffff',
+                            borderRadius: settings.pack_button_border_radius || '0.5rem',
+                            height: settings.pack_button_size === 'huge' ? '4rem' : settings.pack_button_size === 'large' ? '3.5rem' : '3rem',
+                            padding: settings.pack_button_size === 'huge' ? '0 2rem' : settings.pack_button_size === 'large' ? '0 1.5rem' : '0 1rem',
+                            fontSize: settings.pack_button_size === 'huge' ? '1.25rem' : settings.pack_button_size === 'large' ? '1.125rem' : '1rem',
+                          }}
+                        >
+                          {(settings.pack_button_show_icon ?? true) && <Check className="h-5 w-5" />}
+                          {settings.pack_button_text || 'Pakket'}
+                        </Button>
                       </div>
                     </div>
                     

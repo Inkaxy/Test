@@ -104,6 +104,14 @@ export function CustomerOrderCard({
   const buttonStyle = settings?.product_card_button_style || 'full';
   const packedStyle = settings?.product_card_packed_style || 'strikethrough';
   const animationEnabled = settings?.product_card_animation_enabled ?? true;
+  
+  // Pakke-knapp innstillinger
+  const packButtonText = settings?.pack_button_text || 'Pakket';
+  const packButtonBgColor = settings?.pack_button_background_color || '#22c55e';
+  const packButtonTextColor = settings?.pack_button_text_color || '#ffffff';
+  const packButtonBorderRadius = settings?.pack_button_border_radius || '0.5rem';
+  const packButtonSize = settings?.pack_button_size || 'large';
+  const packButtonShowIcon = settings?.pack_button_show_icon ?? true;
   const useAlternateRows = settings?.product_card_alternate_rows ?? false;
   const alternateColor = settings?.product_card_alternate_color || alternateRowColor;
   
@@ -245,70 +253,89 @@ export function CustomerOrderCard({
   );
   
   // Render action buttons
-  const renderActions = () => (
-    <div className="flex flex-col items-end gap-3 flex-shrink-0">
-      {getStatusBadge()}
-      
-      {status === 'pending' && (
-        <div className="flex gap-2">
-          {buttonStyle !== 'icon-only' && (
+  const renderActions = () => {
+    const packBtnClasses = {
+      normal: { button: 'h-12 px-4 text-base', icon: 'h-12 w-12' },
+      large: { button: 'h-14 px-6 text-lg', icon: 'h-14 w-14' },
+      huge: { button: 'h-16 px-8 text-xl', icon: 'h-16 w-16' },
+    };
+    const packBtnSize = packBtnClasses[packButtonSize];
+    
+    return (
+      <div className="flex flex-col items-end gap-3 flex-shrink-0">
+        {getStatusBadge()}
+        
+        {status === 'pending' && (
+          <div className="flex gap-2">
+            {buttonStyle !== 'icon-only' && (
+              <Button
+                size="lg"
+                onClick={() => onMarkPacked(
+                  order.id, 
+                  order.packing_status?.id, 
+                  order.product.id, 
+                  order.product.category_id
+                )}
+                disabled={isMarkingPacked}
+                className={cn(packBtnSize.button, 'gap-2 font-medium touch-manipulation')}
+                style={{
+                  backgroundColor: packButtonBgColor,
+                  color: packButtonTextColor,
+                  borderRadius: packButtonBorderRadius,
+                }}
+              >
+                {packButtonShowIcon && <Check className="h-5 w-5" />}
+                {buttonStyle === 'full' && packButtonText}
+              </Button>
+            )}
+            
+            {buttonStyle === 'icon-only' && (
+              <Button
+                size="lg"
+                onClick={() => onMarkPacked(
+                  order.id, 
+                  order.packing_status?.id, 
+                  order.product.id, 
+                  order.product.category_id
+                )}
+                disabled={isMarkingPacked}
+                className={cn(packBtnSize.icon, 'touch-manipulation')}
+                style={{
+                  backgroundColor: packButtonBgColor,
+                  color: packButtonTextColor,
+                  borderRadius: packButtonBorderRadius,
+                }}
+              >
+                <Check className="h-6 w-6" />
+              </Button>
+            )}
+            
             <Button
               size="lg"
-              onClick={() => onMarkPacked(
-                order.id, 
-                order.packing_status?.id, 
-                order.product.id, 
-                order.product.category_id
-              )}
-              disabled={isMarkingPacked}
-              className={cn(btnClasses.button, 'gap-2 font-medium touch-manipulation')}
-            >
-              <Check className="h-5 w-5" />
-              {buttonStyle === 'full' && t('packing.markAsPacked')}
-            </Button>
-          )}
-          
-          {buttonStyle === 'icon-only' && (
-            <Button
-              size="lg"
-              onClick={() => onMarkPacked(
-                order.id, 
-                order.packing_status?.id, 
-                order.product.id, 
-                order.product.category_id
-              )}
-              disabled={isMarkingPacked}
+              variant="outline"
+              onClick={() => onReportDeviation(order)}
               className={cn(btnClasses.icon, 'touch-manipulation')}
             >
-              <Check className="h-6 w-6" />
+              <AlertTriangle className="h-5 w-5" />
             </Button>
-          )}
-          
+          </div>
+        )}
+        
+        {isPacked && order.packing_status?.id && (
           <Button
             size="lg"
-            variant="outline"
-            onClick={() => onReportDeviation(order)}
-            className={cn(btnClasses.icon, 'touch-manipulation')}
+            variant="ghost"
+            onClick={() => onUndo(order.packing_status!.id, order.id)}
+            disabled={isUndoing}
+            className="h-12 touch-manipulation"
           >
-            <AlertTriangle className="h-5 w-5" />
+            <Undo2 className="h-5 w-5 mr-2" />
+            {t('packing.undoPacked')}
           </Button>
-        </div>
-      )}
-      
-      {isPacked && order.packing_status?.id && (
-        <Button
-          size="lg"
-          variant="ghost"
-          onClick={() => onUndo(order.packing_status!.id, order.id)}
-          disabled={isUndoing}
-          className="h-12 touch-manipulation"
-        >
-          <Undo2 className="h-5 w-5 mr-2" />
-          {t('packing.undoPacked')}
-        </Button>
-      )}
-    </div>
-  );
+        )}
+      </div>
+    );
+  };
   
   return (
     <motion.div
