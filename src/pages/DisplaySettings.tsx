@@ -2111,6 +2111,46 @@ export default function DisplaySettingsPage() {
           </Card>
         </div>
       )}
+
+      {/* Visual Display Editor */}
+      {isVisualEditorOpen && (
+        <VisualDisplayEditor
+          initialSettings={settings}
+          displayType={selectedDisplayType}
+          categoryId={selectedCategoryId}
+          bakeryName={bakery?.name}
+          categoryName={filteredCategories.find(c => c.id === selectedCategoryId)?.name || 'Alle kategorier'}
+          isSaving={saveMutation.isPending}
+          onSave={async (newSettings) => {
+            setSettings(newSettings);
+            const settingsJson = JSON.parse(JSON.stringify(newSettings));
+            
+            if (existingSettings?.id) {
+              await supabase
+                .from('display_settings')
+                .update({ settings: settingsJson })
+                .eq('id', existingSettings.id);
+            } else {
+              await supabase
+                .from('display_settings')
+                .insert([{
+                  bakery_id: bakeryId,
+                  category_id: selectedCategoryId,
+                  display_type: selectedDisplayType,
+                  settings: settingsJson,
+                }]);
+            }
+            
+            queryClient.invalidateQueries({ queryKey: ['display-settings'] });
+            queryClient.invalidateQueries({ queryKey: ['display-settings-admin'] });
+            toast({
+              title: 'Innstillinger lagret',
+              description: 'Display-innstillingene ble oppdatert',
+            });
+          }}
+          onClose={() => setIsVisualEditorOpen(false)}
+        />
+      )}
     </div>
   );
 }
