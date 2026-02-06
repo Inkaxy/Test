@@ -8,7 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Mail, Plus, X, Send } from 'lucide-react';
+import { Loader2, Mail, Plus, X, Send, Clock } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useBakerySettings, useUpdateBakerySettings, type ReportFrequency, type EmailReportConfig } from '@/hooks/useBakerySettings';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -28,6 +29,7 @@ export function EmailReportSettingsCard() {
   const [newEmail, setNewEmail] = useState('');
   const [includeDeviations, setIncludeDeviations] = useState(true);
   const [includeSummary, setIncludeSummary] = useState(true);
+  const [sendTime, setSendTime] = useState('06:00');
   const [isSending, setIsSending] = useState(false);
   
   useEffect(() => {
@@ -38,6 +40,7 @@ export function EmailReportSettingsCard() {
       setRecipients(config.recipients || []);
       setIncludeDeviations(config.include_deviations ?? true);
       setIncludeSummary(config.include_summary ?? true);
+      setSendTime(config.send_time || '06:00');
     }
   }, [settings]);
   
@@ -90,6 +93,7 @@ export function EmailReportSettingsCard() {
       recipients,
       include_deviations: includeDeviations,
       include_summary: includeSummary,
+      send_time: sendTime,
       ...updates,
     };
     
@@ -128,6 +132,11 @@ export function EmailReportSettingsCard() {
   const handleIncludeSummaryChange = (value: boolean) => {
     setIncludeSummary(value);
     saveConfig({ include_summary: value });
+  };
+  
+  const handleSendTimeChange = (value: string) => {
+    setSendTime(value);
+    saveConfig({ send_time: value });
   };
   
   const handleSendTestReport = async () => {
@@ -172,22 +181,29 @@ export function EmailReportSettingsCard() {
   };
   
   const getFrequencyDescription = () => {
+    const timeDisplay = sendTime || '06:00';
     if (i18n.language === 'nb') {
       switch (frequency) {
-        case 'daily': return 'Rapport sendes hver dag kl. 06:00 for gårsdagens data.';
-        case 'weekly': return 'Rapport sendes hver mandag kl. 06:00 for forrige uke.';
-        case 'monthly': return 'Rapport sendes 1. hver måned kl. 06:00 for forrige måned.';
+        case 'daily': return `Rapport sendes hver dag kl. ${timeDisplay} for gårsdagens data.`;
+        case 'weekly': return `Rapport sendes hver mandag kl. ${timeDisplay} for forrige uke.`;
+        case 'monthly': return `Rapport sendes 1. hver måned kl. ${timeDisplay} for forrige måned.`;
         default: return '';
       }
     } else {
       switch (frequency) {
-        case 'daily': return 'Report sent daily at 06:00 for yesterday\'s data.';
-        case 'weekly': return 'Report sent every Monday at 06:00 for the previous week.';
-        case 'monthly': return 'Report sent on the 1st of each month at 06:00 for the previous month.';
+        case 'daily': return `Report sent daily at ${timeDisplay} for yesterday's data.`;
+        case 'weekly': return `Report sent every Monday at ${timeDisplay} for the previous week.`;
+        case 'monthly': return `Report sent on the 1st of each month at ${timeDisplay} for the previous month.`;
         default: return '';
       }
     }
   };
+  
+  // Generate time options (every hour)
+  const timeOptions = Array.from({ length: 24 }, (_, i) => {
+    const hour = i.toString().padStart(2, '0');
+    return { value: `${hour}:00`, label: `${hour}:00` };
+  });
   
   return (
     <Card>
@@ -268,6 +284,33 @@ export function EmailReportSettingsCard() {
                     <p className="text-xs text-muted-foreground">{getFrequencyDescription()}</p>
                   )}
                 </div>
+                
+                {/* Send time selection */}
+                {frequency !== 'off' && (
+                  <div className="space-y-3">
+                    <Label className="flex items-center gap-2">
+                      <Clock className="h-4 w-4" />
+                      {i18n.language === 'nb' ? 'Sendetidspunkt' : 'Send time'}
+                    </Label>
+                    <Select value={sendTime} onValueChange={handleSendTimeChange}>
+                      <SelectTrigger className="w-[180px]">
+                        <SelectValue placeholder={i18n.language === 'nb' ? 'Velg tid' : 'Select time'} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {timeOptions.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      {i18n.language === 'nb'
+                        ? 'Velg når rapporten skal sendes automatisk.'
+                        : 'Choose when the report should be sent automatically.'}
+                    </p>
+                  </div>
+                )}
                 
                 {/* Recipients */}
                 <div className="space-y-3">
