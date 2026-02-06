@@ -1550,7 +1550,8 @@ export default function DisplaySettingsPage() {
                 </AccordionContent>
               </AccordionItem>
               
-              {/* Produktbasert pakking */}
+              {/* Produktbasert pakking - kun for shared/customer display */}
+              {selectedDisplayType !== 'packing' && (
               <AccordionItem value="product-packing" className="border rounded-lg px-4">
                 <AccordionTrigger className="hover:no-underline">
                   <div className="flex items-center gap-3">
@@ -1648,6 +1649,7 @@ export default function DisplaySettingsPage() {
                   )}
                 </AccordionContent>
               </AccordionItem>
+              )}
               
               {/* Visningsmodus (kun for Pakkedisplay) */}
               {selectedDisplayType === 'packing' && (
