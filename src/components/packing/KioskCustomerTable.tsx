@@ -105,6 +105,18 @@ export function KioskCustomerTable({
   };
 
   const progressBarHeight = settings.table_progress_bar_height || '0.75rem';
+  
+  // Kolonne-bredder
+  const orderColumnWidth = settings.table_order_column_width || '9rem';
+  const progressColumnWidth = settings.table_progress_column_width || '14rem';
+  const statusColumnWidth = settings.table_status_column_width || '9rem';
+  
+  // Chevron størrelser
+  const chevronSizes = {
+    small: 'h-4 w-4',
+    medium: 'h-6 w-6',
+    large: 'h-8 w-8',
+  };
 
   return (
     <div className="w-full">
@@ -124,16 +136,20 @@ export function KioskCustomerTable({
             {t('packing.customer')}
           </div>
           {settings.table_show_order_count && (
-            <div className="w-28 text-center flex items-center justify-center gap-2">
+            <div className="text-center flex items-center justify-center gap-2" style={{ width: orderColumnWidth }}>
               <Package className="h-4 w-4 opacity-60" />
               {t('packing.orders')}
             </div>
           )}
           {settings.table_show_progress_bar && (
-            <div className="w-56">{t('dashboard.progress')}</div>
+            <div style={{ width: progressColumnWidth }}>{t('dashboard.progress')}</div>
           )}
-          <div className="w-36 text-center">{t('common.status')}</div>
-          <div className="w-10" /> {/* Space for chevron */}
+          {settings.table_show_status !== false && (
+            <div className="text-center" style={{ width: statusColumnWidth }}>{t('common.status')}</div>
+          )}
+          {settings.table_show_chevron !== false && (
+            <div className="w-10" />
+          )}
         </div>
       )}
 
@@ -211,14 +227,14 @@ export function KioskCustomerTable({
                         "truncate leading-tight",
                         fontWeightClasses[settings.table_customer_name_font_weight || 'bold']
                       )}
-                      style={{ fontSize: settings.table_font_size }}
+                      style={{ fontSize: settings.table_customer_name_font_size || settings.table_font_size }}
                     >
                       {customer.name}
                     </p>
                     {settings.table_show_customer_number && (
                       <p 
                         className="text-sm opacity-60 leading-tight mt-0.5"
-                        style={{ fontSize: `calc(${settings.table_font_size} * 0.75)` }}
+                        style={{ fontSize: `calc(${settings.table_customer_name_font_size || settings.table_font_size} * 0.75)` }}
                       >
                         #{customer.customer_number}
                       </p>
@@ -228,7 +244,7 @@ export function KioskCustomerTable({
 
                 {/* Order Count - Highly Visible */}
                 {settings.table_show_order_count && (
-                  <div className="w-36 flex items-center justify-center">
+                  <div className="flex items-center justify-center" style={{ width: orderColumnWidth }}>
                     <div 
                       className={cn(
                         'flex flex-col items-center justify-center rounded-xl py-3 px-4 transition-all',
@@ -258,7 +274,7 @@ export function KioskCustomerTable({
 
                 {/* Progress Bar */}
                 {settings.table_show_progress_bar && (
-                  <div className="w-56 flex items-center gap-4 px-2">
+                  <div className="flex items-center gap-4 px-2" style={{ width: progressColumnWidth }}>
                     <div className="flex-1">
                       <Progress
                         value={customer.progress}
@@ -282,55 +298,90 @@ export function KioskCustomerTable({
                 )}
 
                 {/* Status */}
-                <div className="w-36 flex justify-center">
-                  {lockedByOther && (
-                    <Badge variant="secondary" className="gap-2 px-4 py-2 text-base">
-                      {settings.table_show_status_icons && <Lock className="h-4 w-4" />}
-                      {t('packing.locked')}
-                    </Badge>
-                  )}
-                  {lockedByMe && (
-                    <Badge
-                      className="gap-2 px-4 py-2 text-base"
-                      style={{ backgroundColor: settings.packing_color, color: '#fff' }}
-                    >
-                      {settings.table_show_status_icons && <Lock className="h-4 w-4" />}
-                      {t('packing.yourLock')}
-                    </Badge>
-                  )}
-                  {isComplete && !lockedByMe && !lockedByOther && (
-                    <Badge
-                      className="gap-2 px-4 py-2 text-base"
-                      style={{ backgroundColor: settings.completed_color, color: '#fff' }}
-                    >
-                      {settings.table_show_status_icons && <Check className="h-5 w-5" />}
-                      {t('packing.complete')}
-                    </Badge>
-                  )}
-                  {!isComplete && !lockedByMe && !lockedByOther && (
-                    <Badge
-                      className="gap-2 px-4 py-2 text-base"
-                      style={{ 
-                        backgroundColor: customer.progress > 0 ? `${settings.packing_color}20` : 'transparent',
-                        borderColor: statusColor, 
-                        borderWidth: '2px',
-                        color: settings.text_color,
-                      }}
-                    >
-                      {customer.progress > 0 ? t('packing.inProgress') : t('packing.pending')}
-                    </Badge>
-                  )}
-                </div>
+                {settings.table_show_status !== false && (
+                  <div className="flex justify-center" style={{ width: statusColumnWidth }}>
+                    {lockedByOther && (
+                      <Badge 
+                        variant="secondary" 
+                        className={cn(
+                          "gap-2",
+                          settings.table_status_badge_style === 'minimal' && 'border-0 bg-transparent'
+                        )}
+                        style={{ 
+                          fontSize: settings.table_status_font_size,
+                          padding: settings.table_status_badge_padding,
+                        }}
+                      >
+                        {settings.table_show_status_icons && <Lock className="h-4 w-4" />}
+                        {t('packing.locked')}
+                      </Badge>
+                    )}
+                    {lockedByMe && (
+                      <Badge
+                        className="gap-2"
+                        style={{ 
+                          backgroundColor: settings.table_status_badge_style === 'outline' ? 'transparent' : settings.packing_color, 
+                          color: settings.table_status_badge_style === 'outline' ? settings.packing_color : '#fff',
+                          borderColor: settings.packing_color,
+                          borderWidth: settings.table_status_badge_style === 'outline' ? '2px' : '0',
+                          fontSize: settings.table_status_font_size,
+                          padding: settings.table_status_badge_padding,
+                        }}
+                      >
+                        {settings.table_show_status_icons && <Lock className="h-4 w-4" />}
+                        {t('packing.yourLock')}
+                      </Badge>
+                    )}
+                    {isComplete && !lockedByMe && !lockedByOther && (
+                      <Badge
+                        className="gap-2"
+                        style={{ 
+                          backgroundColor: settings.table_status_badge_style === 'outline' ? 'transparent' : settings.completed_color, 
+                          color: settings.table_status_badge_style === 'outline' ? settings.completed_color : '#fff',
+                          borderColor: settings.completed_color,
+                          borderWidth: settings.table_status_badge_style === 'outline' ? '2px' : '0',
+                          fontSize: settings.table_status_font_size,
+                          padding: settings.table_status_badge_padding,
+                        }}
+                      >
+                        {settings.table_show_status_icons && <Check className="h-5 w-5" />}
+                        {t('packing.complete')}
+                      </Badge>
+                    )}
+                    {!isComplete && !lockedByMe && !lockedByOther && (
+                      <Badge
+                        className="gap-2"
+                        style={{ 
+                          backgroundColor: settings.table_status_badge_style === 'filled' 
+                            ? (customer.progress > 0 ? `${settings.packing_color}30` : `${settings.pending_color}30`) 
+                            : 'transparent',
+                          borderColor: statusColor, 
+                          borderWidth: '2px',
+                          color: settings.text_color,
+                          fontSize: settings.table_status_font_size,
+                          padding: settings.table_status_badge_padding,
+                        }}
+                      >
+                        {customer.progress > 0 ? t('packing.inProgress') : t('packing.pending')}
+                      </Badge>
+                    )}
+                  </div>
+                )}
                 
                 {/* Chevron indicator for touch */}
-                <div className="w-10 flex justify-center">
-                  {!lockedByOther && !isComplete && (
-                    <ChevronRight 
-                      className="h-6 w-6 opacity-40"
-                      style={{ color: settings.text_color }}
-                    />
-                  )}
-                </div>
+                {settings.table_show_chevron !== false && (
+                  <div className="w-10 flex justify-center">
+                    {!lockedByOther && !isComplete && (
+                      <ChevronRight 
+                        className={cn(
+                          "opacity-40",
+                          chevronSizes[settings.table_chevron_size || 'medium']
+                        )}
+                        style={{ color: settings.text_color }}
+                      />
+                    )}
+                  </div>
+                )}
               </motion.div>
             );
           })}
