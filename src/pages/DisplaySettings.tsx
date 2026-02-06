@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { TablePreview } from '@/components/display-editor/TablePreview';
 import { ThemePresetMenu, ThemePreset } from '@/components/display-editor/ThemePresetMenu';
+import { ProductCardSettingsPanel } from '@/components/display-editor/ProductCardSettingsPanel';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -1943,6 +1944,12 @@ export default function DisplaySettingsPage() {
                         />
                       </div>
                     </div>
+                    
+                    {/* Produktkort-innstillinger */}
+                    <ProductCardSettingsPanel 
+                      settings={settings} 
+                      updateSetting={updateSetting} 
+                    />
                   </AccordionContent>
                 </AccordionItem>
               )}

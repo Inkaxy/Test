@@ -364,6 +364,34 @@ export interface DisplaySettings {
   table_quantity_show_label: boolean;
   table_quantity_border_style: 'none' | 'outline' | 'filled';
   
+  // Produktkort-innstillinger (når kunden pakkes)
+  product_card_layout: 'horizontal' | 'vertical';
+  product_card_name_font_size: string;
+  product_card_name_font_weight: 'normal' | 'medium' | 'semibold' | 'bold';
+  product_card_show_product_number: boolean;
+  product_card_product_number_font_size: string;
+  product_card_quantity_size: 'small' | 'medium' | 'large' | 'huge';
+  product_card_quantity_position: 'left' | 'right' | 'center';
+  product_card_quantity_style: 'plain' | 'box' | 'circle' | 'pill';
+  product_card_quantity_background_color: string;
+  product_card_quantity_text_color: string;
+  product_card_show_tray_format: boolean;
+  product_card_tray_label: string;
+  product_card_show_total_pieces: boolean;
+  product_card_pieces_label: string;
+  product_card_min_height: string;
+  product_card_padding: string;
+  product_card_gap: string;
+  product_card_border_radius: string;
+  product_card_border_width: string;
+  product_card_show_status_badge: boolean;
+  product_card_button_size: 'normal' | 'large' | 'huge';
+  product_card_button_style: 'full' | 'icon-only' | 'compact';
+  product_card_alternate_rows: boolean;
+  product_card_alternate_color: string;
+  product_card_packed_style: 'strikethrough' | 'fade' | 'collapse';
+  product_card_animation_enabled: boolean;
+  
   // Legacy support
   show_progress_bar: boolean;
   progress_bar_style: string;
@@ -502,6 +530,34 @@ export function getDefaultDisplaySettings(): DisplaySettings {
     table_quantity_text_color: '#3b82f6',
     table_quantity_show_label: false,
     table_quantity_border_style: 'outline',
+    
+    // Produktkort-innstillinger
+    product_card_layout: 'horizontal',
+    product_card_name_font_size: '1.25rem',
+    product_card_name_font_weight: 'semibold',
+    product_card_show_product_number: true,
+    product_card_product_number_font_size: '0.875rem',
+    product_card_quantity_size: 'large',
+    product_card_quantity_position: 'right',
+    product_card_quantity_style: 'box',
+    product_card_quantity_background_color: '#3b82f620',
+    product_card_quantity_text_color: '#3b82f6',
+    product_card_show_tray_format: true,
+    product_card_tray_label: 'pl',
+    product_card_show_total_pieces: true,
+    product_card_pieces_label: 'stk',
+    product_card_min_height: '100px',
+    product_card_padding: '1.25rem',
+    product_card_gap: '1rem',
+    product_card_border_radius: '0.75rem',
+    product_card_border_width: '2px',
+    product_card_show_status_badge: true,
+    product_card_button_size: 'large',
+    product_card_button_style: 'full',
+    product_card_alternate_rows: false,
+    product_card_alternate_color: '#f1f5f920',
+    product_card_packed_style: 'strikethrough',
+    product_card_animation_enabled: true,
     
     // Legacy
     show_progress_bar: true,

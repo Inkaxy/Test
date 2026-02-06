@@ -415,6 +415,7 @@ export default function CustomerPackingView() {
                 index={index}
                 isAlternate={alternateRowsEnabled && index % 2 === 1}
                 alternateRowColor={alternateRowColor}
+                settings={settings}
                 onMarkPacked={handleMarkPacked}
                 onReportDeviation={(o) => setDeviationOrder({ 
                   id: o.id, 
