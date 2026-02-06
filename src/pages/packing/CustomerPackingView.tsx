@@ -252,6 +252,8 @@ export default function CustomerPackingView() {
   const remainingOrders = totalOrders - packedOrders;
   
   // Use display settings for header
+  const showBakeryName = settings.header_show_bakery_name;
+  const showCategoryName = settings.header_show_category_name;
   const showClock = settings.header_show_clock ?? settings.show_clock;
   const showDate = settings.header_show_date ?? settings.show_date;
   const clockFormat = settings.header_clock_format || '24h';
@@ -492,19 +494,29 @@ export default function CustomerPackingView() {
             <ArrowLeft className="h-6 w-6" />
           </Button>
           <div>
-            <h1 
-              className="font-bold"
-              style={{ fontSize: settings.header_bakery_font_size || '1.875rem' }}
-            >
-              {bakery?.name || t('packing.customerBased')}
-            </h1>
-            {category && (
+            {showBakeryName && bakery?.name && (
+              <h1 
+                className="font-bold"
+                style={{ fontSize: settings.header_bakery_font_size || '1.875rem' }}
+              >
+                {bakery.name}
+              </h1>
+            )}
+            {showCategoryName && category && (
               <p 
-                className="opacity-80"
-                style={{ fontSize: settings.header_category_font_size || '1.25rem' }}
+                className={showBakeryName ? "opacity-80" : "font-bold"}
+                style={{ fontSize: showBakeryName ? (settings.header_category_font_size || '1.25rem') : (settings.header_bakery_font_size || '1.875rem') }}
               >
                 {category.name}
               </p>
+            )}
+            {!showBakeryName && !showCategoryName && (
+              <h1 
+                className="font-bold"
+                style={{ fontSize: settings.header_bakery_font_size || '1.875rem' }}
+              >
+                {t('packing.customerBased')}
+              </h1>
             )}
           </div>
         </div>
