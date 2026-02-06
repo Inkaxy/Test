@@ -17,31 +17,132 @@ export interface EditableElementConfig {
 
 export const EDITABLE_ELEMENTS: EditableElementConfig[] = [
   // Header elements
-  { id: 'header-bakery-name', label: 'Bakerinavn', category: 'header', settingKeys: ['header_show_bakery_name', 'header_bakery_font_size'] },
-  { id: 'header-category', label: 'Kategorinavn', category: 'header', settingKeys: ['header_show_category_name', 'header_category_font_size'] },
-  { id: 'header-clock', label: 'Klokke', category: 'header', settingKeys: ['header_show_clock', 'header_clock_font_size', 'header_clock_format'] },
-  { id: 'header-date', label: 'Dato', category: 'header', settingKeys: ['header_show_date', 'header_date_font_size'] },
+  { 
+    id: 'header-bakery-name', 
+    label: 'Bakerinavn', 
+    category: 'header', 
+    settingKeys: ['header_show_bakery_name', 'header_bakery_font_size', 'text_color'] 
+  },
+  { 
+    id: 'header-category', 
+    label: 'Kategorinavn', 
+    category: 'header', 
+    settingKeys: ['header_show_category_name', 'header_category_font_size', 'text_color'] 
+  },
+  { 
+    id: 'header-clock', 
+    label: 'Klokke', 
+    category: 'header', 
+    settingKeys: ['header_show_clock', 'header_clock_font_size', 'header_clock_format', 'text_color'] 
+  },
+  { 
+    id: 'header-date', 
+    label: 'Dato', 
+    category: 'header', 
+    settingKeys: ['header_show_date', 'header_date_font_size', 'text_color'] 
+  },
   
   // Stats elements
-  { id: 'stats-progress', label: 'Fremdrift', category: 'stats', settingKeys: ['stats_show_total_progress', 'stats_progress_bar_style', 'stats_progress_bar_height'] },
-  { id: 'stats-packed', label: 'Pakket-teller', category: 'stats', settingKeys: ['stats_show_packed_count', 'stats_value_font_size'] },
-  { id: 'stats-remaining', label: 'Gjenstående', category: 'stats', settingKeys: ['stats_show_remaining_count', 'stats_label_font_size'] },
+  { 
+    id: 'stats-progress', 
+    label: 'Fremdrift', 
+    category: 'stats', 
+    settingKeys: [
+      'stats_show_total_progress', 
+      'stats_show_packed_count', 
+      'stats_show_remaining_count',
+      'stats_progress_bar_style', 
+      'stats_progress_bar_height',
+      'stats_value_font_size',
+      'stats_label_font_size',
+      'completed_color',
+      'pending_color',
+      'card_background_color'
+    ] 
+  },
   
   // Card elements
-  { id: 'card-customer-name', label: 'Kundenavn', category: 'cards', settingKeys: ['card_customer_name_font_size'] },
-  { id: 'card-customer-number', label: 'Kundenummer', category: 'cards', settingKeys: ['card_show_customer_number'] },
-  { id: 'card-products', label: 'Produktliste', category: 'cards', settingKeys: ['card_show_product_list', 'card_product_font_size'] },
-  { id: 'card-progress', label: 'Kundeprogress', category: 'cards', settingKeys: ['card_show_individual_progress', 'card_progress_font_size'] },
+  { 
+    id: 'layout-card', 
+    label: 'Kundekort', 
+    category: 'cards', 
+    settingKeys: [
+      'card_show_customer_number',
+      'card_show_product_list',
+      'card_show_product_numbers',
+      'card_show_quantity_as_trays',
+      'card_show_individual_progress',
+      'card_compact_mode',
+      'card_customer_name_font_size',
+      'card_product_font_size',
+      'card_quantity_font_size',
+      'card_progress_font_size',
+      'card_background_color',
+      'border_radius', 
+      'card_border_width',
+      'completed_color',
+      'pending_color',
+      'packing_color'
+    ] 
+  },
   
   // Layout elements
-  { id: 'layout-grid', label: 'Rutenett', category: 'layout', settingKeys: ['columns', 'gap_size', 'padding'] },
-  { id: 'layout-card', label: 'Kort-stil', category: 'layout', settingKeys: ['border_radius', 'card_border_width'] },
+  { 
+    id: 'layout-grid', 
+    label: 'Rutenett', 
+    category: 'layout', 
+    settingKeys: [
+      'columns', 
+      'gap_size', 
+      'padding',
+      'background_color',
+      'auto_scroll_enabled',
+      'auto_scroll_speed',
+      'auto_scroll_pause_on_hover'
+    ] 
+  },
   
   // Appearance
-  { id: 'appearance-background', label: 'Bakgrunn', category: 'appearance', settingKeys: ['background_color'] },
-  { id: 'appearance-card-bg', label: 'Kortbakgrunn', category: 'appearance', settingKeys: ['card_background_color'] },
-  { id: 'appearance-text', label: 'Tekstfarge', category: 'appearance', settingKeys: ['text_color'] },
-  { id: 'appearance-status', label: 'Statusfarger', category: 'appearance', settingKeys: ['pending_color', 'packing_color', 'completed_color'] },
+  { 
+    id: 'appearance-colors', 
+    label: 'Farger', 
+    category: 'appearance', 
+    settingKeys: [
+      'background_color', 
+      'card_background_color', 
+      'text_color',
+      'pending_color', 
+      'packing_color', 
+      'completed_color'
+    ] 
+  },
+  
+  // Animation settings
+  {
+    id: 'appearance-animations',
+    label: 'Animasjoner',
+    category: 'appearance',
+    settingKeys: [
+      'animation_enabled',
+      'animation_speed',
+      'animation_on_status_change',
+      'animation_highlight_new',
+      'animation_highlight_duration',
+      'realtime_flash_on_update'
+    ]
+  },
+  
+  // Sorting settings
+  {
+    id: 'appearance-sorting',
+    label: 'Sortering',
+    category: 'appearance',
+    settingKeys: [
+      'customer_sort_mode',
+      'customer_sort_direction',
+      'customer_sort_completed_last'
+    ]
+  },
 ];
 
 export const THEME_PRESETS = {

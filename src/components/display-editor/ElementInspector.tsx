@@ -1,16 +1,19 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Eye, EyeOff } from 'lucide-react';
+import { X, ChevronDown, ChevronUp, Settings2, Palette, Type, Layout, Sparkles, ArrowUpDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
+import { Slider } from '@/components/ui/slider';
 import { DisplaySettings } from '@/hooks/useDisplayOrders';
 import { EDITABLE_ELEMENTS, EditableElementConfig } from './types';
 import { ColorPicker } from './ColorPicker';
 import { SizeSlider, FONT_SIZE_PRESETS } from './SizeSlider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { cn } from '@/lib/utils';
 
 interface ElementInspectorProps {
   selectedElement: string | null;
@@ -19,17 +22,64 @@ interface ElementInspectorProps {
   onClose: () => void;
 }
 
+// Group settings by type for better organization
+type SettingGroup = 'visibility' | 'typography' | 'colors' | 'layout' | 'animation' | 'sorting';
+
+function getSettingGroup(key: keyof DisplaySettings): SettingGroup {
+  if (key.includes('show_') || key.includes('enabled')) return 'visibility';
+  if (key.includes('font_size') || key.includes('format')) return 'typography';
+  if (key.includes('color')) return 'colors';
+  if (key.includes('animation') || key.includes('flash') || key.includes('highlight')) return 'animation';
+  if (key.includes('sort')) return 'sorting';
+  return 'layout';
+}
+
+const GROUP_ICONS: Record<SettingGroup, React.ReactNode> = {
+  visibility: <Settings2 className="h-4 w-4" />,
+  typography: <Type className="h-4 w-4" />,
+  colors: <Palette className="h-4 w-4" />,
+  layout: <Layout className="h-4 w-4" />,
+  animation: <Sparkles className="h-4 w-4" />,
+  sorting: <ArrowUpDown className="h-4 w-4" />,
+};
+
+const GROUP_LABELS: Record<SettingGroup, string> = {
+  visibility: 'Synlighet',
+  typography: 'Typografi',
+  colors: 'Farger',
+  layout: 'Layout',
+  animation: 'Animasjoner',
+  sorting: 'Sortering',
+};
+
 export function ElementInspector({
   selectedElement,
   settings,
   onUpdateSetting,
   onClose,
 }: ElementInspectorProps) {
+  const [openGroups, setOpenGroups] = React.useState<SettingGroup[]>(['visibility', 'typography']);
   const elementConfig = EDITABLE_ELEMENTS.find(e => e.id === selectedElement);
   
   if (!selectedElement || !elementConfig) {
     return null;
   }
+
+  // Group settings by type
+  const groupedSettings = elementConfig.settingKeys.reduce((acc, key) => {
+    const group = getSettingGroup(key);
+    if (!acc[group]) acc[group] = [];
+    acc[group].push(key);
+    return acc;
+  }, {} as Record<SettingGroup, (keyof DisplaySettings)[]>);
+
+  const toggleGroup = (group: SettingGroup) => {
+    setOpenGroups(prev => 
+      prev.includes(group) 
+        ? prev.filter(g => g !== group)
+        : [...prev, group]
+    );
+  };
 
   const renderSettingControl = (settingKey: keyof DisplaySettings) => {
     const value = settings[settingKey];
@@ -49,11 +99,19 @@ export function ElementInspector({
         card_show_individual_progress: 'Vis kundeprogress',
         card_show_product_numbers: 'Vis produktnummer',
         card_show_quantity_as_trays: 'Vis antall som brett',
+        card_compact_mode: 'Kompakt modus',
+        animation_enabled: 'Animasjoner aktivert',
+        animation_on_status_change: 'Animer statusendringer',
+        animation_highlight_new: 'Marker nye elementer',
+        auto_scroll_enabled: 'Auto-scroll aktivert',
+        auto_scroll_pause_on_hover: 'Pause ved hover',
+        realtime_flash_on_update: 'Blink ved oppdatering',
+        customer_sort_completed_last: 'Ferdige kunder sist',
       };
       
       return (
-        <div key={settingKey} className="flex items-center justify-between py-2">
-          <Label className="text-sm">{labelMap[settingKey] || settingKey}</Label>
+        <div key={settingKey} className="flex items-center justify-between py-2 px-1 rounded hover:bg-muted/50 transition-colors">
+          <Label className="text-sm cursor-pointer">{labelMap[settingKey] || settingKey}</Label>
           <Switch
             checked={value}
             onCheckedChange={(v) => onUpdateSetting(settingKey, v as never)}
@@ -65,15 +123,16 @@ export function ElementInspector({
     // Font size sliders
     if (settingKey.includes('font_size')) {
       const labelMap: Record<string, string> = {
-        header_bakery_font_size: 'Skriftstørrelse',
-        header_category_font_size: 'Skriftstørrelse',
-        header_clock_font_size: 'Skriftstørrelse',
-        header_date_font_size: 'Skriftstørrelse',
-        stats_value_font_size: 'Verdi-størrelse',
-        stats_label_font_size: 'Etikett-størrelse',
-        card_customer_name_font_size: 'Kundenavn-størrelse',
-        card_product_font_size: 'Produkt-størrelse',
-        card_progress_font_size: 'Progress-størrelse',
+        header_bakery_font_size: 'Bakerinavn størrelse',
+        header_category_font_size: 'Kategorinavn størrelse',
+        header_clock_font_size: 'Klokke størrelse',
+        header_date_font_size: 'Dato størrelse',
+        stats_value_font_size: 'Verdi størrelse',
+        stats_label_font_size: 'Etikett størrelse',
+        card_customer_name_font_size: 'Kundenavn størrelse',
+        card_product_font_size: 'Produkt størrelse',
+        card_quantity_font_size: 'Antall størrelse',
+        card_progress_font_size: 'Progress størrelse',
       };
       
       return (
@@ -161,10 +220,10 @@ export function ElementInspector({
             value={value as string}
             onValueChange={(v) => onUpdateSetting(settingKey, v as never)}
           >
-            <SelectTrigger className="w-full">
+            <SelectTrigger className="w-full bg-background">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-popover z-50">
               <SelectItem value="24h">24-timers (14:30)</SelectItem>
               <SelectItem value="12h">12-timers (2:30 PM)</SelectItem>
             </SelectContent>
@@ -182,10 +241,10 @@ export function ElementInspector({
             value={value as string}
             onValueChange={(v) => onUpdateSetting(settingKey, v as never)}
           >
-            <SelectTrigger className="w-full">
+            <SelectTrigger className="w-full bg-background">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-popover z-50">
               <SelectItem value="bar">Stolpe</SelectItem>
               <SelectItem value="circle">Sirkel</SelectItem>
               <SelectItem value="none">Ingen</SelectItem>
@@ -225,8 +284,118 @@ export function ElementInspector({
       );
     }
     
+    // Animation speed
+    if (settingKey === 'animation_speed') {
+      return (
+        <div key={settingKey} className="space-y-2">
+          <Label className="text-sm">Animasjonshastighet</Label>
+          <Select
+            value={value as string}
+            onValueChange={(v) => onUpdateSetting(settingKey, v as never)}
+          >
+            <SelectTrigger className="w-full bg-background">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="bg-popover z-50">
+              <SelectItem value="fast">Rask</SelectItem>
+              <SelectItem value="normal">Normal</SelectItem>
+              <SelectItem value="slow">Sakte</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      );
+    }
+    
+    // Animation highlight duration
+    if (settingKey === 'animation_highlight_duration') {
+      return (
+        <div key={settingKey} className="space-y-2">
+          <div className="flex items-center justify-between">
+            <Label className="text-sm">Markeringsvarighet</Label>
+            <span className="text-xs text-muted-foreground">{(value as number) / 1000}s</span>
+          </div>
+          <Slider
+            value={[(value as number)]}
+            onValueChange={([v]) => onUpdateSetting(settingKey, v as never)}
+            min={1000}
+            max={10000}
+            step={500}
+            className="w-full"
+          />
+        </div>
+      );
+    }
+    
+    // Auto scroll speed
+    if (settingKey === 'auto_scroll_speed') {
+      return (
+        <div key={settingKey} className="space-y-2">
+          <Label className="text-sm">Scroll-hastighet</Label>
+          <Select
+            value={value as string}
+            onValueChange={(v) => onUpdateSetting(settingKey, v as never)}
+          >
+            <SelectTrigger className="w-full bg-background">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="bg-popover z-50">
+              <SelectItem value="slow">Sakte</SelectItem>
+              <SelectItem value="medium">Medium</SelectItem>
+              <SelectItem value="fast">Rask</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      );
+    }
+    
+    // Sort mode
+    if (settingKey === 'customer_sort_mode') {
+      return (
+        <div key={settingKey} className="space-y-2">
+          <Label className="text-sm">Sorteringsmodus</Label>
+          <Select
+            value={value as string}
+            onValueChange={(v) => onUpdateSetting(settingKey, v as never)}
+          >
+            <SelectTrigger className="w-full bg-background">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="bg-popover z-50">
+              <SelectItem value="name">Kundenavn</SelectItem>
+              <SelectItem value="customer_number">Kundenummer</SelectItem>
+              <SelectItem value="progress">Fremdrift</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      );
+    }
+    
+    // Sort direction
+    if (settingKey === 'customer_sort_direction') {
+      return (
+        <div key={settingKey} className="space-y-2">
+          <Label className="text-sm">Sorteringsretning</Label>
+          <Select
+            value={value as string}
+            onValueChange={(v) => onUpdateSetting(settingKey, v as never)}
+          >
+            <SelectTrigger className="w-full bg-background">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="bg-popover z-50">
+              <SelectItem value="asc">Stigende (A-Å)</SelectItem>
+              <SelectItem value="desc">Synkende (Å-A)</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      );
+    }
+    
     return null;
   };
+
+  const orderedGroups: SettingGroup[] = ['visibility', 'typography', 'colors', 'layout', 'animation', 'sorting'];
+  const availableGroups = orderedGroups.filter(g => groupedSettings[g]?.length > 0);
 
   return (
     <AnimatePresence>
@@ -237,10 +406,15 @@ export function ElementInspector({
         className="w-80 bg-card border-l border-border h-full flex flex-col shadow-lg"
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b">
-          <div>
-            <h3 className="font-semibold">{elementConfig.label}</h3>
-            <p className="text-xs text-muted-foreground capitalize">{elementConfig.category}</p>
+        <div className="flex items-center justify-between p-4 border-b bg-muted/30">
+          <div className="flex items-center gap-3">
+            <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+              <Settings2 className="h-4 w-4 text-primary" />
+            </div>
+            <div>
+              <h3 className="font-semibold">{elementConfig.label}</h3>
+              <p className="text-xs text-muted-foreground capitalize">{elementConfig.category}</p>
+            </div>
           </div>
           <Button variant="ghost" size="icon" onClick={onClose}>
             <X className="h-4 w-4" />
@@ -248,11 +422,53 @@ export function ElementInspector({
         </div>
         
         {/* Settings */}
-        <ScrollArea className="flex-1 p-4">
-          <div className="space-y-4">
-            {elementConfig.settingKeys.map(renderSettingControl)}
+        <ScrollArea className="flex-1">
+          <div className="p-2">
+            {availableGroups.map((group, index) => (
+              <Collapsible
+                key={group}
+                open={openGroups.includes(group)}
+                onOpenChange={() => toggleGroup(group)}
+              >
+                <CollapsibleTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className={cn(
+                      "w-full justify-between px-3 py-2 h-auto",
+                      openGroups.includes(group) && "bg-muted"
+                    )}
+                  >
+                    <div className="flex items-center gap-2">
+                      {GROUP_ICONS[group]}
+                      <span className="font-medium text-sm">{GROUP_LABELS[group]}</span>
+                      <span className="text-xs text-muted-foreground">
+                        ({groupedSettings[group].length})
+                      </span>
+                    </div>
+                    {openGroups.includes(group) ? (
+                      <ChevronUp className="h-4 w-4" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4" />
+                    )}
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <div className="px-3 py-2 space-y-3">
+                    {groupedSettings[group].map(renderSettingControl)}
+                  </div>
+                </CollapsibleContent>
+                {index < availableGroups.length - 1 && <Separator className="my-1" />}
+              </Collapsible>
+            ))}
           </div>
         </ScrollArea>
+        
+        {/* Footer with quick actions */}
+        <div className="p-3 border-t bg-muted/30">
+          <p className="text-xs text-muted-foreground text-center">
+            Trykk Esc for å lukke • Ctrl+Z for å angre
+          </p>
+        </div>
       </motion.div>
     </AnimatePresence>
   );
