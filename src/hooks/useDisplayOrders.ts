@@ -286,6 +286,14 @@ export interface DisplaySettings {
   card_border_width: string;
   theme_preset: ThemePreset;
   
+  // Bilder (Images)
+  logo_url: string | null;
+  logo_position: 'left' | 'center' | 'right';
+  logo_size: string;
+  background_image_url: string | null;
+  background_image_opacity: number;
+  background_image_blur: number;
+  
   // Layout & Scroll
   columns: number;
   gap_size: string;
@@ -392,6 +400,14 @@ export function getDefaultDisplaySettings(): DisplaySettings {
     border_radius: '0.75rem',
     card_border_width: '4px',
     theme_preset: 'dark',
+    
+    // Bilder
+    logo_url: null,
+    logo_position: 'left',
+    logo_size: '3rem',
+    background_image_url: null,
+    background_image_opacity: 0.2,
+    background_image_blur: 0,
     
     // Layout & Scroll
     columns: 3,
