@@ -21,6 +21,7 @@ import {
   Type, BarChart3, LayoutGrid, Sparkles, Layout, Zap, Bell, Copy, RotateCcw, Table2
 } from 'lucide-react';
 import { TablePreview } from '@/components/display-editor/TablePreview';
+import { ThemePresetMenu, ThemePreset } from '@/components/display-editor/ThemePresetMenu';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -868,52 +869,34 @@ export default function DisplaySettingsPage() {
                   </div>
                 </AccordionTrigger>
                 <AccordionContent className="space-y-4 pt-2">
-                  {/* Theme presets */}
-                  <div className="space-y-3">
-                    <Label className="text-sm font-medium">Tema-forhåndsvalg</Label>
-                    <div className="grid grid-cols-4 gap-2">
-                      {[
-                        { id: 'dark', label: 'Mørk', bg: '#1a1a2e', card: '#16213e', text: '#ffffff' },
-                        { id: 'light', label: 'Lys', bg: '#f8fafc', card: '#ffffff', text: '#0f172a' },
-                        { id: 'high-contrast', label: 'Høy kontrast', bg: '#000000', card: '#1a1a1a', text: '#ffffff' },
-                        { id: 'custom', label: 'Egendefinert', bg: settings.background_color, card: settings.card_background_color, text: settings.text_color },
-                      ].map((theme) => (
-                        <button
-                          key={theme.id}
-                          type="button"
-                          onClick={() => {
-                            if (theme.id !== 'custom') {
-                              updateSetting('background_color', theme.bg);
-                              updateSetting('card_background_color', theme.card);
-                              updateSetting('text_color', theme.text);
-                              updateSetting('theme_preset', theme.id as 'dark' | 'light' | 'high-contrast' | 'custom');
-                            } else {
-                              updateSetting('theme_preset', 'custom');
-                            }
-                          }}
-                          className={`p-3 rounded-lg border-2 transition-all ${
-                            (settings.theme_preset || 'dark') === theme.id 
-                              ? 'border-primary ring-2 ring-primary/20' 
-                              : 'border-border hover:border-primary/50'
-                          }`}
-                        >
-                          <div 
-                            className="h-8 rounded mb-2 flex items-center justify-center"
-                            style={{ backgroundColor: theme.bg }}
-                          >
-                            <div 
-                              className="h-4 w-8 rounded"
-                              style={{ backgroundColor: theme.card }}
-                            />
-                          </div>
-                          <span className="text-xs font-medium">{theme.label}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+                  {/* Theme presets - using shared component */}
+                  <ThemePresetMenu
+                    currentTheme={settings.theme_preset || 'dark'}
+                    currentSettings={{
+                      background_color: settings.background_color,
+                      card_background_color: settings.card_background_color,
+                      text_color: settings.text_color,
+                      pending_color: settings.pending_color,
+                      packing_color: settings.packing_color,
+                      completed_color: settings.completed_color,
+                    }}
+                    onSelectTheme={(theme: ThemePreset) => {
+                      if (theme.id !== 'custom') {
+                        updateSetting('background_color', theme.background_color);
+                        updateSetting('card_background_color', theme.card_background_color);
+                        updateSetting('text_color', theme.text_color);
+                        updateSetting('pending_color', theme.pending_color);
+                        updateSetting('packing_color', theme.packing_color);
+                        updateSetting('completed_color', theme.completed_color);
+                        updateSetting('theme_preset', theme.id as any);
+                      } else {
+                        updateSetting('theme_preset', 'custom');
+                      }
+                    }}
+                  />
                   
-                  {(settings.theme_preset === 'custom' || !settings.theme_preset) && (
-                    <div className="grid grid-cols-2 gap-4">
+                  {settings.theme_preset === 'custom' && (
+                    <div className="grid grid-cols-2 gap-4 pt-2">
                       <ColorInput 
                         label="Bakgrunnsfarge" 
                         value={settings.background_color}
@@ -1540,6 +1523,73 @@ export default function DisplaySettingsPage() {
                           <div className="text-xs text-muted-foreground">Engelsk</div>
                         </button>
                       </div>
+                    </div>
+                    
+                    {/* Theme presets for Packing Display */}
+                    <div className="border-t pt-4">
+                      <h4 className="text-sm font-medium flex items-center gap-2 mb-3">
+                        <Sparkles className="h-4 w-4" />
+                        Tema
+                      </h4>
+                      <ThemePresetMenu
+                        currentTheme={settings.theme_preset || 'dark'}
+                        currentSettings={{
+                          background_color: settings.background_color,
+                          card_background_color: settings.card_background_color,
+                          text_color: settings.text_color,
+                          pending_color: settings.pending_color,
+                          packing_color: settings.packing_color,
+                          completed_color: settings.completed_color,
+                        }}
+                        onSelectTheme={(theme: ThemePreset) => {
+                          if (theme.id !== 'custom') {
+                            updateSetting('background_color', theme.background_color);
+                            updateSetting('card_background_color', theme.card_background_color);
+                            updateSetting('text_color', theme.text_color);
+                            updateSetting('pending_color', theme.pending_color);
+                            updateSetting('packing_color', theme.packing_color);
+                            updateSetting('completed_color', theme.completed_color);
+                            updateSetting('theme_preset', theme.id as any);
+                          } else {
+                            updateSetting('theme_preset', 'custom');
+                          }
+                        }}
+                      />
+                      
+                      {settings.theme_preset === 'custom' && (
+                        <div className="grid grid-cols-2 gap-3 mt-4">
+                          <ColorInput 
+                            label="Bakgrunnsfarge" 
+                            value={settings.background_color}
+                            onChange={(v) => updateSetting('background_color', v)}
+                          />
+                          <ColorInput 
+                            label="Kortbakgrunn" 
+                            value={settings.card_background_color}
+                            onChange={(v) => updateSetting('card_background_color', v)}
+                          />
+                          <ColorInput 
+                            label="Tekstfarge" 
+                            value={settings.text_color}
+                            onChange={(v) => updateSetting('text_color', v)}
+                          />
+                          <ColorInput 
+                            label="Venter" 
+                            value={settings.pending_color}
+                            onChange={(v) => updateSetting('pending_color', v)}
+                          />
+                          <ColorInput 
+                            label="Pakker" 
+                            value={settings.packing_color}
+                            onChange={(v) => updateSetting('packing_color', v)}
+                          />
+                          <ColorInput 
+                            label="Ferdig" 
+                            value={settings.completed_color}
+                            onChange={(v) => updateSetting('completed_color', v)}
+                          />
+                        </div>
+                      )}
                     </div>
                     
                     {/* Table-specific settings */}
