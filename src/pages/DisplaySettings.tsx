@@ -51,6 +51,7 @@ export default function DisplaySettingsPage() {
     urlCategoryId || null
   );
   const [settings, setSettings] = useState<DisplaySettings>(getDefaultDisplaySettings());
+  const [isVisualEditorOpen, setIsVisualEditorOpen] = useState(false);
   
   const { data: categories = [] } = useCategories();
   
