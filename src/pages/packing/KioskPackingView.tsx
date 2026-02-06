@@ -600,15 +600,6 @@ export default function KioskPackingView() {
               >
                 <RefreshCw className="h-5 w-5" />
               </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleFullscreen}
-                className="h-10 w-10"
-                style={{ color: settings.text_color }}
-              >
-                <Maximize className="h-5 w-5" />
-              </Button>
             </div>
           </div>
         </header>
@@ -786,15 +777,6 @@ export default function KioskPackingView() {
               style={{ color: settings.text_color }}
             >
               <RefreshCw className="h-5 w-5" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleFullscreen}
-              className="h-10 w-10"
-              style={{ color: settings.text_color }}
-            >
-              <Maximize className="h-5 w-5" />
             </Button>
           </div>
         </div>
