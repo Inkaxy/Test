@@ -15,6 +15,12 @@ interface PreviewCustomer {
   status: 'pending' | 'packing' | 'complete' | 'locked';
 }
 
+interface MockProduct {
+  name: string;
+  quantity: number;
+  pieces_per_tray: number;
+}
+
 const mockCustomers: PreviewCustomer[] = [
   { 
     id: '1', 
@@ -53,6 +59,23 @@ const mockCustomers: PreviewCustomer[] = [
     status: 'locked' 
   },
 ];
+
+// Mock products for pl+stk preview
+const mockProducts: MockProduct[] = [
+  { name: 'Rundstykker', quantity: 27, pieces_per_tray: 12 },
+  { name: 'Croissant', quantity: 15, pieces_per_tray: 8 },
+  { name: 'Kanelbolle', quantity: 6, pieces_per_tray: 6 },
+  { name: 'Focaccia', quantity: 4, pieces_per_tray: 4 },
+];
+
+const formatQuantityWithTrays = (quantity: number, piecesPerTray: number): string => {
+  if (piecesPerTray <= 0) return `${quantity}`;
+  const trays = Math.floor(quantity / piecesPerTray);
+  const pieces = quantity % piecesPerTray;
+  if (trays === 0) return `${pieces}`;
+  if (pieces === 0) return `${trays}pl`;
+  return `${trays}pl+${pieces}`;
+};
 
 const rowHeightClasses = {
   compact: 'py-2',
@@ -116,6 +139,45 @@ export function TablePreview({ settings }: TablePreviewProps) {
       <div className="flex items-center gap-2 mb-3 text-xs font-medium" style={{ color: settings.text_color, opacity: 0.6 }}>
         <Package className="h-3 w-3" />
         <span>TABELL FORHÅNDSVISNING</span>
+      </div>
+
+      {/* pl+stk Preview Section */}
+      <div className="mb-4 p-3 rounded-lg" style={{ backgroundColor: `${settings.card_background_color}`, border: `1px solid ${settings.pending_color}30` }}>
+        <div className="flex items-center gap-2 mb-2 text-xs font-medium" style={{ color: settings.text_color, opacity: 0.6 }}>
+          <Package className="h-3 w-3" />
+          <span>PRODUKT MED PL+STK FORMAT</span>
+        </div>
+        <div className="space-y-1.5">
+          {mockProducts.map((product, idx) => (
+            <div 
+              key={idx}
+              className="flex items-center justify-between px-2 py-1.5 rounded"
+              style={{ 
+                backgroundColor: idx % 2 === 0 ? settings.card_background_color : settings.table_alternate_row_color,
+                fontSize: `calc(${settings.table_font_size} * 0.75)`,
+              }}
+            >
+              <span style={{ color: settings.text_color }}>{product.name}</span>
+              <div 
+                className={cn(
+                  'px-2 py-0.5 rounded font-mono font-bold',
+                  quantitySizeClasses[settings.table_quantity_display_size as keyof typeof quantitySizeClasses] || 'text-lg',
+                )}
+                style={{
+                  backgroundColor: settings.table_quantity_border_style === 'filled' 
+                    ? settings.table_quantity_background_color 
+                    : 'transparent',
+                  color: settings.table_quantity_text_color || settings.packing_color,
+                  border: settings.table_quantity_border_style === 'outline' 
+                    ? `2px solid ${settings.table_quantity_text_color || settings.packing_color}` 
+                    : 'none',
+                }}
+              >
+                {formatQuantityWithTrays(product.quantity, product.pieces_per_tray)}
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Sticky Header */}
