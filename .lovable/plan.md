@@ -1,160 +1,215 @@
 
-# Plan: Norsk som hovedspråk - FULLFØRT
+# Plan: E-postrapporter for avvik og pakkesesjoner
 
-## Implementering
+## Oversikt
 
-**Display-skjermene (Felles Display, Kunde Display) bruker:**
-- `useRealtimeDisplay()` hook
-- Lytter på `broadcast` events (packing_update fra pakkestasjonene)
-- Lytter på `postgres_changes` som backup
-- Invaliderer queries og refetcher når oppdateringer mottas
+Implementere automatisk e-postutsending av avviksrapporter og pakkesammendrag til administrative brukere. Administratorer kan velge frekvens: daglig, ukentlig, månedlig, eller deaktivert.
 
-**Pakkeskjermene (Pakkedisplay, Produktpakking):**
-- Sender broadcast events via `usePackingBroadcast()`
-- Bruker `useMarkAsPacked()`, `useBatchMarkAsPacked()`, `useUndoPacking()` mutations
-- Har egne `useRealtimeDisplay` som lytter (men på andre kanaler)
+## Arkitektur
 
-**Kritisk punkt:** 
-Display-skjermene må fortsatt motta realtime broadcast-events fra pakkestasjonene. Vi MUST NOT endre hvordan broadcast-events sendes fra pakkestasjonene.
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│                     Innstillinger (Settings.tsx)                │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │  E-postrapporter                                         │   │
+│  │  ○ Av  ○ Daglig  ○ Ukentlig  ○ Månedlig                 │   │
+│  │  Mottakere: [admin1@bakeri.no, admin2@bakeri.no]        │   │
+│  └─────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                  bakeries.settings (JSONB)                       │
+│  {                                                               │
+│    "email_report_config": {                                      │
+│      "enabled": true,                                            │
+│      "frequency": "daily" | "weekly" | "monthly",                │
+│      "recipients": ["email1@test.no", "email2@test.no"],         │
+│      "include_deviations": true,                                 │
+│      "include_summary": true,                                    │
+│      "last_sent_at": "2026-02-05T08:00:00Z"                     │
+│    }                                                             │
+│  }                                                               │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│             Edge Function: send-packing-report                   │
+│  - Kjøres via cron (daglig kl 06:00)                            │
+│  - Henter alle bakerier med aktiv e-postrapport                 │
+│  - Sjekker frequency og last_sent_at                            │
+│  - Samler avviksdata og pakkestatistikk                         │
+│  - Sender e-post via Resend                                      │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                     E-postinnhold                                │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │  📊 Pakkerapport - Bakeri AS                             │   │
+│  │  Periode: 05.02.2026                                     │   │
+│  │                                                          │   │
+│  │  SAMMENDRAG                                              │   │
+│  │  ├── Totalt pakket: 234 ordrer                          │   │
+│  │  ├── Avvik: 12 (5.1%)                                   │   │
+│  │  └── Fullføringsrate: 100%                              │   │
+│  │                                                          │   │
+│  │  AVVIK DETALJER                                          │   │
+│  │  ┌─────────────────────────────────────────────────┐    │   │
+│  │  │ Kunde      │ Produkt    │ Type   │ Notat       │    │   │
+│  │  │ Kafe Nord  │ Rundstykke │ Manko  │ -3 stk      │    │   │
+│  │  │ Restaurant │ Focaccia   │ Skade  │ Brent       │    │   │
+│  │  └─────────────────────────────────────────────────┘    │   │
+│  └─────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────┘
+```
 
-## Løsning: Optimistisk oppdatering BARE på pakkeskjermen
+## Implementeringsdetaljer
 
-Optimiseringen gjøres lokalt på pakke-siden (KioskPackingView, CustomerPackingView) uten å påvirke realtime broadcast-systemet:
+### Del 1: Utvide BakerySettings interface
 
-1. **Optimistisk UI oppdatering på pakkedisplay** - Viser resultat umiddelbart når bruker klikker
-2. **Fortsatt send broadcast** - Pakkestasjonene sender broadcast slik som før
-3. **Display mottar broadcast** - Display-skjermene får realtime updates som før
-4. **Ingen endringer i broadcast-mekanikk** - Alt fungerer som før
+**Fil: `src/hooks/useBakerySettings.ts`**
 
-## Implementering
-
-### Del 1: Optimistisk oppdatering i useMarkAsPacked (og andre mutations)
-
-**Fil:** `src/hooks/useOrders.ts`
-
-Legg til `onMutate` handler som oppdaterer cache optimistisk:
+Legg til ny konfigurasjon for e-postrapporter:
 
 ```typescript
-onMutate: async ({ orderId, packingStatusId }) => {
-  // Avbryt pågående refetch
-  await queryClient.cancelQueries({ queryKey: ['kiosk-customers-for-date'] });
-  
-  // Lagre forrige data
-  const previousData = queryClient.getQueryData(['kiosk-customers-for-date', ...]);
-  
-  // Optimistisk oppdatering av cache
-  queryClient.setQueryData(['kiosk-customers-for-date', ...], (old) => {
-    if (!old) return old;
-    // Oppdater status lokalt
-    return updateOrderStatusInCache(old, orderId, 'packed');
-  });
-  
-  return { previousData };
-},
+export type ReportFrequency = 'off' | 'daily' | 'weekly' | 'monthly';
 
-onError: (err, variables, context) => {
-  // Rollback ved feil
-  if (context?.previousData) {
-    queryClient.setQueryData(['kiosk-customers-for-date', ...], context.previousData);
-  }
-},
+export interface EmailReportConfig {
+  enabled: boolean;
+  frequency: ReportFrequency;
+  recipients: string[];
+  include_deviations: boolean;
+  include_summary: boolean;
+  last_sent_at?: string;
+}
 
-onSettled: () => {
-  // Etter mutation, refetch for å synkronisere med server
-  queryClient.refetchQueries({ queryKey: ['kiosk-customers-for-date'] });
-  // VIKTIG: Broadcast sender automatisk - ingen endring her
+export interface BakerySettings {
+  // ... eksisterende felt
+  email_report_config?: EmailReportConfig;
 }
 ```
 
-### Del 2: Oppdater KioskPackingView.tsx
+### Del 2: UI for e-postinnstillinger
 
-**Fil:** `src/pages/packing/KioskPackingView.tsx`
+**Ny fil: `src/components/settings/EmailReportSettingsCard.tsx`**
 
-Sikre at mutations brukes på alle packing-action buttons:
-- Mark as packed → `useMarkAsPacked()` (med optimistisk oppdatering)
-- Undo → `useUndoPacking()` (med optimistisk oppdatering)
-- Report deviation → `useReportDeviation()` (med optimistisk oppdatering)
+Inneholder:
+- Av/På-bryter for e-postrapporter
+- RadioGroup for frekvens (Daglig, Ukentlig, Månedlig)
+- Input-felt for å legge til mottakere (e-postadresser)
+- Liste over nåværende mottakere med slett-knapp
+- Avkrysningsbokser for hva som skal inkluderes (avvik, sammendrag)
+- "Send testrapport"-knapp
 
-Innføring av optimistisk oppdatering påvirker BARE den lokale brukerens view - display-skjermene mottar fortsatt broadcast events fra `usePackingBroadcast()`.
+### Del 3: Oppdatere Settings-siden
 
-### Del 3: Oppdater CustomerPackingView.tsx
+**Fil: `src/pages/Settings.tsx`**
 
-**Fil:** `src/pages/packing/CustomerPackingView.tsx`
+Importer og legg til `EmailReportSettingsCard` komponenten mellom DeviationSettingsCard og PackingRowStyleSettings.
 
-Samme optimistisk oppdatering som KioskPackingView.
+### Del 4: Edge Function for sending av rapport
 
-### Del 4: Hjelpefunksjon for cache-update
-
-**Fil:** `src/hooks/useOrders.ts`
-
-Legg til hjelpefunksjon som beregner oppdatert status:
+**Ny fil: `supabase/functions/send-packing-report/index.ts`**
 
 ```typescript
-function updateOrderStatusInCache(
-  customers: any[],
-  orderId: string,
-  newStatus: 'packed' | 'pending' | 'deviation'
-): any[] {
-  return customers.map(customer => {
-    const orderIndex = customer.orders.findIndex((o: any) => o.id === orderId);
-    if (orderIndex === -1) return customer;
-    
-    const updatedOrders = [...customer.orders];
-    updatedOrders[orderIndex] = {
-      ...updatedOrders[orderIndex],
-      packing_status: {
-        ...updatedOrders[orderIndex].packing_status,
-        status: newStatus,
-      }
-    };
-    
-    const packedCount = updatedOrders.filter(
-      (o: any) => o.packing_status?.status === 'packed'
-    ).length;
-    
-    return {
-      ...customer,
-      orders: updatedOrders,
-      packedOrders: packedCount,
-      progress: Math.round((packedCount / customer.totalOrders) * 100),
-    };
-  });
-}
+// Pseudokode for edge function
+Deno.serve(async (req) => {
+  // 1. Hent alle bakerier med email_report_config.enabled = true
+  
+  // 2. For hver bakeri:
+  //    - Sjekk frequency og last_sent_at
+  //    - Hvis det er på tide å sende:
+  //      a. Hent avviksdata for perioden
+  //      b. Hent pakkestatistikk
+  //      c. Generer HTML-rapport
+  //      d. Send via Resend
+  //      e. Oppdater last_sent_at
+  
+  // 3. Returner status
+});
 ```
 
-## Sikkerhet - Display påvirkes IKKE
+**Rapportdata som hentes:**
+- Ordrer med `packing_status.status = 'deviation'` for perioden
+- Join med `customers` og `products` for navn
+- Beregn totalt pakket, avvik-prosent, fullføringsrate
 
-| Komponent | Før | Etter | Resultat |
-|-----------|-----|-------|----------|
-| Pakkedisplay UI | Venter ~300ms | Oppdateres umiddelbar (optimistisk) | ✅ Raskere |
-| Broadcast sendt | `usePackingBroadcast()` | `usePackingBroadcast()` uendret | ✅ Display får signal |
-| Display mottar | `useRealtimeDisplay` invaliderer | `useRealtimeDisplay` invaliderer | ✅ Ingen endring |
-| Database roundtrip | Venter på svar | Samme som før | ✅ Ikke påvirket |
+### Del 5: Cron-jobb for daglig kjøring
+
+**Fil: `supabase/config.toml`**
+
+Legg til ny function-konfigurasjon:
+```toml
+[functions.send-packing-report]
+verify_jwt = false
+```
+
+**Database cron-jobb** (kjøres via Supabase SQL):
+Planlegg kjøring kl 06:00 hver dag som kaller edge function.
+
+### Del 6: Resend API-nøkkel
+
+E-postsending krever Resend API-nøkkel. Brukeren må:
+1. Opprette konto på resend.com
+2. Verifisere domene
+3. Generere API-nøkkel
+4. Legge inn nøkkelen som secret: `RESEND_API_KEY`
+
+---
 
 ## Filendringer
 
 | Fil | Endring |
 |-----|---------|
-| `src/hooks/useOrders.ts` | Legg til `onMutate` med optimistisk cache-update, legg til hjelpefunksjon |
-| `src/pages/packing/KioskPackingView.tsx` | Sikre alle mutations bruker optimistisk oppdatering |
-| `src/pages/packing/CustomerPackingView.tsx` | Sikre alle mutations bruker optimistisk oppdatering |
+| `src/hooks/useBakerySettings.ts` | Utvid interface med EmailReportConfig |
+| `src/components/settings/EmailReportSettingsCard.tsx` | Ny komponent for UI |
+| `src/pages/Settings.tsx` | Importer og bruk EmailReportSettingsCard |
+| `supabase/functions/send-packing-report/index.ts` | Ny edge function |
+| `supabase/config.toml` | Legg til function-konfigurasjon |
 
-## Teknisk sikring
+---
 
-**Display-kanalen påvirkes IKKE fordi:**
-1. `usePackingBroadcast()` sendes som før
-2. `useRealtimeDisplay()` mottar broadcast som før
-3. Bare den lokale UI-cachen oppdateres optimistisk
-4. Når broadcast mottas, refetcher display-skjermen anyway
+## Tekniske detaljer
 
-**Fallback:**
-- Hvis optimistisk oppdatering mislykkes, `onError` rollback restorer forrige data
-- `onSettled` refetcher for å synkronisere med server
+### E-postmal (HTML)
+Rapporten formateres som en profesjonell HTML-e-post med:
+- Bakerilogo (hvis tilgjengelig)
+- Tydelig overskrift med dato/periode
+- Oppsummeringsboks med nøkkeltall
+- Tabell over avvik med kunde, produkt, type og notat
+- Bunntekst med lenke til systemet
 
-## Resultat
+### Frekvenslogikk
 
-- ✅ Pakkedisplay respondere umiddelbart (0ms opplevd latency)
-- ✅ Felles Display og Kunde Display mottar broadcast som før
-- ✅ Display-skjermene refetcher ved broadcast mottatt
-- ✅ Ingen endring i realtime-arkitektur
-- ✅ Sikre fallback ved feil
+| Frekvens | Periode som rapporteres |
+|----------|------------------------|
+| Daglig | Gårsdagen |
+| Ukentlig | Siste 7 dager (sendes mandag) |
+| Månedlig | Forrige måned (sendes 1. i måneden) |
+
+### Feilhåndtering
+- Hvis e-postsending feiler, logg feilen og prøv igjen ved neste kjøring
+- Ikke oppdater `last_sent_at` før sending er bekreftet
+- Send feilvarsel til systemadministrator ved gjentatte feil
+
+---
+
+## Brukeropplevelse
+
+1. Administrator går til **Innstillinger**
+2. Finner ny seksjon **E-postrapporter**
+3. Aktiverer rapportering og velger frekvens
+4. Legger til e-postadresser for mottakere
+5. Kan sende en testrapport umiddelbart
+6. Rapporter sendes automatisk basert på valgt frekvens
+
+---
+
+## Forutsetninger
+
+Før implementering må brukeren:
+1. Opprette Resend-konto og verifisere domene
+2. Legge inn `RESEND_API_KEY` som secret
+
+Skal jeg starte med denne implementeringen?
