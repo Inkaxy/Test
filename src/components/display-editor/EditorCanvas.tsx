@@ -66,6 +66,13 @@ export function EditorCanvas({
   onReorderCustomers,
 }: EditorCanvasProps) {
   const [customerOrder, setCustomerOrder] = useState(MOCK_CUSTOMERS.map(c => c.id));
+
+  const handleReorder = (newOrder: string[]) => {
+    setCustomerOrder(newOrder);
+    onReorderCustomers?.(newOrder);
+  };
+
+  const now = new Date();
   const formattedTime = settings.header_clock_format === '24h' 
     ? format(now, 'HH:mm')
     : format(now, 'h:mm a');
