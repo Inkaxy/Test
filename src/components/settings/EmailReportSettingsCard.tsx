@@ -134,6 +134,11 @@ export function EmailReportSettingsCard() {
     saveConfig({ include_summary: value });
   };
   
+  const handleSendTimeChange = (value: string) => {
+    setSendTime(value);
+    saveConfig({ send_time: value });
+  };
+  
   const handleSendTestReport = async () => {
     if (recipients.length === 0) {
       toast({
