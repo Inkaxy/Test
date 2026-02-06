@@ -143,20 +143,20 @@ export function EditorToolbar({
                </DropdownMenuItem>
              </DropdownMenuContent>
            </DropdownMenu>
-          
-          <Separator orientation="vertical" className="h-6" />
-          
-          {/* Quick colors */}
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-9 w-9 rounded-full"
-              >
-                <Palette className="h-4 w-4" />
-              </Button>
-            </PopoverTrigger>
+           
+           <Separator orientation="vertical" className="h-6" />
+           
+           {/* Quick colors */}
+           <Popover>
+             <PopoverTrigger asChild>
+               <Button
+                 variant="ghost"
+                 size="icon"
+                 className="h-9 w-9 rounded-full"
+               >
+                 <Palette className="h-4 w-4" />
+               </Button>
+             </PopoverTrigger>
             <PopoverContent className="w-72" align="center" side="top">
               <div className="space-y-3">
                 <Label className="text-sm font-medium">Hurtigfarger</Label>
