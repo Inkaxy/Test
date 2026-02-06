@@ -393,6 +393,14 @@ export interface DisplaySettings {
   product_card_packed_style: 'strikethrough' | 'fade' | 'collapse';
   product_card_animation_enabled: boolean;
   
+  // Pakke-knapp innstillinger
+  pack_button_text: string;
+  pack_button_background_color: string;
+  pack_button_text_color: string;
+  pack_button_border_radius: string;
+  pack_button_size: 'normal' | 'large' | 'huge';
+  pack_button_show_icon: boolean;
+  
   // Legacy support
   show_progress_bar: boolean;
   progress_bar_style: string;
@@ -560,6 +568,14 @@ export function getDefaultDisplaySettings(): DisplaySettings {
     product_card_alternate_color: '#f1f5f920',
     product_card_packed_style: 'strikethrough',
     product_card_animation_enabled: true,
+    
+    // Pakke-knapp innstillinger
+    pack_button_text: 'Pakket',
+    pack_button_background_color: '#22c55e',
+    pack_button_text_color: '#ffffff',
+    pack_button_border_radius: '0.5rem',
+    pack_button_size: 'large',
+    pack_button_show_icon: true,
     
     // Legacy
     show_progress_bar: true,
