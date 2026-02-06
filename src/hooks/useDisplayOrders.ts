@@ -401,6 +401,14 @@ export interface DisplaySettings {
   pack_button_size: 'normal' | 'large' | 'huge';
   pack_button_show_icon: boolean;
   
+  // Tilbakeknapp-innstillinger
+  back_button_show: boolean;
+  back_button_size: 'small' | 'medium' | 'large' | 'huge';
+  back_button_style: 'icon' | 'icon-circle' | 'icon-square' | 'text' | 'text-icon';
+  back_button_background_color: string;
+  back_button_icon_color: string;
+  back_button_text: string;
+  
   // Legacy support
   show_progress_bar: boolean;
   progress_bar_style: string;
@@ -576,6 +584,14 @@ export function getDefaultDisplaySettings(): DisplaySettings {
     pack_button_border_radius: '0.5rem',
     pack_button_size: 'large',
     pack_button_show_icon: true,
+    
+    // Tilbakeknapp-innstillinger
+    back_button_show: true,
+    back_button_size: 'large',
+    back_button_style: 'icon',
+    back_button_background_color: 'transparent',
+    back_button_icon_color: '',
+    back_button_text: 'Tilbake',
     
     // Legacy
     show_progress_bar: true,

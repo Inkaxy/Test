@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { useState, useEffect } from 'react';
-import { Check, Lock, Users, Package, ChevronRight, Clock, Calendar, BarChart3, CheckCircle2, Circle, AlertTriangle, Undo2 } from 'lucide-react';
+import { Check, Lock, Users, Package, ChevronRight, Clock, Calendar, BarChart3, CheckCircle2, Circle, AlertTriangle, Undo2, ArrowLeft } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -221,7 +221,7 @@ export function TablePreview({ settings }: TablePreviewProps) {
       }}
     >
       {/* === HEADER SECTION === */}
-      {(settings.header_show_bakery_name || settings.header_show_category_name || settings.header_show_clock || settings.header_show_date) && (
+      {(settings.back_button_show !== false || settings.header_show_bakery_name || settings.header_show_category_name || settings.header_show_clock || settings.header_show_date) && (
         <div 
           className="mb-3 p-3 rounded-lg"
           style={{ backgroundColor: settings.card_background_color }}
@@ -229,23 +229,74 @@ export function TablePreview({ settings }: TablePreviewProps) {
           <div className="flex items-center gap-2 mb-2 text-[10px] font-semibold uppercase tracking-wider" style={{ color: settings.text_color, opacity: 0.5 }}>
             HEADER-INNSTILLINGER
           </div>
-          <div className="flex items-center justify-between">
-            <div className="flex flex-col gap-0.5">
-              {settings.header_show_bakery_name && (
-                <span 
-                  className="font-bold"
-                  style={{ color: settings.text_color, fontSize: `calc(${settings.header_bakery_font_size || '1.5rem'} * 0.6)` }}
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              {/* Back Button Preview */}
+              {settings.back_button_show !== false && (
+                <div 
+                  className={cn(
+                    "flex items-center justify-center shrink-0",
+                    settings.back_button_style === 'icon-circle' && "rounded-full",
+                    settings.back_button_style === 'icon-square' && "rounded-md",
+                    (settings.back_button_style === 'text' || settings.back_button_style === 'text-icon') && "px-2 gap-1"
+                  )}
+                  style={{ 
+                    backgroundColor: (settings.back_button_style === 'icon-circle' || settings.back_button_style === 'icon-square') 
+                      ? (settings.back_button_background_color || 'transparent') 
+                      : 'transparent',
+                    color: settings.back_button_icon_color || settings.text_color,
+                    width: settings.back_button_style === 'text' || settings.back_button_style === 'text-icon' 
+                      ? 'auto' 
+                      : settings.back_button_size === 'small' ? '24px' 
+                      : settings.back_button_size === 'medium' ? '28px'
+                      : settings.back_button_size === 'large' ? '32px' 
+                      : '40px',
+                    height: settings.back_button_style === 'text' || settings.back_button_style === 'text-icon' 
+                      ? 'auto' 
+                      : settings.back_button_size === 'small' ? '24px' 
+                      : settings.back_button_size === 'medium' ? '28px'
+                      : settings.back_button_size === 'large' ? '32px' 
+                      : '40px',
+                  }}
                 >
-                  Test Bakeri
-                </span>
+                  {settings.back_button_style !== 'text' && (
+                    <ArrowLeft className={cn(
+                      settings.back_button_size === 'small' && 'h-4 w-4',
+                      settings.back_button_size === 'medium' && 'h-5 w-5',
+                      settings.back_button_size === 'large' && 'h-6 w-6',
+                      settings.back_button_size === 'huge' && 'h-8 w-8',
+                    )} />
+                  )}
+                  {(settings.back_button_style === 'text' || settings.back_button_style === 'text-icon') && (
+                    <span className={cn(
+                      "font-medium",
+                      settings.back_button_size === 'small' && 'text-xs',
+                      settings.back_button_size === 'medium' && 'text-sm',
+                      settings.back_button_size === 'large' && 'text-base',
+                      settings.back_button_size === 'huge' && 'text-lg',
+                    )}>
+                      {settings.back_button_text || 'Tilbake'}
+                    </span>
+                  )}
+                </div>
               )}
-              {settings.header_show_category_name && (
-                <span 
-                  style={{ color: settings.packing_color, fontSize: `calc(${settings.header_category_font_size || '1rem'} * 0.6)` }}
-                >
-                  Småvarer
-                </span>
-              )}
+              <div className="flex flex-col gap-0.5">
+                {settings.header_show_bakery_name && (
+                  <span 
+                    className="font-bold"
+                    style={{ color: settings.text_color, fontSize: `calc(${settings.header_bakery_font_size || '1.5rem'} * 0.6)` }}
+                  >
+                    Test Bakeri
+                  </span>
+                )}
+                {settings.header_show_category_name && (
+                  <span 
+                    style={{ color: settings.packing_color, fontSize: `calc(${settings.header_category_font_size || '1rem'} * 0.6)` }}
+                  >
+                    Småvarer
+                  </span>
+                )}
+              </div>
             </div>
             <div className="flex items-center gap-3 text-right">
               {settings.header_show_clock && (
