@@ -1,4 +1,6 @@
 export { VisualDisplayEditor } from './VisualDisplayEditor';
+export { ResizableElement } from './ResizableElement';
+export { DraggableSection } from './DraggableSection';
 export { EditorCanvas } from './EditorCanvas';
 export { EditorToolbar } from './EditorToolbar';
 export { EditableElement } from './EditableElement';
