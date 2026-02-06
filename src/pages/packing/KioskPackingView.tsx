@@ -655,6 +655,7 @@ export default function KioskPackingView() {
                   index={index}
                   isAlternate={alternateRowsEnabled && index % 2 === 1}
                   alternateRowColor={alternateRowColor}
+                  settings={settings}
                   onMarkPacked={(orderId, packingStatusId) => handleMarkPacked(orderId, packingStatusId)}
                   onReportDeviation={(o) => setDeviationOrder({ 
                     id: o.id, 
