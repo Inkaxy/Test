@@ -642,36 +642,59 @@ export default function KioskPackingView() {
         )}
         
         {/* Products - using shared CustomerOrderCard component for consistency */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: settings.gap_size || '1rem' }}>
-          <AnimatePresence>
-            {currentCustomer.orders.map((order, index) => {
-              const alternateRowsEnabled = bakerySettings?.packing_row_style?.alternateRowsEnabled || false;
-              const alternateRowColor = bakerySettings?.packing_row_style?.alternateRowColor || 'amber';
-              
-              return (
-                <CustomerOrderCard
-                  key={order.id}
-                  order={order}
-                  index={index}
-                  isAlternate={alternateRowsEnabled && index % 2 === 1}
-                  alternateRowColor={alternateRowColor}
-                  settings={settings}
-                  onMarkPacked={(orderId, packingStatusId) => handleMarkPacked(orderId, packingStatusId)}
-                  onReportDeviation={(o) => setDeviationOrder({ 
-                    id: o.id, 
-                    packingStatusId: o.packing_status?.id,
-                    productName: o.product.name,
-                    customerName: currentCustomer.name,
-                    quantity: o.quantity,
-                  })}
-                  onUndo={handleUndo}
-                  isMarkingPacked={markAsPacked.isPending}
-                  isUndoing={undoPacking.isPending}
-                />
-              );
-            })}
-          </AnimatePresence>
-        </div>
+        {(() => {
+          const isPacked = (order: any) => {
+            const status = order?.packing_status?.status || 'pending';
+            return status === 'packed' || status === 'deviation';
+          };
+
+          const ordersToRender = settings.customer_sort_completed_last
+            ? currentCustomer.orders
+                .map((order, originalIndex) => ({ order, originalIndex }))
+                .sort((a, b) => {
+                  const aPacked = isPacked(a.order);
+                  const bPacked = isPacked(b.order);
+                  if (aPacked !== bPacked) return aPacked ? 1 : -1;
+                  return a.originalIndex - b.originalIndex;
+                })
+                .map(({ order }) => order)
+            : currentCustomer.orders;
+
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: settings.gap_size || '1rem' }}>
+              <AnimatePresence>
+                {ordersToRender.map((order, index) => {
+                  const alternateRowsEnabled = bakerySettings?.packing_row_style?.alternateRowsEnabled || false;
+                  const alternateRowColor = bakerySettings?.packing_row_style?.alternateRowColor || 'amber';
+
+                  return (
+                    <CustomerOrderCard
+                      key={order.id}
+                      order={order}
+                      index={index}
+                      isAlternate={alternateRowsEnabled && index % 2 === 1}
+                      alternateRowColor={alternateRowColor}
+                      settings={settings}
+                      onMarkPacked={(orderId, packingStatusId) => handleMarkPacked(orderId, packingStatusId)}
+                      onReportDeviation={(o) =>
+                        setDeviationOrder({
+                          id: o.id,
+                          packingStatusId: o.packing_status?.id,
+                          productName: o.product.name,
+                          customerName: currentCustomer.name,
+                          quantity: o.quantity,
+                        })
+                      }
+                      onUndo={handleUndo}
+                      isMarkingPacked={markAsPacked.isPending}
+                      isUndoing={undoPacking.isPending}
+                    />
+                  );
+                })}
+              </AnimatePresence>
+            </div>
+          );
+        })()}
         
         {/* Deviation dialog */}
         <DeviationDialog
