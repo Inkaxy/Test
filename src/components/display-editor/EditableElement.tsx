@@ -50,8 +50,9 @@ export function EditableElement({
 
   return (
     <motion.div
+      layout
       className={cn(
-        "relative cursor-pointer transition-all duration-200 rounded-lg",
+        "relative cursor-pointer rounded-lg",
         isSelected 
           ? "ring-2 ring-primary ring-offset-2 ring-offset-background" 
           : "hover:ring-2 hover:ring-muted-foreground/50 hover:ring-offset-1",
@@ -68,15 +69,28 @@ export function EditableElement({
           onDoubleClick();
         }
       }}
-      whileHover={{ scale: isSelected && !isEditing ? 1.02 : 1 }}
-      whileTap={{ scale: isEditing ? 1 : 0.98 }}
+      initial={false}
+      animate={{ 
+        scale: 1,
+        transition: { type: "spring", stiffness: 400, damping: 30 }
+      }}
+      whileHover={{ 
+        scale: isSelected && !isEditing ? 1.01 : 1,
+        transition: { type: "spring", stiffness: 400, damping: 25 }
+      }}
+      whileTap={{ 
+        scale: isEditing ? 1 : 0.99,
+        transition: { type: "spring", stiffness: 500, damping: 30 }
+      }}
     >
       {/* Selection label with edit indicator */}
       {isSelected && (
         <motion.div 
           className="absolute -top-3 left-2 z-10 bg-primary text-primary-foreground px-2 py-0.5 text-xs font-medium rounded shadow-sm flex items-center gap-1"
-          initial={{ opacity: 0, y: 5 }}
-          animate={{ opacity: 1, y: 0 }}
+          initial={{ opacity: 0, y: 5, scale: 0.9 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: 5, scale: 0.9 }}
+          transition={{ type: "spring", stiffness: 500, damping: 30 }}
         >
           {label}
           {isEditable && !isEditing && (
@@ -89,9 +103,9 @@ export function EditableElement({
       {isSelected && isEditable && !isEditing && (
         <motion.div 
           className="absolute -bottom-6 left-1/2 -translate-x-1/2 z-10 bg-muted text-muted-foreground px-2 py-0.5 text-[10px] rounded whitespace-nowrap"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
+          initial={{ opacity: 0, y: -5 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3, type: "spring", stiffness: 300, damping: 25 }}
         >
           Dobbeltklikk for å redigere
         </motion.div>

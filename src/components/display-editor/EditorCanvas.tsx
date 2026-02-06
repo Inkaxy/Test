@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { motion, Reorder } from 'framer-motion';
+import { motion, Reorder, AnimatePresence, LayoutGroup } from 'framer-motion';
 import { Package, CheckCircle, Clock, GripVertical, Move } from 'lucide-react';
 import { DisplaySettings } from '@/hooks/useDisplayOrders';
 import { EditableElement } from './EditableElement';
@@ -8,6 +8,21 @@ import { format } from 'date-fns';
 import { nb } from 'date-fns/locale';
 
 type SectionId = 'header' | 'stats' | 'grid';
+
+// Smooth spring animation config
+const smoothSpring = {
+  type: "spring" as const,
+  stiffness: 300,
+  damping: 30,
+  mass: 0.8,
+};
+
+const gentleSpring = {
+  type: "spring" as const,
+  stiffness: 200,
+  damping: 25,
+  mass: 1,
+};
 
 interface EditorCanvasProps {
   settings: DisplaySettings;
@@ -420,22 +435,44 @@ export function EditorCanvas({
       
       {/* Content */}
       <div className="relative z-10">
-        <Reorder.Group 
-          axis="y" 
-          values={sectionOrder} 
-          onReorder={handleSectionReorder}
-          className="flex flex-col"
-        >
-          {sectionOrder.map((sectionId) => (
-            <Reorder.Item
-              key={sectionId}
-              value={sectionId}
-              className="cursor-grab active:cursor-grabbing"
-            >
-              {renderSection(sectionId)}
-            </Reorder.Item>
-          ))}
-        </Reorder.Group>
+        <LayoutGroup>
+          <Reorder.Group 
+            axis="y" 
+            values={sectionOrder} 
+            onReorder={handleSectionReorder}
+            className="flex flex-col gap-2"
+          >
+            <AnimatePresence mode="popLayout">
+              {sectionOrder.map((sectionId) => (
+                <Reorder.Item
+                  key={sectionId}
+                  value={sectionId}
+                  layout
+                  layoutId={`section-${sectionId}`}
+                  transition={smoothSpring}
+                  initial={{ opacity: 0, y: -20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 20 }}
+                  whileDrag={{ 
+                    scale: 1.02, 
+                    boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
+                    zIndex: 50,
+                    cursor: "grabbing",
+                  }}
+                  className="cursor-grab active:cursor-grabbing"
+                  style={{ position: "relative" }}
+                >
+                  <motion.div
+                    layout="position"
+                    transition={gentleSpring}
+                  >
+                    {renderSection(sectionId)}
+                  </motion.div>
+                </Reorder.Item>
+              ))}
+            </AnimatePresence>
+          </Reorder.Group>
+        </LayoutGroup>
       </div>
     </div>
   );
@@ -564,51 +601,78 @@ function CustomerGrid({
   getGridCols 
 }: CustomerGridProps) {
   return (
-    <Reorder.Group 
-      axis="y"
-      values={customerOrder}
-      onReorder={onReorder}
-      className={`grid ${getGridCols()}`}
-      style={{ gap: settings.gap_size }}
-    >
-      {customerOrder.map((customerId) => {
-        const customer = MOCK_CUSTOMERS.find(c => c.id === customerId);
-        if (!customer) return null;
+    <LayoutGroup id="customer-grid">
+      <Reorder.Group 
+        axis="y"
+        values={customerOrder}
+        onReorder={onReorder}
+        className={`grid ${getGridCols()}`}
+        style={{ gap: settings.gap_size }}
+      >
+        <AnimatePresence mode="popLayout">
+          {customerOrder.map((customerId, index) => {
+            const customer = MOCK_CUSTOMERS.find(c => c.id === customerId);
+            if (!customer) return null;
 
-        const customerPacked = customer.orders.filter(o => o.packed).length;
-        const customerTotal = customer.orders.length;
-        const customerProgress = Math.round((customerPacked / customerTotal) * 100);
-        const isComplete = customerProgress === 100;
+            const customerPacked = customer.orders.filter(o => o.packed).length;
+            const customerTotal = customer.orders.length;
+            const customerProgress = Math.round((customerPacked / customerTotal) * 100);
+            const isComplete = customerProgress === 100;
 
-        return (
-          <Reorder.Item 
-            key={customer.id}
-            value={customer.id}
-            className="relative group cursor-grab active:cursor-grabbing"
-          >
+            return (
+              <Reorder.Item 
+                key={customer.id}
+                value={customer.id}
+                layout
+                layoutId={`customer-${customer.id}`}
+                transition={smoothSpring}
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                whileDrag={{ 
+                  scale: 1.05, 
+                  boxShadow: "0 20px 40px -10px rgba(0, 0, 0, 0.3)",
+                  zIndex: 50,
+                  rotate: 2,
+                }}
+                className="relative group cursor-grab active:cursor-grabbing"
+              >
             <EditableElement
               id={`card-${customer.id}`}
               label="Kundekort"
               isSelected={selectedElement === `card-${customer.id}` || selectedElement === 'layout-card'}
               onSelect={() => onSelectElement('layout-card')}
             >
-              <div className="relative">
+              <motion.div 
+                className="relative"
+                layout
+                transition={gentleSpring}
+              >
                 {/* Drag handle */}
-                <div className="absolute -left-8 top-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <motion.div 
+                  className="absolute -left-8 top-2"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 0 }}
+                  whileHover={{ opacity: 1 }}
+                  transition={{ duration: 0.15 }}
+                >
                   <GripVertical 
                     className="h-5 w-5" 
                     style={{ color: settings.text_color }}
                   />
-                </div>
+                </motion.div>
 
                 <motion.div
-                  className="p-4 transition-all"
+                  className="p-4"
                   style={{
                     backgroundColor: settings.card_background_color,
                     borderRadius: settings.border_radius,
                     borderLeft: `${settings.card_border_width} solid ${isComplete ? settings.completed_color : settings.pending_color}`,
                   }}
-                  whileHover={{ scale: 1.02 }}
+                  whileHover={{ 
+                    scale: 1.015,
+                    transition: { type: "spring", stiffness: 400, damping: 25 }
+                  }}
                 >
                   {/* Customer header */}
                   <div className="flex items-start justify-between mb-3">
@@ -703,12 +767,14 @@ function CustomerGrid({
                     </div>
                   )}
                 </motion.div>
-              </div>
+              </motion.div>
             </EditableElement>
-          </Reorder.Item>
-        );
-      })}
-    </Reorder.Group>
+              </Reorder.Item>
+            );
+          })}
+        </AnimatePresence>
+      </Reorder.Group>
+    </LayoutGroup>
   );
 }
 
