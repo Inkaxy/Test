@@ -141,7 +141,7 @@ export function VisualDisplayEditor({
           
           <div className="flex items-center gap-2">
             {state.isDirty && (
-              <span className="text-xs text-amber-500 font-medium">
+              <span className="text-xs text-primary font-medium">
                 Ulagrede endringer
               </span>
             )}
