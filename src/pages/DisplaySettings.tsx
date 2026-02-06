@@ -18,7 +18,7 @@ import { useCategories } from '@/hooks/useCategories';
 import { DisplaySettings, getDefaultDisplaySettings, DisplayType, DISPLAY_TYPES } from '@/hooks/useDisplayOrders';
 import { 
   Monitor, Smartphone, ExternalLink, Loader2, Users, Package, 
-  Type, BarChart3, LayoutGrid, Sparkles, Layout, Zap, Bell, Copy, RotateCcw
+  Type, BarChart3, LayoutGrid, Sparkles, Layout, Zap, Bell, Copy, RotateCcw, Paintbrush
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -28,6 +28,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu';
+import { VisualDisplayEditor } from '@/components/display-editor';
 
 export default function DisplaySettingsPage() {
   const { t } = useTranslation();
