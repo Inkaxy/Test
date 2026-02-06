@@ -181,22 +181,29 @@ export function EmailReportSettingsCard() {
   };
   
   const getFrequencyDescription = () => {
+    const timeDisplay = sendTime || '06:00';
     if (i18n.language === 'nb') {
       switch (frequency) {
-        case 'daily': return 'Rapport sendes hver dag kl. 06:00 for gårsdagens data.';
-        case 'weekly': return 'Rapport sendes hver mandag kl. 06:00 for forrige uke.';
-        case 'monthly': return 'Rapport sendes 1. hver måned kl. 06:00 for forrige måned.';
+        case 'daily': return `Rapport sendes hver dag kl. ${timeDisplay} for gårsdagens data.`;
+        case 'weekly': return `Rapport sendes hver mandag kl. ${timeDisplay} for forrige uke.`;
+        case 'monthly': return `Rapport sendes 1. hver måned kl. ${timeDisplay} for forrige måned.`;
         default: return '';
       }
     } else {
       switch (frequency) {
-        case 'daily': return 'Report sent daily at 06:00 for yesterday\'s data.';
-        case 'weekly': return 'Report sent every Monday at 06:00 for the previous week.';
-        case 'monthly': return 'Report sent on the 1st of each month at 06:00 for the previous month.';
+        case 'daily': return `Report sent daily at ${timeDisplay} for yesterday's data.`;
+        case 'weekly': return `Report sent every Monday at ${timeDisplay} for the previous week.`;
+        case 'monthly': return `Report sent on the 1st of each month at ${timeDisplay} for the previous month.`;
         default: return '';
       }
     }
   };
+  
+  // Generate time options (every hour)
+  const timeOptions = Array.from({ length: 24 }, (_, i) => {
+    const hour = i.toString().padStart(2, '0');
+    return { value: `${hour}:00`, label: `${hour}:00` };
+  });
   
   return (
     <Card>
