@@ -435,6 +435,18 @@ export interface DisplaySettings {
   refresh_button_icon_color: string;
   refresh_button_text: string;
   
+  // Låsefunksjon (Customer locking)
+  lock_enabled: boolean;
+  lock_show_indicator: boolean;
+  lock_indicator_style: 'badge' | 'icon' | 'border' | 'overlay';
+  lock_my_lock_color: string;
+  lock_other_lock_color: string;
+  lock_show_locked_by_text: boolean;
+  lock_locked_by_you_text: string;
+  lock_locked_by_other_text: string;
+  lock_fade_locked_cards: boolean;
+  lock_block_locked_cards: boolean;
+  
   // Legacy support
   show_progress_bar: boolean;
   progress_bar_style: string;
@@ -644,6 +656,18 @@ export function getDefaultDisplaySettings(): DisplaySettings {
     refresh_button_background_color: 'transparent',
     refresh_button_icon_color: '',
     refresh_button_text: 'Oppdater',
+    
+    // Låsefunksjon
+    lock_enabled: true,
+    lock_show_indicator: true,
+    lock_indicator_style: 'badge',
+    lock_my_lock_color: '#3b82f6',
+    lock_other_lock_color: '#6b7280',
+    lock_show_locked_by_text: true,
+    lock_locked_by_you_text: 'Din lås',
+    lock_locked_by_other_text: 'Låst',
+    lock_fade_locked_cards: true,
+    lock_block_locked_cards: true,
     
     // Legacy
     show_progress_bar: true,
