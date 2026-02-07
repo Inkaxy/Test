@@ -390,8 +390,8 @@ export default function KioskPackingView() {
   
   // Customer locking - only if enabled in settings
   const lockEnabled = settings.lock_enabled !== false;
-  const { data: locks = [] } = useCustomerLocks(lockEnabled ? dateStr : '');
-  useRealtimeCustomerLocks(lockEnabled ? dateStr : '');
+  const { data: locks = [] } = useCustomerLocks(lockEnabled ? dateStr : '', bakery?.id);
+  useRealtimeCustomerLocks(lockEnabled ? dateStr : '', bakery?.id);
   
   const acquireLock = useAcquireCustomerLock(bakery?.id);
   const { startAutoExtend, release, isReleasing } = useActiveCustomerLock(

@@ -16,13 +16,13 @@ export interface CustomerLock {
 const LOCK_DURATION_MINUTES = 15;
 const LOCK_EXTEND_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 
-export function useCustomerLocks(deliveryDate: string) {
+export function useCustomerLocks(deliveryDate: string, providedBakeryId?: string | null) {
   const { getActiveBakeryId } = useAuthStore();
+  const bakeryId = providedBakeryId || getActiveBakeryId();
   
   return useQuery({
-    queryKey: ['customer-locks', deliveryDate, getActiveBakeryId()],
+    queryKey: ['customer-locks', deliveryDate, bakeryId],
     queryFn: async () => {
-      const bakeryId = getActiveBakeryId();
       if (!bakeryId) return [];
       
       const { data, error } = await supabase
@@ -35,15 +35,15 @@ export function useCustomerLocks(deliveryDate: string) {
       if (error) throw error;
       return data as CustomerLock[];
     },
-    enabled: !!deliveryDate,
+    enabled: !!deliveryDate && !!bakeryId,
     refetchInterval: 30000, // Refetch every 30 seconds as backup
   });
 }
 
-export function useRealtimeCustomerLocks(deliveryDate: string) {
+export function useRealtimeCustomerLocks(deliveryDate: string, providedBakeryId?: string | null) {
   const queryClient = useQueryClient();
   const { getActiveBakeryId } = useAuthStore();
-  const bakeryId = getActiveBakeryId();
+  const bakeryId = providedBakeryId || getActiveBakeryId();
   
   useEffect(() => {
     if (!bakeryId || !deliveryDate) return;
