@@ -351,6 +351,57 @@ export type Database = {
           },
         ]
       }
+      kiosk_locks: {
+        Row: {
+          bakery_id: string
+          created_at: string
+          customer_id: string
+          delivery_date: string
+          device_id: string
+          expires_at: string
+          id: string
+          locked_at: string
+          updated_at: string
+        }
+        Insert: {
+          bakery_id: string
+          created_at?: string
+          customer_id: string
+          delivery_date: string
+          device_id: string
+          expires_at: string
+          id?: string
+          locked_at?: string
+          updated_at?: string
+        }
+        Update: {
+          bakery_id?: string
+          created_at?: string
+          customer_id?: string
+          delivery_date?: string
+          device_id?: string
+          expires_at?: string
+          id?: string
+          locked_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kiosk_locks_bakery_id_fkey"
+            columns: ["bakery_id"]
+            isOneToOne: false
+            referencedRelation: "bakeries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kiosk_locks_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       orders: {
         Row: {
           bakery_id: string
@@ -595,11 +646,30 @@ export type Database = {
         }
         Returns: string
       }
+      acquire_kiosk_lock: {
+        Args: {
+          _bakery_id: string
+          _customer_id: string
+          _delivery_date: string
+          _device_id: string
+          _lock_duration_minutes?: number
+        }
+        Returns: string
+      }
       can_access_bakery: { Args: { _bakery_id: string }; Returns: boolean }
       extend_customer_lock: {
         Args: {
           _customer_id: string
           _delivery_date: string
+          _extension_minutes?: number
+        }
+        Returns: boolean
+      }
+      extend_kiosk_lock: {
+        Args: {
+          _customer_id: string
+          _delivery_date: string
+          _device_id: string
           _extension_minutes?: number
         }
         Returns: boolean
@@ -615,6 +685,14 @@ export type Database = {
       is_super_admin: { Args: never; Returns: boolean }
       release_customer_lock: {
         Args: { _customer_id: string; _delivery_date: string }
+        Returns: boolean
+      }
+      release_kiosk_lock: {
+        Args: {
+          _customer_id: string
+          _delivery_date: string
+          _device_id: string
+        }
         Returns: boolean
       }
       setup_bakery_for_new_user: {

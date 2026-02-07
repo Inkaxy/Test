@@ -20,14 +20,15 @@ import { useDisplaySettings, getDefaultDisplaySettings, DisplaySettings } from '
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '@/stores/authStore';
 import { 
-  useCustomerLocks, 
-  useRealtimeCustomerLocks,
-  useAcquireCustomerLock,
-  useActiveCustomerLock,
-  isLockedByCurrentUser,
-  isLockedByOther,
-  CustomerLock 
-} from '@/hooks/useCustomerLocks';
+  useDeviceId,
+  useKioskLocks, 
+  useRealtimeKioskLocks,
+  useAcquireKioskLock,
+  useActiveKioskLock,
+  isLockedByCurrentDevice,
+  isLockedByOtherDevice,
+  KioskLock 
+} from '@/hooks/useKioskLocks';
 import { useToast } from '@/hooks/use-toast';
 
 interface DeviationOrderInfo {
@@ -368,6 +369,7 @@ export default function KioskPackingView() {
   const containerRef = useRef<HTMLDivElement>(null);
   const selectCustomerInProgressRef = useRef(false);
   const locale = i18n.language === 'nb' ? nb : enUS;
+  const deviceId = useDeviceId();
   const { user } = useAuthStore();
   
   const dateParam = searchParams.get('date');
@@ -389,16 +391,16 @@ export default function KioskPackingView() {
   const settings: DisplaySettings = displaySettings || getDefaultDisplaySettings();
   const { data: bakerySettings } = useBakerySettings();
   
-  // Customer locking - only if enabled in settings AND user is authenticated
-  // Without auth, locking is silently disabled (allows kiosk to work without login)
-  const lockEnabled = settings.lock_enabled !== false && !!user;
-  const { data: locks = [] } = useCustomerLocks(lockEnabled ? dateStr : '', bakery?.id);
-  useRealtimeCustomerLocks(lockEnabled ? dateStr : '', bakery?.id);
+  // Customer locking - device-based for kiosk (no auth required)
+  const lockEnabled = settings.lock_enabled !== false;
+  const { data: locks = [] } = useKioskLocks(lockEnabled ? dateStr : '', bakery?.id || null);
+  useRealtimeKioskLocks(lockEnabled ? dateStr : '', bakery?.id || null);
   
-  const acquireLock = useAcquireCustomerLock(bakery?.id);
-  const { startAutoExtend, release, isReleasing } = useActiveCustomerLock(
+  const acquireLock = useAcquireKioskLock();
+  const { startAutoExtend, release, isReleasing } = useActiveKioskLock(
     selectedCustomer?.id || null, 
-    dateStr
+    dateStr,
+    deviceId
   );
   
   // Apply sorting based on display settings
@@ -433,7 +435,7 @@ export default function KioskPackingView() {
   const reportDeviation = useKioskReportDeviation(bakery?.id || null, dateStr, categoryId);
   
   // Helper to get lock for a customer
-  const getLock = (customerId: string): CustomerLock | undefined => {
+  const getLock = (customerId: string): KioskLock | undefined => {
     return locks.find(l => l.customer_id === customerId);
   };
   
@@ -473,14 +475,14 @@ export default function KioskPackingView() {
     }
 
     const lock = getLock(customer.id);
-    const lockedByMe = isLockedByCurrentUser(lock, user?.id);
+    const lockedByMe = isLockedByCurrentDevice(lock, deviceId);
 
-    // Check if locked by another user
-    if (settings.lock_block_locked_cards && isLockedByOther(lock, user?.id)) {
+    // Check if locked by another device
+    if (settings.lock_block_locked_cards && isLockedByOtherDevice(lock, deviceId)) {
       toast({
         variant: 'destructive',
         title: t('packing.customerLocked'),
-        description: t('packing.customerLockedBy'),
+        description: t('packing.customerLockedByDevice'),
       });
       return;
     }
@@ -497,7 +499,8 @@ export default function KioskPackingView() {
       await acquireLock.mutateAsync({
         customerId: customer.id,
         deliveryDate: dateStr,
-        bakeryId: bakery?.id ?? undefined,
+        bakeryId: bakery?.id || '',
+        deviceId,
       });
       setSelectedCustomer(customer);
       startAutoExtend();
@@ -975,7 +978,7 @@ export default function KioskPackingView() {
           settings={settings}
           onSelectCustomer={handleSelectCustomer}
           locks={lockEnabled ? locks : undefined}
-          currentUserId={user?.id}
+          currentDeviceId={deviceId}
         />
       ) : (
         <div
@@ -988,8 +991,8 @@ export default function KioskPackingView() {
           <AnimatePresence>
             {customers.map((customer) => {
               const lock = lockEnabled ? getLock(customer.id) : undefined;
-              const lockedByMe = lockEnabled && isLockedByCurrentUser(lock, user?.id);
-              const lockedByOther = lockEnabled && isLockedByOther(lock, user?.id);
+              const lockedByMe = lockEnabled && isLockedByCurrentDevice(lock, deviceId);
+              const lockedByOther = lockEnabled && isLockedByOtherDevice(lock, deviceId);
               const isComplete = customer.progress === 100;
               const shouldFade = settings.lock_fade_locked_cards && lockedByOther;
               const isBlocked = settings.lock_block_locked_cards && lockedByOther;

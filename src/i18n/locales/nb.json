@@ -134,6 +134,7 @@
     "overallProgress": "{{packed}} av {{total}} pakket totalt",
     "customerLocked": "Kunde låst",
     "customerLockedBy": "Denne kunden pakkes av en annen bruker",
+    "customerLockedByDevice": "Denne kunden pakkes av en annen enhet",
     "couldNotLock": "Kunne ikke låse kunde",
     "couldNotPack": "Kunne ikke markere som pakket",
     "couldNotUndo": "Kunne ikke angre",
