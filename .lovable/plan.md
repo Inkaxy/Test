@@ -1,50 +1,76 @@
 
-# Plan: Legg til "Ferdige varer til bunnen" innstilling i Pakkedisplay
+# Plan: Enhetslåsing for Kiosk-modus uten innlogging
 
-## Sammendrag
-Legge til en sorteringsinnstilling i Pakkedisplay-seksjonen på Display Settings-siden som lar administratorer velge om kunder som er ferdig pakket skal flyttes til bunnen av listen.
+## Problemstilling
+Låsefunksjonaliteten i kiosk-modus fungerer ikke uten innlogging fordi:
+1. Database-funksjonene (`acquire_customer_lock`, `release_customer_lock`, `extend_customer_lock`) bruker `auth.uid()` for å identifisere hvem som låser
+2. RLS-reglene krever `can_access_bakery()` som også avhenger av autentisering
 
-## Nåværende tilstand
-- Innstillingen `customer_sort_completed_last` eksisterer allerede i `DisplaySettings` interface
-- Den brukes aktivt i `KioskPackingView.tsx` for sortering
-- UI-kontrollen finnes for Felles Display (linje 1153-1162), men mangler i Pakkedisplay-seksjonen
+## Løsning: Enhets-ID-basert låsing for kiosk
 
-## Endringer
+Vi implementerer et parallelt låsesystem for kiosk som bruker en unik **enhets-ID** i stedet for bruker-ID. Dette gir:
+- Synlig låsing mellom enheter uten pålogging
+- Samme visuelle oppførsel (fading, blokkering av låste kunder)
+- Automatisk utløp og frigivelse
 
-### Fil: `src/pages/DisplaySettings.tsx`
+### Teknisk implementasjon
 
-Legge til en ny seksjon "Sortering" i tabell-innstillingene for Pakkedisplay etter "Header-innstillinger" seksjonen (rundt linje 1877).
-
-**Ny kode som legges til:**
-
+**1. Ny database-tabell: `kiosk_locks`**
 ```text
-{/* Sortering */}
-<div className="space-y-4 p-4 rounded-lg bg-muted/30">
-  <h5 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Sortering</h5>
-  
-  <div className="flex items-center justify-between">
-    <div>
-      <Label>Ferdige varer til bunnen</Label>
-      <p className="text-xs text-muted-foreground">Flytt kunder med 100% fremdrift til bunnen av listen</p>
-    </div>
-    <Switch
-      checked={settings.customer_sort_completed_last ?? true}
-      onCheckedChange={(v) => updateSetting('customer_sort_completed_last', v)}
-    />
-  </div>
-</div>
+┌──────────────────────────────────────────────────────┐
+│                    kiosk_locks                        │
+├──────────────────────────────────────────────────────┤
+│ id              UUID (PK)                             │
+│ customer_id     UUID (FK → customers)                 │
+│ bakery_id       UUID (FK → bakeries)                  │
+│ delivery_date   DATE                                  │
+│ device_id       TEXT (unik ID per enhet/nettleser)    │
+│ locked_at       TIMESTAMP                             │
+│ expires_at      TIMESTAMP                             │
+│ created_at      TIMESTAMP                             │
+│ updated_at      TIMESTAMP                             │
+└──────────────────────────────────────────────────────┘
 ```
 
-## Plassering i filen
-Etter Header-innstillinger (linje ~1877) og før `</div>` som avslutter tabell-innstillingene (linje ~1878).
+**2. RLS-regler for offentlig tilgang**
+- SELECT: Alle kan se låser for aktive bakerier (via `bakeries.short_id`)
+- INSERT/UPDATE/DELETE: Alle kan administrere låser for aktive bakerier
 
-## Resultat
-- Administratorer kan nå aktivere/deaktivere "ferdige varer til bunnen" direkte fra Pakkedisplay-innstillingene
-- Innstillingen vil umiddelbart påvirke sorteringen i KioskPackingView
-- Standard verdi er `true` (aktivert)
+**3. Nye database-funksjoner**
+- `acquire_kiosk_lock(_customer_id, _bakery_id, _delivery_date, _device_id, _duration_minutes)` → UUID
+- `release_kiosk_lock(_customer_id, _delivery_date, _device_id)` → BOOLEAN
+- `extend_kiosk_lock(_customer_id, _delivery_date, _device_id, _extension_minutes)` → BOOLEAN
 
-## Filer som endres
+**4. React-hooks for kiosk-låsing**
+Ny fil `src/hooks/useKioskLocks.ts`:
+- `useDeviceId()` - Genererer/henter en unik enhets-ID fra localStorage
+- `useKioskLocks(deliveryDate, bakeryId)` - Henter aktive låser
+- `useRealtimeKioskLocks(deliveryDate, bakeryId)` - Lytter til endringer i sanntid
+- `useAcquireKioskLock()` - Låser en kunde for enheten
+- `useReleaseKioskLock()` - Frigjør låsen
+- `useActiveKioskLock()` - Administrerer auto-forlengelse
+
+**5. Oppdatere KioskPackingView**
+- Bruke `useDeviceId()` for å identifisere enheten
+- Bruke kiosk-låse-hooks i stedet for bruker-baserte hooks
+- Vise "Låst av annen enhet" i stedet for "Låst av [navn]"
+
+### Enhets-ID generering
+```text
+Enhets-ID genereres ved første besøk og lagres i localStorage:
+kiosk-device-id = "kiosk-abc123xyz789"
+```
+
+Dette sikrer at:
+- Samme nettbrett beholder samme ID mellom økter
+- Forskjellige enheter får unike IDer
+- Ingen innlogging er nødvendig
+
+### Oppsummering av filer som endres
 
 | Fil | Endring |
 |-----|---------|
-| `src/pages/DisplaySettings.tsx` | Legg til Switch for `customer_sort_completed_last` i Pakkedisplay tabell-innstillinger |
+| Ny migrasjon | Opprett `kiosk_locks` tabell med RLS og funksjoner |
+| `src/hooks/useKioskLocks.ts` | Ny fil med alle kiosk-låse-hooks |
+| `src/pages/packing/KioskPackingView.tsx` | Bytt til kiosk-låse-hooks |
+| `src/pages/packing/ProductKioskPackingView.tsx` | Samme endring (hvis den har kundelåsing) |
