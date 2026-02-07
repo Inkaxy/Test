@@ -19,8 +19,9 @@ import { DisplaySettings, getDefaultDisplaySettings, DisplayType, DISPLAY_TYPES 
 import { 
   Monitor, Smartphone, ExternalLink, Loader2, Users, Package, 
   Type, BarChart3, LayoutGrid, Sparkles, Layout, Zap, Bell, Copy, RotateCcw, Table2, Check,
-  ArrowLeft, Clock, RefreshCw, Wifi
+  ArrowLeft, Clock, RefreshCw, Wifi, ArrowRight
 } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { TablePreview } from '@/components/display-editor/TablePreview';
 import { ThemePresetMenu, ThemePreset } from '@/components/display-editor/ThemePresetMenu';
@@ -3127,37 +3128,85 @@ export default function DisplaySettingsPage() {
                         style={{ backgroundColor: settings.card_background_color }}
                       >
                         <div className="flex items-center gap-3">
-                          {/* Back Button */}
-                          {settings.back_button_show !== false && (
-                            <div 
-                              className={cn(
-                                "flex items-center justify-center shrink-0",
-                                settings.back_button_style === 'icon-circle' && "rounded-full",
-                                settings.back_button_style === 'icon-square' && "rounded-md",
-                              )}
-                              style={{ 
-                                backgroundColor: (settings.back_button_style === 'icon-circle' || settings.back_button_style === 'icon-square') 
-                                  ? (settings.back_button_background_color || 'transparent') 
-                                  : 'transparent',
-                                color: settings.back_button_icon_color || settings.text_color,
-                                width: settings.back_button_size === 'small' ? '28px' 
-                                  : settings.back_button_size === 'medium' ? '32px'
-                                  : settings.back_button_size === 'large' ? '40px' 
-                                  : '48px',
-                                height: settings.back_button_size === 'small' ? '28px' 
-                                  : settings.back_button_size === 'medium' ? '32px'
-                                  : settings.back_button_size === 'large' ? '40px' 
-                                  : '48px',
-                              }}
-                            >
-                              <ArrowLeft className={cn(
-                                settings.back_button_size === 'small' && 'h-4 w-4',
-                                settings.back_button_size === 'medium' && 'h-5 w-5',
-                                settings.back_button_size === 'large' && 'h-6 w-6',
-                                settings.back_button_size === 'huge' && 'h-8 w-8',
-                              )} />
-                            </div>
-                          )}
+                          {/* Back Button - Shows done mode preview when enabled */}
+                          {settings.back_button_show !== false && (() => {
+                            const showDoneMode = settings.back_button_done_highlight ?? true;
+                            const doneStyle = showDoneMode 
+                              ? (settings.back_button_done_style || 'text-icon')
+                              : (settings.back_button_style || 'icon');
+                            const doneSize = showDoneMode 
+                              ? (settings.back_button_done_size || 'huge')
+                              : (settings.back_button_size || 'large');
+                            const doneBgColor = showDoneMode 
+                              ? (settings.back_button_done_background_color || settings.completed_color || '#22c55e')
+                              : (settings.back_button_background_color || 'transparent');
+                            const doneIconColor = showDoneMode 
+                              ? (settings.back_button_done_icon_color || '#ffffff')
+                              : (settings.back_button_icon_color || settings.text_color);
+                            const doneText = showDoneMode 
+                              ? (settings.back_button_done_text || 'Ferdig')
+                              : (settings.back_button_text || 'Tilbake');
+                            const showPulse = showDoneMode && (settings.back_button_done_pulse_animation ?? true);
+
+                            const sizeMap = {
+                              small: { box: '28px', icon: 'h-4 w-4', text: 'text-sm', padding: 'px-3 py-1.5' },
+                              medium: { box: '32px', icon: 'h-5 w-5', text: 'text-base', padding: 'px-4 py-2' },
+                              large: { box: '40px', icon: 'h-6 w-6', text: 'text-lg', padding: 'px-5 py-2.5' },
+                              huge: { box: '48px', icon: 'h-8 w-8', text: 'text-xl', padding: 'px-6 py-3' },
+                            };
+                            const sizes = sizeMap[doneSize] || sizeMap.large;
+
+                            const hasBackground = doneStyle === 'icon-circle' || doneStyle === 'icon-square' || doneStyle === 'text' || doneStyle === 'text-icon';
+                            const IconComponent = showDoneMode ? Check : ArrowLeft;
+
+                            const buttonContent = (
+                              <div 
+                                className={cn(
+                                  "flex items-center justify-center shrink-0 gap-2 font-semibold",
+                                  doneStyle === 'icon-circle' && "rounded-full",
+                                  doneStyle === 'icon-square' && "rounded-lg",
+                                  (doneStyle === 'text' || doneStyle === 'text-icon') && `rounded-lg ${sizes.padding} ${sizes.text}`,
+                                )}
+                                style={{ 
+                                  backgroundColor: hasBackground ? doneBgColor : 'transparent',
+                                  color: doneIconColor,
+                                  width: (doneStyle === 'text' || doneStyle === 'text-icon') ? 'auto' : sizes.box,
+                                  height: (doneStyle === 'text' || doneStyle === 'text-icon') ? 'auto' : sizes.box,
+                                  boxShadow: showDoneMode ? '0 4px 14px 0 rgba(0,0,0,0.25)' : undefined,
+                                }}
+                              >
+                                {doneStyle !== 'text' && <IconComponent className={sizes.icon} />}
+                                {(doneStyle === 'text' || doneStyle === 'text-icon') && <span>{doneText}</span>}
+                                {showDoneMode && doneStyle === 'text-icon' && <ArrowRight className={sizes.icon} />}
+                              </div>
+                            );
+
+                            if (showPulse) {
+                              return (
+                                <motion.div
+                                  initial={{ scale: 1 }}
+                                  animate={{ 
+                                    scale: [1, 1.05, 1],
+                                    boxShadow: [
+                                      '0 0 0 0 rgba(34, 197, 94, 0.4)',
+                                      '0 0 0 8px rgba(34, 197, 94, 0)',
+                                      '0 0 0 0 rgba(34, 197, 94, 0)'
+                                    ]
+                                  }}
+                                  transition={{ 
+                                    duration: 2,
+                                    repeat: Infinity,
+                                    repeatDelay: 1,
+                                    ease: 'easeInOut'
+                                  }}
+                                  className="rounded-lg"
+                                >
+                                  {buttonContent}
+                                </motion.div>
+                              );
+                            }
+                            return buttonContent;
+                          })()}
                           <div>
                             {settings.header_show_bakery_name && (
                               <h3 className="font-bold" style={{ fontSize: `calc(${settings.header_bakery_font_size} * 0.7)`, color: settings.text_color }}>
