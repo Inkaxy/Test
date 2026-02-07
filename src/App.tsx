@@ -60,40 +60,11 @@ function AppRoutes() {
       {/* Short display URLs - /d/{token} */}
       <Route path="/d/:displayToken" element={<CustomerDisplay />} />
       
-      {/* Kiosk packing routes (requires login) */}
-      <Route
-        path="/kiosk/packing/:bakeryShortId/:categoryId"
-        element={
-          <ProtectedRoute requireRole="bakery_user">
-            <KioskPackingView />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/kiosk/packing/:bakeryShortId"
-        element={
-          <ProtectedRoute requireRole="bakery_user">
-            <KioskPackingView />
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/kiosk/packing/:bakeryShortId/product/:categoryId"
-        element={
-          <ProtectedRoute requireRole="bakery_user">
-            <ProductKioskPackingView />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/kiosk/packing/:bakeryShortId/product"
-        element={
-          <ProtectedRoute requireRole="bakery_user">
-            <ProductKioskPackingView />
-          </ProtectedRoute>
-        }
-      />
+      {/* Kiosk packing routes - public access, locking requires auth */}
+      <Route path="/kiosk/packing/:bakeryShortId/:categoryId" element={<KioskPackingView />} />
+      <Route path="/kiosk/packing/:bakeryShortId" element={<KioskPackingView />} />
+      <Route path="/kiosk/packing/:bakeryShortId/product/:categoryId" element={<ProductKioskPackingView />} />
+      <Route path="/kiosk/packing/:bakeryShortId/product" element={<ProductKioskPackingView />} />
       
       {/* Protected packing display route */}
       <Route
