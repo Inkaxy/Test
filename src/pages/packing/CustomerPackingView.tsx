@@ -80,9 +80,9 @@ export default function CustomerPackingView() {
   };
   
   const { data: customers = [], isLoading: customersLoading } = useCustomersForDate(dateStr, categoryId, sortOptions);
-  const { data: locks = [] } = useCustomerLocks(dateStr);
+  const { data: locks = [] } = useCustomerLocks(dateStr, bakeryId);
   const { data: bakerySettings } = useBakerySettings();
-  useRealtimeCustomerLocks(dateStr);
+  useRealtimeCustomerLocks(dateStr, bakeryId);
   
   const acquireLock = useAcquireCustomerLock(bakeryId);
   const { startAutoExtend, release, isReleasing } = useActiveCustomerLock(
