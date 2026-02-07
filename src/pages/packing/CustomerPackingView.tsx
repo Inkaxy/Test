@@ -310,6 +310,7 @@ export default function CustomerPackingView() {
             settings={settings}
             onClick={handleBack}
             disabled={isReleasing}
+            isCustomerDone={currentCustomer.progress === 100}
           />
           <div className="flex-1">
             <h1 

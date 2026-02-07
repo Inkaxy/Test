@@ -427,6 +427,15 @@ export interface DisplaySettings {
   back_button_icon_color: string;
   back_button_text: string;
   
+  // Tilbakeknapp ferdig-modus (når kunde er 100% pakket)
+  back_button_done_highlight: boolean;
+  back_button_done_background_color: string;
+  back_button_done_icon_color: string;
+  back_button_done_text: string;
+  back_button_done_style: 'icon' | 'icon-circle' | 'icon-square' | 'text' | 'text-icon';
+  back_button_done_size: 'small' | 'medium' | 'large' | 'huge';
+  back_button_done_pulse_animation: boolean;
+  
   // Oppdateringsknapp-innstillinger
   refresh_button_show: boolean;
   refresh_button_size: 'small' | 'medium' | 'large' | 'huge';
@@ -648,6 +657,15 @@ export function getDefaultDisplaySettings(): DisplaySettings {
     back_button_background_color: 'transparent',
     back_button_icon_color: '',
     back_button_text: 'Tilbake',
+    
+    // Tilbakeknapp ferdig-modus
+    back_button_done_highlight: true,
+    back_button_done_background_color: '#22c55e',
+    back_button_done_icon_color: '#ffffff',
+    back_button_done_text: 'Ferdig',
+    back_button_done_style: 'text-icon',
+    back_button_done_size: 'huge',
+    back_button_done_pulse_animation: true,
     
     // Oppdateringsknapp-innstillinger
     refresh_button_show: true,
