@@ -1363,6 +1363,135 @@ export default function DisplaySettingsPage() {
                     )}
                   </div>
                   
+                  {/* Kundelåsing - kun for packing display */}
+                  {selectedDisplayType === 'packing' && (
+                    <div className="border-t pt-4 space-y-4">
+                      <h4 className="text-sm font-medium">Kundelåsing</h4>
+                      <p className="text-xs text-muted-foreground mb-4">
+                        Forhindrer at flere pakkere jobber med samme kunde samtidig
+                      </p>
+                      
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <Label>Aktiver låsing</Label>
+                          <p className="text-xs text-muted-foreground">Lås kunder når de pakkes</p>
+                        </div>
+                        <Switch
+                          checked={settings.lock_enabled ?? true}
+                          onCheckedChange={(v) => updateSetting('lock_enabled', v)}
+                        />
+                      </div>
+                      
+                      {settings.lock_enabled !== false && (
+                        <>
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <Label>Vis låseindikator</Label>
+                              <p className="text-xs text-muted-foreground">Badge/ikon på kundekort</p>
+                            </div>
+                            <Switch
+                              checked={settings.lock_show_indicator ?? true}
+                              onCheckedChange={(v) => updateSetting('lock_show_indicator', v)}
+                            />
+                          </div>
+                          
+                          {settings.lock_show_indicator && (
+                            <>
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <Label>Vis tekst i låsebadge</Label>
+                                  <p className="text-xs text-muted-foreground">"Din lås" / "Låst"</p>
+                                </div>
+                                <Switch
+                                  checked={settings.lock_show_locked_by_text ?? true}
+                                  onCheckedChange={(v) => updateSetting('lock_show_locked_by_text', v)}
+                                />
+                              </div>
+                              
+                              {settings.lock_show_locked_by_text && (
+                                <div className="grid grid-cols-2 gap-4">
+                                  <div className="space-y-2">
+                                    <Label>Tekst "Din lås"</Label>
+                                    <Input
+                                      value={settings.lock_locked_by_you_text || 'Din lås'}
+                                      onChange={(e) => updateSetting('lock_locked_by_you_text', e.target.value)}
+                                      placeholder="Din lås"
+                                    />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label>Tekst "Låst av andre"</Label>
+                                    <Input
+                                      value={settings.lock_locked_by_other_text || 'Låst'}
+                                      onChange={(e) => updateSetting('lock_locked_by_other_text', e.target.value)}
+                                      placeholder="Låst"
+                                    />
+                                  </div>
+                                </div>
+                              )}
+                              
+                              <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                  <Label>Farge "Din lås"</Label>
+                                  <div className="flex gap-2">
+                                    <Input
+                                      type="color"
+                                      value={settings.lock_my_lock_color || '#3b82f6'}
+                                      onChange={(e) => updateSetting('lock_my_lock_color', e.target.value)}
+                                      className="w-12 h-10 p-1"
+                                    />
+                                    <Input
+                                      value={settings.lock_my_lock_color || '#3b82f6'}
+                                      onChange={(e) => updateSetting('lock_my_lock_color', e.target.value)}
+                                      className="flex-1"
+                                    />
+                                  </div>
+                                </div>
+                                <div className="space-y-2">
+                                  <Label>Farge "Låst av andre"</Label>
+                                  <div className="flex gap-2">
+                                    <Input
+                                      type="color"
+                                      value={settings.lock_other_lock_color || '#6b7280'}
+                                      onChange={(e) => updateSetting('lock_other_lock_color', e.target.value)}
+                                      className="w-12 h-10 p-1"
+                                    />
+                                    <Input
+                                      value={settings.lock_other_lock_color || '#6b7280'}
+                                      onChange={(e) => updateSetting('lock_other_lock_color', e.target.value)}
+                                      className="flex-1"
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                            </>
+                          )}
+                          
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <Label>Fade låste kort</Label>
+                              <p className="text-xs text-muted-foreground">Gjør kort låst av andre lysere</p>
+                            </div>
+                            <Switch
+                              checked={settings.lock_fade_locked_cards ?? true}
+                              onCheckedChange={(v) => updateSetting('lock_fade_locked_cards', v)}
+                            />
+                          </div>
+                          
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <Label>Blokker låste kort</Label>
+                              <p className="text-xs text-muted-foreground">Forhindre klikk på kort låst av andre</p>
+                            </div>
+                            <Switch
+                              checked={settings.lock_block_locked_cards ?? true}
+                              onCheckedChange={(v) => updateSetting('lock_block_locked_cards', v)}
+                            />
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
+                  
                   {/* Fullskjerm & Wake Lock */}
                   <div className="border-t pt-4 space-y-4">
                     <h4 className="text-sm font-medium">Skjermkontroll</h4>

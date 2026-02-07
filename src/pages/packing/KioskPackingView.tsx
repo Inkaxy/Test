@@ -18,6 +18,17 @@ import { DeviationDialog } from '@/components/packing/DeviationDialog';
 import { KioskCustomerTable } from '@/components/packing/KioskCustomerTable';
 import { useDisplaySettings, getDefaultDisplaySettings, DisplaySettings } from '@/hooks/useDisplayOrders';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useAuthStore } from '@/stores/authStore';
+import { 
+  useCustomerLocks, 
+  useRealtimeCustomerLocks,
+  useAcquireCustomerLock,
+  useActiveCustomerLock,
+  isLockedByCurrentUser,
+  isLockedByOther,
+  CustomerLock 
+} from '@/hooks/useCustomerLocks';
+import { useToast } from '@/hooks/use-toast';
 
 interface DeviationOrderInfo {
   id: string;
@@ -350,11 +361,13 @@ function useKioskReportDeviation(bakeryId: string | null, dateStr: string, categ
 
 export default function KioskPackingView() {
   const { t, i18n } = useTranslation();
+  const { toast } = useToast();
   const { bakeryShortId, categoryId } = useParams<{ bakeryShortId: string; categoryId?: string }>();
   const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const containerRef = useRef<HTMLDivElement>(null);
   const locale = i18n.language === 'nb' ? nb : enUS;
+  const { user } = useAuthStore();
   
   const dateParam = searchParams.get('date');
   const dateStr = dateParam || format(new Date(), 'yyyy-MM-dd');
@@ -374,6 +387,17 @@ export default function KioskPackingView() {
   const { data: displaySettings } = useDisplaySettings(bakery?.id || null, categoryId, 'packing');
   const settings: DisplaySettings = displaySettings || getDefaultDisplaySettings();
   const { data: bakerySettings } = useBakerySettings();
+  
+  // Customer locking - only if enabled in settings
+  const lockEnabled = settings.lock_enabled !== false;
+  const { data: locks = [] } = useCustomerLocks(lockEnabled ? dateStr : '');
+  useRealtimeCustomerLocks(lockEnabled ? dateStr : '');
+  
+  const acquireLock = useAcquireCustomerLock();
+  const { startAutoExtend, release, isReleasing } = useActiveCustomerLock(
+    selectedCustomer?.id || null, 
+    dateStr
+  );
   
   // Apply sorting based on display settings
   const customers = useMemo(() => {
@@ -406,6 +430,11 @@ export default function KioskPackingView() {
   const undoPacking = useKioskUndoPacking(bakery?.id || null, dateStr, categoryId);
   const reportDeviation = useKioskReportDeviation(bakery?.id || null, dateStr, categoryId);
   
+  // Helper to get lock for a customer
+  const getLock = (customerId: string): CustomerLock | undefined => {
+    return locks.find(l => l.customer_id === customerId);
+  };
+  
   // Set language based on display settings
   useEffect(() => {
     if (settings.packing_language && settings.packing_language !== i18n.language) {
@@ -421,9 +450,47 @@ export default function KioskPackingView() {
     return () => clearInterval(interval);
   }, []);
   
-  const handleBack = () => {
+  const handleBack = async () => {
     if (selectedCustomer) {
+      if (lockEnabled) {
+        await release();
+      }
       setSelectedCustomer(null);
+    }
+  };
+  
+  const handleSelectCustomer = async (customer: CustomerWithOrders) => {
+    if (!lockEnabled) {
+      // No locking - just select
+      setSelectedCustomer(customer);
+      return;
+    }
+    
+    const lock = getLock(customer.id);
+    
+    // Check if locked by another user
+    if (settings.lock_block_locked_cards && isLockedByOther(lock, user?.id)) {
+      toast({
+        variant: 'destructive',
+        title: t('packing.customerLocked'),
+        description: t('packing.customerLockedBy'),
+      });
+      return;
+    }
+    
+    try {
+      await acquireLock.mutateAsync({ 
+        customerId: customer.id, 
+        deliveryDate: dateStr 
+      });
+      setSelectedCustomer(customer);
+      startAutoExtend();
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: t('common.error'),
+        description: t('packing.couldNotLock'),
+      });
     }
   };
   
@@ -459,7 +526,9 @@ export default function KioskPackingView() {
   const showDate = settings.header_show_date ?? settings.show_date;
   const clockFormat = settings.header_clock_format || '24h';
   
-  const getStatusColor = (progress: number) => {
+  const getStatusColor = (progress: number, lockedByOther?: boolean, lockedByMe?: boolean) => {
+    if (lockedByMe) return settings.lock_my_lock_color || settings.packing_color;
+    if (lockedByOther) return settings.lock_other_lock_color || '#6b7280';
     if (progress === 100) return settings.completed_color;
     if (progress > 0) return settings.packing_color;
     return settings.pending_color;
@@ -553,6 +622,7 @@ export default function KioskPackingView() {
           <BackButton 
             settings={settings}
             onClick={handleBack}
+            disabled={isReleasing}
           />
           <div className="flex-1">
             <h1 
@@ -565,6 +635,20 @@ export default function KioskPackingView() {
               {currentCustomer.customer_number} • {format(new Date(dateStr), 'PPP', { locale })}
             </p>
           </div>
+          
+          {/* Lock indicator when customer is selected */}
+          {lockEnabled && settings.lock_show_indicator && (
+            <Badge 
+              className="gap-1 text-base px-3 py-2"
+              style={{ 
+                backgroundColor: settings.lock_my_lock_color || settings.completed_color, 
+                color: '#fff' 
+              }}
+            >
+              <Lock className="h-4 w-4" />
+              {settings.lock_show_locked_by_text && (settings.lock_locked_by_you_text || t('packing.lockedByYou'))}
+            </Badge>
+          )}
           
           <div className="flex items-center gap-4">
             {settings.realtime_show_connection_status && (
@@ -870,8 +954,10 @@ export default function KioskPackingView() {
         <KioskCustomerTable
           customers={customers}
           settings={settings}
-          onSelectCustomer={(customer) => setSelectedCustomer(customer as CustomerWithOrders)}
+          onSelectCustomer={handleSelectCustomer}
           onPackOrder={handleMarkPacked}
+          locks={lockEnabled ? locks : undefined}
+          currentUserId={user?.id}
         />
       ) : (
         <div
@@ -883,28 +969,34 @@ export default function KioskPackingView() {
         >
           <AnimatePresence>
             {customers.map((customer) => {
+              const lock = lockEnabled ? getLock(customer.id) : undefined;
+              const lockedByMe = lockEnabled && isLockedByCurrentUser(lock, user?.id);
+              const lockedByOther = lockEnabled && isLockedByOther(lock, user?.id);
               const isComplete = customer.progress === 100;
+              const shouldFade = settings.lock_fade_locked_cards && lockedByOther;
+              const isBlocked = settings.lock_block_locked_cards && lockedByOther;
               
               return (
                 <motion.div
                   key={customer.id}
                   initial={settings.animation_enabled ? { opacity: 0, scale: 0.95 } : false}
-                  animate={{ opacity: 1, scale: 1 }}
+                  animate={{ opacity: shouldFade ? 0.5 : 1, scale: 1 }}
                   exit={settings.animation_enabled ? { opacity: 0, scale: 0.95 } : undefined}
                   transition={{ 
                     duration: settings.animation_speed === 'fast' ? 0.15 : 
                               settings.animation_speed === 'slow' ? 0.5 : 0.3 
                   }}
                   className={cn(
-                    'cursor-pointer transition-all active:scale-[0.98] touch-manipulation p-4 rounded-xl',
-                    settings.card_compact_mode && 'p-3'
+                    'transition-all touch-manipulation p-4 rounded-xl relative',
+                    settings.card_compact_mode && 'p-3',
+                    isBlocked ? 'cursor-not-allowed' : 'cursor-pointer active:scale-[0.98]'
                   )}
                   style={{
                     backgroundColor: settings.card_background_color,
                     borderRadius: settings.border_radius,
-                    borderLeft: `${settings.card_border_width || '4px'} solid ${getStatusColor(customer.progress)}`,
+                    borderLeft: `${settings.card_border_width || '4px'} solid ${getStatusColor(customer.progress, lockedByOther, lockedByMe)}`,
                   }}
-                  onClick={() => setSelectedCustomer(customer)}
+                  onClick={() => !isBlocked && handleSelectCustomer(customer)}
                 >
                   {/* Customer header */}
                   <div className="flex items-start justify-between mb-3">
@@ -922,7 +1014,33 @@ export default function KioskPackingView() {
                       )}
                     </div>
                     
-                    {isComplete && (
+                    {/* Status badges - show lock status if enabled */}
+                    {settings.lock_show_indicator && lockedByOther && (
+                      <Badge 
+                        variant="secondary"
+                        className="gap-1 text-base px-3 py-1"
+                        style={{ 
+                          backgroundColor: settings.lock_other_lock_color || '#6b7280',
+                          color: '#fff',
+                        }}
+                      >
+                        <Lock className="h-4 w-4" />
+                        {settings.lock_show_locked_by_text && (settings.lock_locked_by_other_text || t('packing.locked'))}
+                      </Badge>
+                    )}
+                    {settings.lock_show_indicator && lockedByMe && (
+                      <Badge 
+                        className="gap-1 text-base px-3 py-1"
+                        style={{ 
+                          backgroundColor: settings.lock_my_lock_color || settings.packing_color, 
+                          color: '#fff' 
+                        }}
+                      >
+                        <Lock className="h-4 w-4" />
+                        {settings.lock_show_locked_by_text && (settings.lock_locked_by_you_text || t('packing.yourLock'))}
+                      </Badge>
+                    )}
+                    {isComplete && !lockedByMe && !lockedByOther && (
                       <Badge 
                         className="gap-1 text-base px-3 py-1"
                         style={{ backgroundColor: settings.completed_color, color: '#fff' }}
