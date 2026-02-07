@@ -2499,24 +2499,24 @@ export default function DisplaySettingsPage() {
                             </Select>
                           </div>
                         </div>
+                        
+                        {/* Sortering */}
+                        <div className="space-y-4 p-4 rounded-lg bg-muted/30">
+                          <h5 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Sortering</h5>
+                          
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <Label>Ferdige varer til bunnen</Label>
+                              <p className="text-xs text-muted-foreground">Flytt kunder med 100% fremdrift til bunnen av listen</p>
+                            </div>
+                            <Switch
+                              checked={settings.customer_sort_completed_last ?? true}
+                              onCheckedChange={(v) => updateSetting('customer_sort_completed_last', v)}
+                            />
+                          </div>
+                        </div>
                       </div>
                     )}
-                    
-                    {/* Sortering */}
-                    <div className="space-y-4 p-4 rounded-lg bg-muted/30">
-                      <h5 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Sortering</h5>
-                      
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <Label>Ferdige varer til bunnen</Label>
-                          <p className="text-xs text-muted-foreground">Flytt kunder med 100% fremdrift til bunnen av listen</p>
-                        </div>
-                        <Switch
-                          checked={settings.customer_sort_completed_last ?? true}
-                          onCheckedChange={(v) => updateSetting('customer_sort_completed_last', v)}
-                        />
-                      </div>
-                    </div>
                     
                     {/* Pakkeknapp-innstillinger */}
                     <div className="space-y-4 p-4 rounded-lg bg-muted/30">
