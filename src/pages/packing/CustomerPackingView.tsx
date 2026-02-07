@@ -84,7 +84,7 @@ export default function CustomerPackingView() {
   const { data: bakerySettings } = useBakerySettings();
   useRealtimeCustomerLocks(dateStr);
   
-  const acquireLock = useAcquireCustomerLock();
+  const acquireLock = useAcquireCustomerLock(bakeryId);
   const { startAutoExtend, release, isReleasing } = useActiveCustomerLock(
     selectedCustomer?.id || null, 
     dateStr

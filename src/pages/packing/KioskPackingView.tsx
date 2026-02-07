@@ -393,7 +393,7 @@ export default function KioskPackingView() {
   const { data: locks = [] } = useCustomerLocks(lockEnabled ? dateStr : '');
   useRealtimeCustomerLocks(lockEnabled ? dateStr : '');
   
-  const acquireLock = useAcquireCustomerLock();
+  const acquireLock = useAcquireCustomerLock(bakery?.id);
   const { startAutoExtend, release, isReleasing } = useActiveCustomerLock(
     selectedCustomer?.id || null, 
     dateStr
