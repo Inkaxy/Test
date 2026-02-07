@@ -389,8 +389,9 @@ export default function KioskPackingView() {
   const settings: DisplaySettings = displaySettings || getDefaultDisplaySettings();
   const { data: bakerySettings } = useBakerySettings();
   
-  // Customer locking - only if enabled in settings
-  const lockEnabled = settings.lock_enabled !== false;
+  // Customer locking - only if enabled in settings AND user is authenticated
+  // Without auth, locking is silently disabled (allows kiosk to work without login)
+  const lockEnabled = settings.lock_enabled !== false && !!user;
   const { data: locks = [] } = useCustomerLocks(lockEnabled ? dateStr : '', bakery?.id);
   useRealtimeCustomerLocks(lockEnabled ? dateStr : '', bakery?.id);
   
