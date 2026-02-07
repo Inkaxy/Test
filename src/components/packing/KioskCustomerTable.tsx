@@ -334,18 +334,21 @@ export function KioskCustomerTable({
                   <div className="flex justify-center" style={{ width: statusColumnWidth }}>
                     {lockedByOther && (
                       <Badge 
-                        variant="secondary" 
                         className={cn(
                           "gap-2",
                           settings.table_status_badge_style === 'minimal' && 'border-0 bg-transparent'
                         )}
                         style={{ 
+                          backgroundColor: settings.table_status_badge_style === 'outline' ? 'transparent' : settings.packing_color, 
+                          color: settings.table_status_badge_style === 'outline' ? settings.packing_color : '#fff',
+                          borderColor: settings.packing_color,
+                          borderWidth: settings.table_status_badge_style === 'outline' ? '2px' : '0',
                           fontSize: settings.table_status_font_size,
                           padding: settings.table_status_badge_padding,
                         }}
                       >
                         {settings.table_show_status_icons && <Lock className="h-4 w-4" />}
-                        {t('packing.locked')}
+                        {t('packing.inProgress')}
                       </Badge>
                     )}
                     {lockedByMe && (
