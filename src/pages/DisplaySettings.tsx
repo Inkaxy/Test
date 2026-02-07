@@ -3249,37 +3249,44 @@ export default function DisplaySettingsPage() {
                             </span>
                           )}
                           
-                          {/* Refresh Button */}
-                          {settings.refresh_button_show !== false && (
-                            <div 
-                              className={cn(
-                                "flex items-center justify-center shrink-0",
-                                settings.refresh_button_style === 'icon-circle' && "rounded-full",
-                                settings.refresh_button_style === 'icon-square' && "rounded-md",
-                              )}
-                              style={{ 
-                                backgroundColor: (settings.refresh_button_style === 'icon-circle' || settings.refresh_button_style === 'icon-square') 
-                                  ? (settings.refresh_button_background_color || 'transparent') 
-                                  : 'transparent',
-                                color: settings.refresh_button_icon_color || settings.text_color,
-                                width: settings.refresh_button_size === 'small' ? '24px' 
-                                  : settings.refresh_button_size === 'medium' ? '28px'
-                                  : settings.refresh_button_size === 'large' ? '36px' 
-                                  : '44px',
-                                height: settings.refresh_button_size === 'small' ? '24px' 
-                                  : settings.refresh_button_size === 'medium' ? '28px'
-                                  : settings.refresh_button_size === 'large' ? '36px' 
-                                  : '44px',
-                              }}
-                            >
-                              <RefreshCw className={cn(
-                                settings.refresh_button_size === 'small' && 'h-3 w-3',
-                                settings.refresh_button_size === 'medium' && 'h-4 w-4',
-                                settings.refresh_button_size === 'large' && 'h-5 w-5',
-                                settings.refresh_button_size === 'huge' && 'h-7 w-7',
-                              )} />
-                            </div>
-                          )}
+                          {/* Refresh Button - with all style options */}
+                          {settings.refresh_button_show !== false && (() => {
+                            const refreshStyle = settings.refresh_button_style || 'icon';
+                            const refreshSize = settings.refresh_button_size || 'medium';
+                            const refreshBgColor = settings.refresh_button_background_color || 'transparent';
+                            const refreshIconColor = settings.refresh_button_icon_color || settings.text_color;
+                            const refreshText = settings.refresh_button_text || 'Oppdater';
+
+                            const sizeMap = {
+                              small: { box: '24px', icon: 'h-3 w-3', text: 'text-xs', padding: 'px-2 py-1' },
+                              medium: { box: '28px', icon: 'h-4 w-4', text: 'text-sm', padding: 'px-3 py-1.5' },
+                              large: { box: '36px', icon: 'h-5 w-5', text: 'text-base', padding: 'px-4 py-2' },
+                              huge: { box: '44px', icon: 'h-7 w-7', text: 'text-lg', padding: 'px-5 py-2.5' },
+                            };
+                            const sizes = sizeMap[refreshSize] || sizeMap.medium;
+
+                            const hasBackground = refreshStyle === 'icon-circle' || refreshStyle === 'icon-square' || refreshStyle === 'text' || refreshStyle === 'text-icon';
+
+                            return (
+                              <div 
+                                className={cn(
+                                  "flex items-center justify-center shrink-0 gap-1.5 font-medium",
+                                  refreshStyle === 'icon-circle' && "rounded-full",
+                                  refreshStyle === 'icon-square' && "rounded-md",
+                                  (refreshStyle === 'text' || refreshStyle === 'text-icon') && `rounded-md ${sizes.padding} ${sizes.text}`,
+                                )}
+                                style={{ 
+                                  backgroundColor: hasBackground ? refreshBgColor : 'transparent',
+                                  color: refreshIconColor,
+                                  width: (refreshStyle === 'text' || refreshStyle === 'text-icon') ? 'auto' : sizes.box,
+                                  height: (refreshStyle === 'text' || refreshStyle === 'text-icon') ? 'auto' : sizes.box,
+                                }}
+                              >
+                                {refreshStyle !== 'text' && <RefreshCw className={sizes.icon} />}
+                                {(refreshStyle === 'text' || refreshStyle === 'text-icon') && <span>{refreshText}</span>}
+                              </div>
+                            );
+                          })()}
                         </div>
                       </div>
                       
@@ -3336,66 +3343,103 @@ export default function DisplaySettingsPage() {
                         }}
                       >
                         {[
-                          { name: 'Meny Heimdal', progress: 100, status: 'complete', orders: '5/5' },
-                          { name: 'Kiwi Foyn', progress: 60, status: 'packing', orders: '3/5' },
-                          { name: 'Spar Sentrum', progress: 0, status: 'pending', orders: '0/4' },
-                          { name: 'Rema 1000', progress: 0, status: 'pending', orders: '0/3' },
-                        ].map((customer) => (
-                          <div
-                            key={customer.name}
-                            className={cn(
-                              "p-3 transition-all",
-                              settings.card_compact_mode && "p-2"
-                            )}
-                            style={{
-                              backgroundColor: settings.card_background_color,
-                              borderRadius: settings.border_radius,
-                              borderLeft: `${settings.card_border_width} solid ${
-                                customer.status === 'complete' ? settings.completed_color : 
-                                customer.status === 'packing' ? settings.packing_color : 
-                                settings.pending_color
-                              }`,
-                              opacity: customer.status === 'complete' ? 0.7 : 1,
-                            }}
-                          >
-                            <div className="flex items-center justify-between">
-                              <h4 
-                                className="font-bold truncate"
-                                style={{ 
-                                  fontSize: `calc(${settings.card_customer_name_font_size || settings.customer_name_font_size} * 0.6)`,
-                                  color: settings.text_color,
-                                }}
-                              >
-                                {customer.name}
-                              </h4>
-                              <span 
-                                className="px-2 py-0.5 rounded text-xs font-bold shrink-0"
-                                style={{
-                                  backgroundColor: customer.status === 'complete' ? settings.completed_color : 
-                                                  customer.status === 'packing' ? settings.packing_color : 
-                                                  `${settings.pending_color}40`,
-                                  color: customer.status === 'pending' ? settings.text_color : '#fff',
-                                }}
-                              >
-                                {customer.orders}
-                              </span>
-                            </div>
-                            {settings.card_show_individual_progress && (
-                              <div
-                                className="h-1.5 rounded-full mt-2"
-                                style={{ backgroundColor: `${settings.pending_color}40` }}
-                              >
-                                <div
-                                  className="h-full rounded-full transition-all"
+                          { name: 'Meny Heimdal', progress: 100, status: 'complete', orders: '5/5', number: '#1001', locked: false, lockedByMe: false },
+                          { name: 'Kiwi Foyn', progress: 60, status: 'packing', orders: '3/5', number: '#1002', locked: true, lockedByMe: true },
+                          { name: 'Spar Sentrum', progress: 0, status: 'pending', orders: '0/4', number: '#1003', locked: true, lockedByMe: false },
+                          { name: 'Rema 1000', progress: 0, status: 'pending', orders: '0/3', number: '#1004', locked: false, lockedByMe: false },
+                        ].map((customer) => {
+                          const isLockedByOther = customer.locked && !customer.lockedByMe;
+                          const shouldFade = settings.lock_fade_locked_cards && isLockedByOther;
+                          
+                          return (
+                            <div
+                              key={customer.name}
+                              className={cn(
+                                "p-3 transition-all relative",
+                                settings.card_compact_mode && "p-2"
+                              )}
+                              style={{
+                                backgroundColor: settings.card_background_color,
+                                borderRadius: settings.border_radius,
+                                borderLeft: `${settings.card_border_width} solid ${
+                                  customer.status === 'complete' ? settings.completed_color : 
+                                  customer.status === 'packing' ? settings.packing_color : 
+                                  settings.pending_color
+                                }`,
+                                opacity: customer.status === 'complete' ? 0.7 : shouldFade ? 0.5 : 1,
+                              }}
+                            >
+                              {/* Lock indicator badge */}
+                              {settings.lock_enabled !== false && settings.lock_show_indicator && customer.locked && (
+                                <div 
+                                  className="absolute -top-1 -right-1 px-1.5 py-0.5 rounded text-[9px] font-bold"
                                   style={{
-                                    width: `${customer.progress}%`,
-                                    backgroundColor: customer.status === 'complete' ? settings.completed_color : settings.packing_color,
+                                    backgroundColor: customer.lockedByMe 
+                                      ? (settings.lock_my_lock_color || '#3b82f6')
+                                      : (settings.lock_other_lock_color || '#6b7280'),
+                                    color: '#ffffff',
                                   }}
-                                />
+                                >
+                                  {settings.lock_show_locked_by_text 
+                                    ? (customer.lockedByMe 
+                                        ? (settings.lock_locked_by_you_text || 'Din lås')
+                                        : (settings.lock_locked_by_other_text || 'Låst'))
+                                    : '🔒'}
+                                </div>
+                              )}
+                              
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <h4 
+                                    className="font-bold truncate"
+                                    style={{ 
+                                      fontSize: `calc(${settings.card_customer_name_font_size || settings.customer_name_font_size} * 0.6)`,
+                                      color: settings.text_color,
+                                    }}
+                                  >
+                                    {customer.name}
+                                  </h4>
+                                  {settings.card_show_customer_number && (
+                                    <p 
+                                      className="opacity-60"
+                                      style={{ 
+                                        fontSize: `calc(${settings.card_product_font_size || '0.875rem'} * 0.8)`,
+                                        color: settings.text_color,
+                                      }}
+                                    >
+                                      {customer.number}
+                                    </p>
+                                  )}
+                                </div>
+                                <span 
+                                  className="px-2 py-0.5 rounded text-xs font-bold shrink-0"
+                                  style={{
+                                    backgroundColor: customer.status === 'complete' ? settings.completed_color : 
+                                                    customer.status === 'packing' ? settings.packing_color : 
+                                                    `${settings.pending_color}40`,
+                                    color: customer.status === 'pending' ? settings.text_color : '#fff',
+                                  }}
+                                >
+                                  {customer.orders}
+                                </span>
                               </div>
-                            )}
-                          </div>
-                        ))}
+                              {settings.card_show_individual_progress && (
+                                <div
+                                  className="h-1.5 rounded-full mt-2"
+                                  style={{ backgroundColor: `${settings.pending_color}40` }}
+                                >
+                                  <div
+                                    className="h-full rounded-full transition-all"
+                                    style={{
+                                      width: `${customer.progress}%`,
+                                      backgroundColor: customer.status === 'complete' ? settings.completed_color : settings.packing_color,
+                                    }}
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   )}
