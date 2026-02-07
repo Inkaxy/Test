@@ -73,19 +73,21 @@ export function useRealtimeCustomerLocks(deliveryDate: string) {
   }, [bakeryId, deliveryDate, queryClient]);
 }
 
-export function useAcquireCustomerLock() {
+export function useAcquireCustomerLock(providedBakeryId?: string | null) {
   const queryClient = useQueryClient();
   const { getActiveBakeryId } = useAuthStore();
   
   return useMutation({
     mutationFn: async ({ 
       customerId, 
-      deliveryDate 
+      deliveryDate,
+      bakeryId: overrideBakeryId,
     }: { 
       customerId: string; 
       deliveryDate: string;
+      bakeryId?: string;
     }) => {
-      const bakeryId = getActiveBakeryId();
+      const bakeryId = overrideBakeryId || providedBakeryId || getActiveBakeryId();
       if (!bakeryId) throw new Error('No bakery selected');
       
       const { data, error } = await supabase.rpc('acquire_customer_lock', {
