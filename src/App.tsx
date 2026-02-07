@@ -60,13 +60,40 @@ function AppRoutes() {
       {/* Short display URLs - /d/{token} */}
       <Route path="/d/:displayToken" element={<CustomerDisplay />} />
       
-      {/* Public kiosk packing routes - customer-based (no auth required) */}
-      <Route path="/kiosk/packing/:bakeryShortId/:categoryId" element={<KioskPackingView />} />
-      <Route path="/kiosk/packing/:bakeryShortId" element={<KioskPackingView />} />
-      
-      {/* Public kiosk packing routes - product-based (no auth required) */}
-      <Route path="/kiosk/packing/:bakeryShortId/product/:categoryId" element={<ProductKioskPackingView />} />
-      <Route path="/kiosk/packing/:bakeryShortId/product" element={<ProductKioskPackingView />} />
+      {/* Kiosk packing routes (requires login) */}
+      <Route
+        path="/kiosk/packing/:bakeryShortId/:categoryId"
+        element={
+          <ProtectedRoute requireRole="bakery_user">
+            <KioskPackingView />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/kiosk/packing/:bakeryShortId"
+        element={
+          <ProtectedRoute requireRole="bakery_user">
+            <KioskPackingView />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/kiosk/packing/:bakeryShortId/product/:categoryId"
+        element={
+          <ProtectedRoute requireRole="bakery_user">
+            <ProductKioskPackingView />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/kiosk/packing/:bakeryShortId/product"
+        element={
+          <ProtectedRoute requireRole="bakery_user">
+            <ProductKioskPackingView />
+          </ProtectedRoute>
+        }
+      />
       
       {/* Protected packing display route */}
       <Route

@@ -366,6 +366,7 @@ export default function KioskPackingView() {
   const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const containerRef = useRef<HTMLDivElement>(null);
+  const selectCustomerInProgressRef = useRef(false);
   const locale = i18n.language === 'nb' ? nb : enUS;
   const { user } = useAuthStore();
   
@@ -460,14 +461,19 @@ export default function KioskPackingView() {
   };
   
   const handleSelectCustomer = async (customer: CustomerWithOrders) => {
+    // Guard against double-taps / repeated clicks (common on tablets)
+    if (selectCustomerInProgressRef.current) return;
+    if (selectedCustomer?.id === customer.id) return;
+
     if (!lockEnabled) {
       // No locking - just select
       setSelectedCustomer(customer);
       return;
     }
-    
+
     const lock = getLock(customer.id);
-    
+    const lockedByMe = isLockedByCurrentUser(lock, user?.id);
+
     // Check if locked by another user
     if (settings.lock_block_locked_cards && isLockedByOther(lock, user?.id)) {
       toast({
@@ -477,20 +483,32 @@ export default function KioskPackingView() {
       });
       return;
     }
-    
+
+    // If we already hold the lock, don't try to acquire again
+    if (lockedByMe) {
+      setSelectedCustomer(customer);
+      startAutoExtend();
+      return;
+    }
+
+    selectCustomerInProgressRef.current = true;
     try {
-      await acquireLock.mutateAsync({ 
-        customerId: customer.id, 
-        deliveryDate: dateStr 
+      await acquireLock.mutateAsync({
+        customerId: customer.id,
+        deliveryDate: dateStr,
+        bakeryId: bakery?.id ?? undefined,
       });
       setSelectedCustomer(customer);
       startAutoExtend();
     } catch (error) {
+      console.warn('Failed to acquire customer lock:', error);
       toast({
         variant: 'destructive',
         title: t('common.error'),
         description: t('packing.couldNotLock'),
       });
+    } finally {
+      selectCustomerInProgressRef.current = false;
     }
   };
   
