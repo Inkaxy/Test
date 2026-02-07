@@ -5,6 +5,7 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { DisplaySettings } from '@/hooks/useDisplayOrders';
+import { KioskLock, isLockedByCurrentDevice, isLockedByOtherDevice } from '@/hooks/useKioskLocks';
 import { CustomerLock, isLockedByCurrentUser, isLockedByOther } from '@/hooks/useCustomerLocks';
 
 interface OrderWithProduct {
@@ -33,12 +34,21 @@ interface CustomerWithOrders {
   progress: number;
 }
 
+// Support both kiosk (device-based) and regular (user-based) locking
+type LockMode = 
+  | { mode: 'device'; locks: KioskLock[]; deviceId: string }
+  | { mode: 'user'; locks: CustomerLock[]; userId: string };
+
 interface KioskCustomerTableProps {
   customers: CustomerWithOrders[];
   settings: DisplaySettings;
   onSelectCustomer: (customer: CustomerWithOrders) => void;
   onPackOrder?: (orderId: string, packingStatusId?: string) => void;
-  locks?: CustomerLock[];
+  // For kiosk mode (device-based)
+  locks?: KioskLock[];
+  currentDeviceId?: string;
+  // For authenticated mode (user-based)
+  userLocks?: CustomerLock[];
   currentUserId?: string;
 }
 
@@ -80,12 +90,35 @@ export function KioskCustomerTable({
   onSelectCustomer,
   onPackOrder,
   locks = [],
+  currentDeviceId,
+  userLocks = [],
   currentUserId,
 }: KioskCustomerTableProps) {
   const { t } = useTranslation();
+  
+  // Determine lock mode based on props
+  const useDeviceLocking = locks.length > 0 || currentDeviceId;
 
-  const getLock = (customerId: string): CustomerLock | undefined => {
+  const getKioskLock = (customerId: string): KioskLock | undefined => {
     return locks.find((l) => l.customer_id === customerId);
+  };
+  
+  const getUserLock = (customerId: string): CustomerLock | undefined => {
+    return userLocks.find((l) => l.customer_id === customerId);
+  };
+  
+  const checkLockedByMe = (customerId: string): boolean => {
+    if (useDeviceLocking) {
+      return isLockedByCurrentDevice(getKioskLock(customerId), currentDeviceId || '');
+    }
+    return isLockedByCurrentUser(getUserLock(customerId), currentUserId);
+  };
+  
+  const checkLockedByOther = (customerId: string): boolean => {
+    if (useDeviceLocking) {
+      return isLockedByOtherDevice(getKioskLock(customerId), currentDeviceId || '');
+    }
+    return isLockedByOther(getUserLock(customerId), currentUserId);
   };
 
   const getStatusColor = (progress: number, lockedByOther?: boolean, lockedByMe?: boolean) => {
@@ -157,9 +190,8 @@ export function KioskCustomerTable({
       <div className="space-y-0">
         <AnimatePresence>
           {customers.map((customer, index) => {
-            const lock = getLock(customer.id);
-            const lockedByMe = isLockedByCurrentUser(lock, currentUserId);
-            const lockedByOther = isLockedByOther(lock, currentUserId);
+            const lockedByMe = checkLockedByMe(customer.id);
+            const lockedByOther = checkLockedByOther(customer.id);
             const isComplete = customer.progress === 100;
             const statusColor = getStatusColor(customer.progress, lockedByOther, lockedByMe);
 

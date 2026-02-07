@@ -134,6 +134,7 @@
     "overallProgress": "{{packed}} of {{total}} packed overall",
     "customerLocked": "Customer locked",
     "customerLockedBy": "This customer is being packed by another user",
+    "customerLockedByDevice": "This customer is being packed by another device",
     "couldNotLock": "Could not lock customer",
     "couldNotPack": "Could not mark as packed",
     "couldNotUndo": "Could not undo",

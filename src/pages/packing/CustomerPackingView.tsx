@@ -638,7 +638,7 @@ export default function CustomerPackingView() {
           customers={customers}
           settings={settings}
           onSelectCustomer={handleSelectCustomer}
-          locks={locks}
+          userLocks={locks}
           currentUserId={user?.id}
         />
       ) : (
