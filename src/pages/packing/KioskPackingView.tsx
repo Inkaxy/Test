@@ -955,7 +955,6 @@ export default function KioskPackingView() {
           customers={customers}
           settings={settings}
           onSelectCustomer={handleSelectCustomer}
-          onPackOrder={handleMarkPacked}
           locks={lockEnabled ? locks : undefined}
           currentUserId={user?.id}
         />
