@@ -173,7 +173,39 @@ function useKioskCustomersForDate(bakeryId: string | null, date: string, categor
       return Array.from(customerMap.values()).sort((a, b) => a.name.localeCompare(b.name, 'nb'));
     },
     enabled: !!bakeryId,
+    refetchInterval: 30000, // Backup polling every 30 seconds
   });
+}
+
+// Hook to subscribe to realtime packing_status changes
+function useRealtimePackingStatus(bakeryId: string | null, date: string, categoryId?: string) {
+  const queryClient = useQueryClient();
+  
+  useEffect(() => {
+    if (!bakeryId) return;
+    
+    const channel = supabase
+      .channel(`kiosk-packing-status:${bakeryId}:${date}:${categoryId || 'all'}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'packing_status',
+        },
+        () => {
+          // Invalidate the customers query to refresh data
+          queryClient.invalidateQueries({ 
+            queryKey: ['kiosk-customers-for-date', bakeryId, date, categoryId] 
+          });
+        }
+      )
+      .subscribe();
+    
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [bakeryId, date, categoryId, queryClient]);
 }
 
 // Helper function to optimistically update order status in cache
@@ -395,6 +427,9 @@ export default function KioskPackingView() {
   const lockEnabled = settings.lock_enabled !== false;
   const { data: locks = [] } = useKioskLocks(lockEnabled ? dateStr : '', bakery?.id || null);
   useRealtimeKioskLocks(lockEnabled ? dateStr : '', bakery?.id || null);
+  
+  // Subscribe to realtime packing status changes
+  useRealtimePackingStatus(bakery?.id || null, dateStr, categoryId);
   
   const acquireLock = useAcquireKioskLock();
   const { startAutoExtend, release, isReleasing } = useActiveKioskLock(
