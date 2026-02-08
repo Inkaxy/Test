@@ -13,6 +13,15 @@ export type ThemePreset =
   | 'coffee' 
   | 'wine' 
   | 'sunrise' 
+  // Nye lyse temaer
+  | 'nordic-frost'
+  | 'morning-bakery'
+  | 'lavender-dreams'
+  | 'ocean-breeze'
+  | 'peach-blossom'
+  | 'sage-garden'
+  | 'vanilla-cream'
+  | 'cherry-blossom'
   | 'custom';
 
 /**
