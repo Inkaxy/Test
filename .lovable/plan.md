@@ -1,231 +1,204 @@
 
-# Grundig Systemgjennomgang - Loaf & Load
+# Fase 1: Sikkerhet - Implementeringsplan
 
-## Sammendrag av Funn
-
-Etter en detaljert analyse av kodebasen, database-strukturen, sikkerhetspolicyer og arkitektur, har jeg identifisert flere områder som bør forbedres. Funnene er kategorisert etter prioritet.
+## Sammenfatting
+Jeg vil implementere de 5 kritiske sikkerhetsforbedringene fra fören godkjente planen. Starter med å sikre Edge Functions og deretter fix RLS-policyer.
 
 ---
 
-## Kritiske Sikkerhetsproblemer (Prioritet 1)
+## Del 1: Edge Functions Sikring
 
-### 1. Offentlig Eksponering av Pakkestatus
-**Problem:** `packing_status`-tabellen (1 506 poster) er offentlig lesbar. Konkurrenter kan overvåke produksjonseffektivitet og identifisere avviksmønstre.
+### 1.1 sync-onedrive-cron Function
+**Hva:** Legge til CRON_SECRET validering
+
+**Endringer:**
+- Legg til CRON_SECRET secret i Lovable Cloud (bruker må angi selv)
+- Valider at `X-Cron-Secret` header matcher `CRON_SECRET` fra environment
+- Fjern logging av sensitive data
+- Returner 401 Unauthorized hvis secret ikke stemmer
+
+**Implementering:**
+```typescript
+// Sjekk CRON_SECRET header
+const cronSecret = req.headers.get('X-Cron-Secret');
+const expectedSecret = Deno.env.get('CRON_SECRET');
+
+if (!cronSecret || cronSecret !== expectedSecret) {
+  return new Response(
+    JSON.stringify({ error: 'Unauthorized - Invalid CRON_SECRET' }),
+    { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+  );
+}
+```
+
+### 1.2 sync-onedrive Function
+**Hva:** Fjern "automated" bypass og krev alltid JWT-validering
+
+**Endringer:**
+- Fjern `automated` parameter som omgår autentisering
+- Krev alltid JWT-token via Authorization header
+- Valider at bruker har tilgang til bakeri (via `can_access_bakery()`)
+- Legge til error handling for uautentisert tilgang
+
+**Implementering:**
+```typescript
+// Fjern: if (!automated) { ... } else { skip auth }
+// Ny logikk: ALLTID validere JWT
+
+const authHeader = req.headers.get('Authorization');
+if (!authHeader?.startsWith('Bearer ')) {
+  return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
+}
+
+const token = authHeader.replace('Bearer ', '');
+const { data, error } = await supabase.auth.getClaims(token);
+if (error || !data?.claims) {
+  return new Response(JSON.stringify({ error: 'Invalid token' }), { status: 401 });
+}
+
+const userId = data.claims.sub;
+```
+
+### 1.3 send-packing-report Function
+**Hva:** Sikre ved JWT-validering og CRON_SECRET
+
+**Endringer:**
+- For manuelle kall: Krev JWT og valider bruker har tilgang til bakeri
+- For cron kall: Krev CRON_SECRET header
+- Fjern mulighet for å angi vilkårlig `bakery_id` uten validering
+
+**Implementering:**
+```typescript
+// Sjekk om dette er kron eller manual
+const cronSecret = req.headers.get('X-Cron-Secret');
+
+if (cronSecret) {
+  // Cron job - valider CRON_SECRET
+  if (cronSecret !== Deno.env.get('CRON_SECRET')) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
+  }
+  // Prosesser alle bakeri med email report enabled
+} else {
+  // Manual call - valider JWT
+  const authHeader = req.headers.get('Authorization');
+  const { data, error } = await supabase.auth.getClaims(token);
+  // Valider bruker har tilgang til bakery_id
+}
+```
+
+---
+
+## Del 2: RLS Policy Forbedringer
+
+### 2.1 packing_status Tabell
+**Hva:** Begrens offentlig lesetilgang
+
+**Problem:** `packing_status` er offentlig lesbar via kiosk-policies. Må begrense mens man behold kiosk-skrivetilgang.
+
+**Løsning:** 
+- Fjern "Public can view packing_status for kiosk" policy
+- Behold "Public can insert/update packing_status for kiosk" policies
+- Behold policies for authenticated users
+
+### 2.2 customers Tabell
+**Hva:** Fjern `display_token` fra offentlige queries
+
+**Problem:** `display_token` UUIDs er lesbar offentlig
 
 **Løsning:**
-- Begrens lesetilgang til autentiserte brukere
-- Behold offentlig skrivetilgang for kiosk-operasjoner, men valider bakeri-ID via database-funksjon
+- Opprett ny policy: "Public can view customers for kiosk (limited columns)"
+- Bruk `.select('id,name,customer_number,bakery_id,address,priority,is_active')` uten `display_token`
+- Opprett Edge Function `validate-display-token` for display-basert tilgang
 
-### 2. Kunde Display-Tokens Eksponert
-**Problem:** `customers`-tabellen eksponerer `display_token` UUIDs offentlig. Disse fungerer som autentiserings-credentials men kan leses av hvem som helst.
+### 2.3 bakeries Tabell
+**Hva:** Fjern `settings` fra offentlig SELECT
 
-**Løsning:**
-- Fjern `display_token` fra offentlige SELECT-policyer
-- Opprett en dedikert edge function for token-validering som returnerer kun nødvendig data
-
-### 3. Bakeri-Innstillinger Eksponert
-**Problem:** RLS-policyen "Public can view bakeries by short_id" returnerer alle kolonner, inkludert `settings` JSON-feltet med e-postadresser og konfigurasjonsdetaljer.
+**Problem:** `settings` JSON inneholder e-postadresser og konfigurasjoner
 
 **Løsning:**
-- Opprett en VIEW `bakeries_public` med kun `id`, `name`, `short_id`, `is_active`
+- Opprett VIEW `bakeries_public` (kun `id, name, short_id, is_active`)
 - Oppdater kiosk-queries til å bruke denne viewen
 
-### 4. Edge Functions Mangler Autentisering
-**Problem:** 
-- `sync-onedrive`: Har "automated" bypass som omgår auth
-- `sync-onedrive-cron`: Ingen autentisering
-- `send-packing-report`: Aksepterer vilkårlig `bakery_id`
+### 2.4 database Funksjoner
+**Hva:** Fix privilege escalation i `setup_bakery_for_new_user()`
 
-**Løsning:**
-- Fjern "automated" bypass og krev alltid JWT
-- Legg til CRON_SECRET validering for cron-funksjoner
-- Valider at bruker har tilgang til aktuelt bakeri
-
-### 5. Leaked Password Protection Deaktivert
-**Problem:** Supabase Leaked Password Protection er slått av.
-
-**Løsning:**
-- Aktiver via backend-konfigurasjon for å beskytte mot kjente lekkede passord
-
----
-
-## Moderate Forbedringer (Prioritet 2)
-
-### 6. Database-Funksjoner med Privilege Escalation Risiko
-**Problem:** `setup_bakery_for_new_user()` validerer ikke at `_user_id` matcher `auth.uid()`. En bruker kan potensielt opprette bakerier for andre brukere.
+**Problem:** `_user_id` valideres ikke mot `auth.uid()`
 
 **Løsning:**
 ```sql
--- Legg til validering i funksjonen:
+-- Legg til validering:
 IF _user_id != auth.uid() THEN
   RAISE EXCEPTION 'Cannot setup bakery for another user';
 END IF;
 ```
 
-### 7. Console.log Statements i Produksjon
-**Problem:** 125 `console.log/warn/error` statements i koden, spesielt i `fileParser.ts` (14 stk) som logger sensitiv parsing-informasjon.
+---
 
-**Løsning:**
-- Fjern eller erstatt med conditional logging (kun i development)
-- Implementer et strukturert logging-system
+## Del 3: Implementering av CRON_SECRET
 
-### 8. OneDrive-Integrasjon er Placeholder
-**Problem:** `sync-onedrive` edge function inneholder kun placeholder-kode og returnerer alltid "OneDrive-synkronisering krever Microsoft Graph API-integrasjon".
+**Brukerens rolle:**
+1. Generere eller velge en tilfeldig streng på 32-64 tegn
+2. Gi den til systemet når det bes om den
 
-**Løsning:**
-- Enten implementer full Microsoft Graph API-integrasjon
-- Eller fjern OneDrive-UI fra kategorier-siden for å unngå forvirring
+**Eksempler på CRON_SECRET:**
+```
+MySuperSecret_Cron_Key_2024_xK9mP3vL7q
+a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6
+your_super_secret_cron_password_123456
+```
 
 ---
 
-## Arkitektur-Forbedringer (Prioritet 3)
+## Implementeringsrekkefølge
 
-### 9. Duplisert Kode for Pakkeoperasjoner
-**Problem:** Både `useOrders.ts` og `KioskPackingView.tsx` inneholder nesten identiske mutasjoner for `markAsPacked`, `undoPacking`, `reportDeviation`.
-
-**Løsning:**
-- Konsolider til én delt hook `usePackingMutations` som støtter både autentisert og kiosk-modus
-- Reduserer vedlikeholdskostnad og risiko for inkonsistens
-
-### 10. DisplaySettings Interface er For Stort
-**Problem:** `DisplaySettings` interface i `useDisplayOrders.ts` har 127+ egenskaper, noe som gjør det vanskelig å vedlikeholde.
-
-**Løsning:**
-- Splitt opp i logiske sub-interfaces:
-  - `HeaderSettings`
-  - `CardSettings`
-  - `TableSettings`
-  - `AnimationSettings`
-  - `LockSettings`
-  - etc.
-
-### 11. Manglende Error Boundaries
-**Problem:** Appen mangler React Error Boundaries, så feil i én komponent kan krasje hele appen.
-
-**Løsning:**
-- Implementer en global ErrorBoundary-komponent
-- Legg til spesifikke error boundaries rundt kritiske seksjoner (display, packing)
-
-### 12. Ingen Retry-Logikk for Kritiske Operasjoner
-**Problem:** Pakkestatus-oppdateringer har ingen retry-logikk ved nettverksfeil.
-
-**Løsning:**
-- Konfigurer React Query med retry for viktige mutasjoner
-- Implementer offline-queue for kritiske operasjoner
+```
+Steg 1: Legge til CRON_SECRET i backend (bruker angi verdi)
+Steg 2: Oppdatere sync-onedrive-cron function med CRON_SECRET validering
+Steg 3: Oppdatere sync-onedrive function - fjern "automated" bypass
+Steg 4: Oppdatere send-packing-report function - sikre med JWT + CRON_SECRET
+Steg 5: Oppdatere RLS policies for packing_status
+Steg 6: Oppdatere RLS policies for customers (fjern display_token)
+Steg 7: Opprett VIEW bakeries_public
+Steg 8: Fix setup_bakery_for_new_user() function
+```
 
 ---
 
-## Ytelses-Optimaliseringer (Prioritet 4)
+## Tekniske detaljer
 
-### 13. Supabase 1000-rad Grense
-**Problem:** Standard Supabase-grense er 1000 rader per spørring. Store bakerier kan treffe denne grensen uten å vite det.
-
-**Løsning:**
-- Legg til eksplisitt `.limit()` i queries
-- Implementer paginering for store datasett
-- Legg til overvåking/varsling når grensen nærmer seg
-
-### 14. Realtime Channel Lekkasje
-**Problem:** I `useOrders.ts` opprettes nye broadcast-kanaler for hver mutasjon uten å fjerne dem etterpå.
-
-**Løsning:**
+### CORS Headers
+Alle Edge Functions beholder eksisterende CORS-headers:
 ```typescript
-// Etter sending, fjern kanalen:
-setTimeout(() => {
-  supabase.removeChannel(generalChannel);
-}, 1000);
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': '...'
+}
 ```
 
-### 15. Store Bundler Imports
-**Problem:** Flere store biblioteker (framer-motion, recharts) lastes globalt selv om de kun brukes på noen sider.
+### JWT Validering Pattern
+```typescript
+const { data, error } = await supabase.auth.getClaims(token)
+if (error || !data?.claims) {
+  return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
+}
+const userId = data.claims.sub
+```
 
-**Løsning:**
-- Lazy-load disse komponentene med `React.lazy()` og `Suspense`
-
----
-
-## UX-Forbedringer (Prioritet 5)
-
-### 16. Manglende Keyboard Navigation i Kiosk
-**Problem:** Kiosk-modus mangler tastaturnavigasjon for effektiv pakking.
-
-**Løsning:**
-- Legg til Enter/Space for å pakke
-- Piltaster for navigasjon mellom kunder/produkter
-- Tab-navigasjon mellom kort
-
-### 17. Ingen Offline-Indikator
-**Problem:** Brukere får ikke beskjed når de mister nettverkstilkobling under pakking.
-
-**Løsning:**
-- Legg til offline-banner med retry-knapp
-- Kølegg handlinger og synkroniser når tilkoblingen gjenopprettes
-
-### 18. Manglende Data Validering på Import
-**Problem:** Import-funksjonen validerer ikke data grundig (f.eks. dupliserte kundenumre, ugyldige tegn).
-
-**Løsning:**
-- Legg til pre-import validering
-- Vis detaljert feilrapport før bruker bekrefter import
-
----
-
-## Teknisk Gjeld
-
-### 19. Inkonsistent i18n
-**Problem:** Noen tekster er hardkodet på norsk (f.eks. i `Settings.tsx`), andre bruker i18n.
-
-**Løsning:**
-- Gå gjennom alle komponenter og migrer hardkodede strenger til i18n
-
-### 20. Manglende TypeScript Strict Mode
-**Problem:** Noen areas bruker `any` typer eller mangler typer.
-
-**Løsning:**
-- Aktiver strict mode i tsconfig
-- Fiks type-feil gradvis
-
----
-
-## Anbefalt Implementeringsrekkefølge
-
-```text
-Fase 1: Sikkerhet (1-2 uker)
-├── Fix RLS-policyer for packing_status
-├── Skjul display_token fra offentlige queries
-├── Sikre edge functions med auth/secrets
-├── Aktiver leaked password protection
-└── Fix database-funksjon privilege checks
-
-Fase 2: Stabilitet (1 uke)
-├── Implementer Error Boundaries
-├── Legg til retry-logikk
-├── Fjern/kondisjonaliser console.logs
-└── Fix realtime channel lekkasje
-
-Fase 3: Arkitektur (2-3 uker)
-├── Konsolider pakke-mutations
-├── Splitt DisplaySettings interface
-├── Lazy-load store komponenter
-└── Implementer paginering
-
-Fase 4: UX & Kvalitet (løpende)
-├── Keyboard navigation
-├── Offline-støtte
-├── Import-validering
-├── i18n-konsistens
-└── TypeScript strict mode
+### Cron Secret Pattern
+```typescript
+const cronSecret = req.headers.get('X-Cron-Secret')
+if (cronSecret !== Deno.env.get('CRON_SECRET')) {
+  return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
+}
 ```
 
 ---
 
-## Oppsummering
+## Testing og Validering
 
-Systemet er generelt godt bygget med solid arkitektur, men har noen kritiske sikkerhetshull som bør adresseres umiddelbart. De viktigste funnene er:
-
-1. **5 kritiske sikkerhetsproblemer** relatert til offentlig data-eksponering og manglende auth på edge functions
-2. **3 moderate forbedringer** inkludert privilege escalation risiko og produksjonslogger
-3. **7 arkitektur/ytelse forbedringer** for langsiktig vedlikeholdbarhet
-4. **5 UX-forbedringer** for bedre brukeropplevelse
-
-Anbefaler å starte med sikkerhetsforbedringene før noe annet.
+Etter implementering:
+1. Test sync-onedrive-cron med korrekt CRON_SECRET header
+2. Test sync-onedrive med JWT token
+3. Test send-packing-report både som cron og manual call
+4. Verifiser at offentlige queries ikke returnerer sensitive data
+5. Test at kiosk-operasjoner fremdeles fungerer
