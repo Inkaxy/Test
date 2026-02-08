@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
@@ -26,6 +26,7 @@ import { PackingHeader } from '@/components/packing/PackingHeader';
 import { useDisplaySettings, getDefaultDisplaySettings, DisplaySettings } from '@/hooks/useDisplayOrders';
 import { useCategories } from '@/hooks/useCategories';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useKeyboardNavigation } from '@/hooks/useKeyboardNavigation';
 
 type DeviationType = 'shortage' | 'damaged' | 'wrong_product' | 'other';
 
@@ -317,6 +318,44 @@ export default function ProductPackingView() {
     queryClient.invalidateQueries({ queryKey: ['products-for-date', bakeryId, dateStr, categoryId] });
   };
   
+  // --- Keyboard navigation for product detail view (order packing) ---
+  const handleOrderSelect = useCallback((index: number) => {
+    if (!selectedProduct) return;
+    const order = selectedProduct.orders[index];
+    if (order && order.packing_status?.status !== 'packed' && order.packing_status?.status !== 'deviation') {
+      handleMarkPacked(order);
+    }
+  }, [selectedProduct, handleMarkPacked]);
+  
+  const handleOrderDeviation = useCallback((index: number) => {
+    if (!selectedProduct) return;
+    const order = selectedProduct.orders[index];
+    if (order) {
+      setDeviationOrder({ 
+        id: order.id, 
+        packingStatusId: order.packing_status?.id 
+      });
+    }
+  }, [selectedProduct]);
+  
+  const handleOrderUndo = useCallback((index: number) => {
+    if (!selectedProduct) return;
+    const order = selectedProduct.orders[index];
+    if (order?.packing_status?.id) {
+      handleUndo(order.packing_status.id);
+    }
+  }, [selectedProduct, handleUndo]);
+  
+  const orderKeyboardNav = useKeyboardNavigation({
+    itemCount: selectedProduct?.orders.length || 0,
+    onSelect: handleOrderSelect,
+    onDeviation: handleOrderDeviation,
+    onUndo: handleOrderUndo,
+    onEscape: handleBack,
+    enabled: !!selectedProduct && !selectedProducts.length,
+    wrapAround: true,
+  });
+  
   const totalOrders = products.reduce((sum, p) => sum + p.totalOrders, 0);
   const packedOrders = products.reduce((sum, p) => sum + p.packedOrders, 0);
   const totalQuantity = products.reduce((sum, p) => sum + p.totalQuantity, 0);
@@ -580,21 +619,35 @@ export default function ProductPackingView() {
           />
         </div>
         
-        {/* Customer orders - touch optimized */}
+        {/* Keyboard hint */}
+        <p className="text-sm opacity-60 mb-4" style={{ fontSize: settings.stats_label_font_size }}>
+          {t('packing.keyboardHint')}
+        </p>
+        
+        {/* Customer orders - touch optimized with keyboard navigation */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: settings.gap_size || '1rem' }}>
           <AnimatePresence>
-            {currentProduct.orders.map((order) => {
+            {currentProduct.orders.map((order, index) => {
               const status = order.packing_status?.status || 'pending';
               const isPacked = status === 'packed' || status === 'deviation';
+              const isFocused = orderKeyboardNav.isFocused(index);
+              const itemProps = orderKeyboardNav.getItemProps(index);
               
               return (
                 <motion.div
                   key={order.id}
+                  ref={itemProps.ref}
+                  tabIndex={itemProps.tabIndex}
+                  data-focused={itemProps['data-focused']}
+                  aria-selected={itemProps['aria-selected']}
                   initial={settings.animation_enabled ? { opacity: 0, scale: 0.98 } : false}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={settings.animation_enabled ? { opacity: 0, scale: 0.98 } : undefined}
                   transition={{ duration: settings.animation_speed === 'fast' ? 0.15 : settings.animation_speed === 'slow' ? 0.5 : 0.3 }}
-                  className="p-6 rounded-xl transition-all"
+                  className={cn(
+                    'p-6 rounded-xl transition-all',
+                    isFocused && 'ring-2 ring-primary ring-offset-2'
+                  )}
                   style={{
                     backgroundColor: isPacked
                       ? `${settings.completed_color}20`

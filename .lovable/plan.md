@@ -122,8 +122,8 @@ const { focusedIndex, setFocusedIndex, isFocused, getItemProps, resetFocus } =
 
 **Integrert i:**
 - ✅ `CustomerPackingView.tsx` - Full tastaturstøtte for ordreliste
-- ⏳ `ProductPackingView.tsx` - Planlagt
-- ⏳ `KioskPackingView.tsx` - Planlagt (hvis ønsket)
+- ✅ `ProductPackingView.tsx` - Full tastaturstøtte for ordreliste i produktdetalj
+- ✅ `KioskPackingView.tsx` - Full tastaturstøtte for kundevalg og ordreliste
 
 **Implementasjonsdetaljer:**
 - Hook returnerer `getItemProps()` for å spre på navigerbare elementer
