@@ -26,7 +26,8 @@ import {
   isLockedByOther,
   CustomerLock 
 } from '@/hooks/useCustomerLocks';
-import { useMarkAsPacked, useReportDeviation, useUndoPacking, Order } from '@/hooks/useOrders';
+import { usePackingMutations } from '@/hooks/usePackingMutations';
+import type { Order } from '@/hooks/useOrders';
 import { useAuthStore } from '@/stores/authStore';
 import { useToast } from '@/hooks/use-toast';
 
@@ -57,9 +58,10 @@ export default function CustomerPacking() {
     dateStr
   );
   
-  const markAsPacked = useMarkAsPacked();
-  const reportDeviation = useReportDeviation();
-  const undoPacking = useUndoPacking();
+  // Use unified packing mutations hook
+  const { markAsPacked, reportDeviation, undoPacking } = usePackingMutations({
+    deliveryDate: dateStr,
+  });
   
   // Get lock for a customer
   const getLock = (customerId: string): CustomerLock | undefined => {

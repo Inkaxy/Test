@@ -9,8 +9,9 @@ import { Package, Loader2, ArrowLeft, Check, AlertTriangle, Undo2, Clock, Wifi, 
 import { format } from 'date-fns';
 import { nb, enUS } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { usePackingMutations } from '@/hooks/usePackingMutations';
 import { DeviationDialog } from '@/components/packing/DeviationDialog';
 
 interface DeviationOrderInfo {
@@ -164,103 +165,7 @@ function useKioskProductsForDate(bakeryId: string | null, date: string, category
   });
 }
 
-// Mutations for packing operations
-function useKioskMarkAsPacked() {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: async ({ orderId, packingStatusId }: { orderId: string; packingStatusId?: string }) => {
-      if (packingStatusId) {
-        const { error } = await supabase
-          .from('packing_status')
-          .update({
-            status: 'packed',
-            packed_at: new Date().toISOString(),
-          })
-          .eq('id', packingStatusId);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from('packing_status')
-          .insert({
-            order_id: orderId,
-            status: 'packed',
-            packed_at: new Date().toISOString(),
-          });
-        if (error) throw error;
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['kiosk-products-for-date'] });
-    },
-  });
-}
-
-function useKioskUndoPacking() {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: async ({ packingStatusId }: { packingStatusId: string }) => {
-      const { error } = await supabase
-        .from('packing_status')
-        .update({
-          status: 'pending',
-          packed_at: null,
-          packed_by: null,
-        })
-        .eq('id', packingStatusId);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['kiosk-products-for-date'] });
-    },
-  });
-}
-
-function useKioskReportDeviation() {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: async ({ 
-      orderId, 
-      packingStatusId, 
-      deviationType, 
-      deviationNote 
-    }: { 
-      orderId: string; 
-      packingStatusId?: string; 
-      deviationType: string; 
-      deviationNote?: string;
-    }) => {
-      if (packingStatusId) {
-        const { error } = await supabase
-          .from('packing_status')
-          .update({
-            status: 'deviation',
-            deviation_type: deviationType as 'shortage' | 'damaged' | 'wrong_product' | 'other',
-            deviation_note: deviationNote || null,
-            packed_at: new Date().toISOString(),
-          })
-          .eq('id', packingStatusId);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from('packing_status')
-          .insert({
-            order_id: orderId,
-            status: 'deviation',
-            deviation_type: deviationType as 'shortage' | 'damaged' | 'wrong_product' | 'other',
-            deviation_note: deviationNote || null,
-            packed_at: new Date().toISOString(),
-          });
-        if (error) throw error;
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['kiosk-products-for-date'] });
-    },
-  });
-}
+// Inline kiosk mutations removed - now using usePackingMutations hook
 
 export default function ProductKioskPackingView() {
   const { t, i18n } = useTranslation();
@@ -285,9 +190,13 @@ export default function ProductKioskPackingView() {
     categoryId
   );
   
-  const markAsPacked = useKioskMarkAsPacked();
-  const undoPacking = useKioskUndoPacking();
-  const reportDeviation = useKioskReportDeviation();
+  // Use unified packing mutations hook in kiosk mode
+  const { markAsPacked, undoPacking, reportDeviation } = usePackingMutations({
+    bakeryId: bakery?.id || null,
+    deliveryDate: dateStr,
+    categoryId,
+    isKiosk: true,
+  });
   
   // Real-time subscription for packing status updates
   useEffect(() => {
@@ -343,7 +252,7 @@ export default function ProductKioskPackingView() {
     await reportDeviation.mutateAsync({
       orderId: deviationOrder.id,
       packingStatusId: deviationOrder.packingStatusId,
-      deviationType: data.deviationType,
+      deviationType: data.deviationType as 'shortage' | 'damaged' | 'wrong_product' | 'other',
       deviationNote: data.deviationNote || undefined,
     });
     setDeviationOrder(null);

@@ -18,7 +18,7 @@ import { cn } from '@/lib/utils';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuthStore } from '@/stores/authStore';
-import { useMarkAsPacked, useReportDeviation, useUndoPacking, useBatchMarkAsPacked } from '@/hooks/useOrders';
+import { usePackingMutations } from '@/hooks/usePackingMutations';
 import { useToast } from '@/hooks/use-toast';
 import { ProductTableView, ProductWithOrders } from '@/components/packing/ProductTableView';
 import { BatchPackingView } from '@/components/packing/BatchPackingView';
@@ -189,10 +189,12 @@ export default function ProductPackingView() {
     };
   }, [bakeryId, dateStr, categoryId, queryClient]);
   
-  const markAsPacked = useMarkAsPacked();
-  const batchMarkAsPacked = useBatchMarkAsPacked();
-  const reportDeviation = useReportDeviation();
-  const undoPacking = useUndoPacking();
+  // Use unified packing mutations hook
+  const { markAsPacked, batchMarkAsPacked, reportDeviation, undoPacking } = usePackingMutations({
+    bakeryId,
+    deliveryDate: dateStr,
+    categoryId,
+  });
   
   const handleBack = () => {
     if (selectedProducts.length > 0) {
