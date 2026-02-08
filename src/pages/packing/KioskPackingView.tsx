@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -31,6 +31,7 @@ import {
   KioskLock 
 } from '@/hooks/useKioskLocks';
 import { useToast } from '@/hooks/use-toast';
+import { useKeyboardNavigation } from '@/hooks/useKeyboardNavigation';
 
 interface DeviationOrderInfo {
   id: string;
@@ -394,6 +395,84 @@ export default function KioskPackingView() {
     setDeviationOrder(null);
   };
   
+  // --- Keyboard navigation for customer selection ---
+  const handleCustomerSelect = useCallback((index: number) => {
+    const customer = customers[index];
+    if (customer) {
+      handleSelectCustomer(customer);
+    }
+  }, [customers, handleSelectCustomer]);
+  
+  const customerKeyboardNav = useKeyboardNavigation({
+    itemCount: customers.length,
+    onSelect: handleCustomerSelect,
+    enabled: !selectedCustomer, // Only active when no customer is selected
+    columns: settings.columns || 3,
+    wrapAround: true,
+  });
+  
+  // --- Keyboard navigation for order packing ---
+  const currentCustomerOrders = useMemo(() => {
+    if (!selectedCustomer) return [];
+    const customer = customers.find(c => c.id === selectedCustomer.id);
+    if (!customer) return [];
+    
+    const isPacked = (order: any) => {
+      const status = order?.packing_status?.status || 'pending';
+      return status === 'packed' || status === 'deviation';
+    };
+    
+    return settings.customer_sort_completed_last
+      ? customer.orders
+          .map((order, originalIndex) => ({ order, originalIndex }))
+          .sort((a, b) => {
+            const aPacked = isPacked(a.order);
+            const bPacked = isPacked(b.order);
+            if (aPacked !== bPacked) return aPacked ? 1 : -1;
+            return a.originalIndex - b.originalIndex;
+          })
+          .map(({ order }) => order)
+      : customer.orders;
+  }, [selectedCustomer, customers, settings.customer_sort_completed_last]);
+  
+  const handleOrderSelect = useCallback((index: number) => {
+    const order = currentCustomerOrders[index];
+    if (order && order.packing_status?.status !== 'packed' && order.packing_status?.status !== 'deviation') {
+      handleMarkPacked(order.id, order.packing_status?.id);
+    }
+  }, [currentCustomerOrders, handleMarkPacked]);
+  
+  const handleOrderDeviation = useCallback((index: number) => {
+    const order = currentCustomerOrders[index];
+    if (order) {
+      const customer = customers.find(c => c.id === selectedCustomer?.id);
+      setDeviationOrder({
+        id: order.id,
+        packingStatusId: order.packing_status?.id,
+        productName: order.product.name,
+        customerName: customer?.name || '',
+        quantity: order.quantity,
+      });
+    }
+  }, [currentCustomerOrders, customers, selectedCustomer]);
+  
+  const handleOrderUndo = useCallback((index: number) => {
+    const order = currentCustomerOrders[index];
+    if (order?.packing_status?.id) {
+      handleUndo(order.packing_status.id, order.id);
+    }
+  }, [currentCustomerOrders, handleUndo]);
+  
+  const orderKeyboardNav = useKeyboardNavigation({
+    itemCount: currentCustomerOrders.length,
+    onSelect: handleOrderSelect,
+    onDeviation: handleOrderDeviation,
+    onUndo: handleOrderUndo,
+    onEscape: handleBack,
+    enabled: !!selectedCustomer,
+    wrapAround: true,
+  });
+  
   const totalOrders = customers.reduce((sum, c) => sum + c.totalOrders, 0);
   const packedOrders = customers.reduce((sum, c) => sum + c.packedOrders, 0);
   const overallProgress = totalOrders > 0 ? Math.round((packedOrders / totalOrders) * 100) : 0;
@@ -587,60 +666,47 @@ export default function KioskPackingView() {
           </div>
         )}
         
+        {/* Keyboard hint */}
+        <p className="text-sm opacity-60 mb-4" style={{ fontSize: settings.card_progress_font_size }}>
+          {t('packing.keyboardHint')}
+        </p>
+        
         {/* Products - using shared CustomerOrderCard component for consistency */}
-        {(() => {
-          const isPacked = (order: any) => {
-            const status = order?.packing_status?.status || 'pending';
-            return status === 'packed' || status === 'deviation';
-          };
+        <div style={{ display: 'flex', flexDirection: 'column', gap: settings.gap_size || '1rem' }}>
+          <AnimatePresence>
+            {currentCustomerOrders.map((order, index) => {
+              const alternateRowsEnabled = bakerySettings?.packing_row_style?.alternateRowsEnabled || false;
+              const alternateRowColor = bakerySettings?.packing_row_style?.alternateRowColor || 'amber';
+              const itemProps = orderKeyboardNav.getItemProps(index);
 
-          const ordersToRender = settings.customer_sort_completed_last
-            ? currentCustomer.orders
-                .map((order, originalIndex) => ({ order, originalIndex }))
-                .sort((a, b) => {
-                  const aPacked = isPacked(a.order);
-                  const bPacked = isPacked(b.order);
-                  if (aPacked !== bPacked) return aPacked ? 1 : -1;
-                  return a.originalIndex - b.originalIndex;
-                })
-                .map(({ order }) => order)
-            : currentCustomer.orders;
-
-          return (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: settings.gap_size || '1rem' }}>
-              <AnimatePresence>
-                {ordersToRender.map((order, index) => {
-                  const alternateRowsEnabled = bakerySettings?.packing_row_style?.alternateRowsEnabled || false;
-                  const alternateRowColor = bakerySettings?.packing_row_style?.alternateRowColor || 'amber';
-
-                  return (
-                    <CustomerOrderCard
-                      key={order.id}
-                      order={order}
-                      index={index}
-                      isAlternate={alternateRowsEnabled && index % 2 === 1}
-                      alternateRowColor={alternateRowColor}
-                      settings={settings}
-                      onMarkPacked={(orderId, packingStatusId) => handleMarkPacked(orderId, packingStatusId)}
-                      onReportDeviation={(o) =>
-                        setDeviationOrder({
-                          id: o.id,
-                          packingStatusId: o.packing_status?.id,
-                          productName: o.product.name,
-                          customerName: currentCustomer.name,
-                          quantity: o.quantity,
-                        })
-                      }
-                      onUndo={handleUndo}
-                      isMarkingPacked={markAsPacked.isPending}
-                      isUndoing={undoPacking.isPending}
-                    />
-                  );
-                })}
-              </AnimatePresence>
-            </div>
-          );
-        })()}
+              return (
+                <CustomerOrderCard
+                  key={order.id}
+                  order={order}
+                  index={index}
+                  isAlternate={alternateRowsEnabled && index % 2 === 1}
+                  alternateRowColor={alternateRowColor}
+                  settings={settings}
+                  onMarkPacked={(orderId, packingStatusId) => handleMarkPacked(orderId, packingStatusId)}
+                  onReportDeviation={(o) =>
+                    setDeviationOrder({
+                      id: o.id,
+                      packingStatusId: o.packing_status?.id,
+                      productName: o.product.name,
+                      customerName: currentCustomer.name,
+                      quantity: o.quantity,
+                    })
+                  }
+                  onUndo={handleUndo}
+                  isMarkingPacked={markAsPacked.isPending}
+                  isUndoing={undoPacking.isPending}
+                  isFocused={orderKeyboardNav.isFocused(index)}
+                  itemRef={itemProps.ref}
+                />
+              );
+            })}
+          </AnimatePresence>
+        </div>
         
         {/* Deviation dialog */}
         <DeviationDialog
@@ -848,17 +914,23 @@ export default function KioskPackingView() {
           }}
         >
           <AnimatePresence>
-            {customers.map((customer) => {
+            {customers.map((customer, index) => {
               const lock = lockEnabled ? getLock(customer.id) : undefined;
               const lockedByMe = lockEnabled && isLockedByCurrentDevice(lock, deviceId);
               const lockedByOther = lockEnabled && isLockedByOtherDevice(lock, deviceId);
               const isComplete = customer.progress === 100;
               const shouldFade = settings.lock_fade_locked_cards && lockedByOther;
               const isBlocked = settings.lock_block_locked_cards && lockedByOther;
+              const isFocused = customerKeyboardNav.isFocused(index);
+              const itemProps = customerKeyboardNav.getItemProps(index);
               
               return (
                 <motion.div
                   key={customer.id}
+                  ref={itemProps.ref}
+                  tabIndex={itemProps.tabIndex}
+                  data-focused={itemProps['data-focused']}
+                  aria-selected={itemProps['aria-selected']}
                   initial={settings.animation_enabled ? { opacity: 0, scale: 0.95 } : false}
                   animate={{ opacity: shouldFade ? 0.5 : 1, scale: 1 }}
                   exit={settings.animation_enabled ? { opacity: 0, scale: 0.95 } : undefined}
@@ -869,7 +941,8 @@ export default function KioskPackingView() {
                   className={cn(
                     'transition-all touch-manipulation p-4 rounded-xl relative',
                     settings.card_compact_mode && 'p-3',
-                    isBlocked ? 'cursor-not-allowed' : 'cursor-pointer active:scale-[0.98]'
+                    isBlocked ? 'cursor-not-allowed' : 'cursor-pointer active:scale-[0.98]',
+                    isFocused && 'ring-2 ring-primary ring-offset-2'
                   )}
                   style={{
                     backgroundColor: settings.card_background_color,
