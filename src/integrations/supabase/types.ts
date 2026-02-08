@@ -674,6 +674,15 @@ export type Database = {
         }
         Returns: boolean
       }
+      get_bakery_public_info: {
+        Args: { _short_id: string }
+        Returns: {
+          id: string
+          is_active: boolean
+          name: string
+          short_id: string
+        }[]
+      }
       get_user_bakery_id: { Args: never; Returns: string }
       has_bakery_role: {
         Args: {
@@ -698,6 +707,15 @@ export type Database = {
       setup_bakery_for_new_user: {
         Args: { _bakery_name: string; _display_name?: string; _user_id: string }
         Returns: string
+      }
+      validate_display_token: {
+        Args: { _token: string }
+        Returns: {
+          bakery_id: string
+          bakery_name: string
+          customer_id: string
+          customer_name: string
+        }[]
       }
     }
     Enums: {

@@ -2,7 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-cron-secret',
 }
 
 // Map JS day number to day name
@@ -13,14 +13,12 @@ function formatTime(date: Date): string {
 }
 
 function isWithinTimeWindow(targetTime: string, currentTime: string, windowMinutes: number): boolean {
-  // Parse times to minutes since midnight
   const [targetHours, targetMinutes] = targetTime.split(':').map(Number)
   const [currentHours, currentMinutes] = currentTime.split(':').map(Number)
   
   const targetTotal = targetHours * 60 + targetMinutes
   const currentTotal = currentHours * 60 + currentMinutes
   
-  // Check if current time is within the window after target time
   const diff = currentTotal - targetTotal
   return diff >= 0 && diff < windowMinutes
 }
@@ -32,6 +30,18 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Validate CRON_SECRET for security
+    const cronSecret = req.headers.get('X-Cron-Secret')
+    const expectedSecret = Deno.env.get('CRON_SECRET')
+
+    if (!cronSecret || cronSecret !== expectedSecret) {
+      console.error('Unauthorized cron attempt - invalid or missing CRON_SECRET')
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     
@@ -41,17 +51,16 @@ Deno.serve(async (req) => {
     const currentDay = DAY_NAMES[now.getDay()]
     const currentTime = formatTime(now)
 
-    console.log(`Cron check at ${now.toISOString()}`)
-    console.log(`Current day: ${currentDay}, Current time: ${currentTime}`)
+    console.log(`Cron check at ${now.toISOString()} - Day: ${currentDay}, Time: ${currentTime}`)
 
     // Get all configs with sync_enabled = true
     const { data: configs, error: configsError } = await supabase
       .from('category_onedrive_config')
-      .select('*')
+      .select('id, category_id, sync_days, sync_time')
       .eq('sync_enabled', true)
 
     if (configsError) {
-      console.error('Error fetching configs:', configsError)
+      console.error('Error fetching configs:', configsError.message)
       throw configsError
     }
 
@@ -66,7 +75,7 @@ Deno.serve(async (req) => {
         syncResults.push({ 
           categoryId: config.category_id, 
           triggered: false, 
-          reason: `Not a sync day (${currentDay} not in ${syncDays.join(', ')})` 
+          reason: 'Not a sync day' 
         })
         continue
       }
@@ -77,21 +86,22 @@ Deno.serve(async (req) => {
         syncResults.push({ 
           categoryId: config.category_id, 
           triggered: false, 
-          reason: `Outside time window (target: ${syncTime}, current: ${currentTime})` 
+          reason: 'Outside time window' 
         })
         continue
       }
 
       console.log(`Triggering sync for category ${config.category_id}`)
 
-      // Trigger sync via edge function
+      // Trigger sync via edge function (service role call)
       try {
         const { error: invokeError } = await supabase.functions.invoke('sync-onedrive', {
-          body: { categoryId: config.category_id, automated: true }
+          body: { categoryId: config.category_id, cronTriggered: true },
+          headers: { 'X-Cron-Secret': cronSecret }
         })
 
         if (invokeError) {
-          console.error(`Error invoking sync for category ${config.category_id}:`, invokeError)
+          console.error(`Error invoking sync for category ${config.category_id}:`, invokeError.message)
           syncResults.push({ 
             categoryId: config.category_id, 
             triggered: false, 
@@ -104,11 +114,12 @@ Deno.serve(async (req) => {
           })
         }
       } catch (error) {
-        console.error(`Exception invoking sync for category ${config.category_id}:`, error)
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+        console.error(`Exception invoking sync for category ${config.category_id}:`, errorMessage)
         syncResults.push({ 
           categoryId: config.category_id, 
           triggered: false, 
-          reason: `Exception: ${error instanceof Error ? error.message : 'Unknown'}` 
+          reason: `Exception: ${errorMessage}` 
         })
       }
     }
@@ -119,8 +130,6 @@ Deno.serve(async (req) => {
       JSON.stringify({ 
         success: true,
         timestamp: now.toISOString(),
-        currentDay,
-        currentTime,
         totalConfigs: configs?.length || 0,
         triggeredCount,
         results: syncResults
@@ -129,8 +138,8 @@ Deno.serve(async (req) => {
     )
 
   } catch (error: unknown) {
-    console.error('Cron error:', error)
-    const errorMessage = error instanceof Error ? error.message : 'Ukjent feil under cron-sjekk'
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error during cron check'
+    console.error('Cron error:', errorMessage)
     return new Response(
       JSON.stringify({ error: errorMessage }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
