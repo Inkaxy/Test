@@ -3,7 +3,7 @@ import { Resend } from 'npm:resend@4.0.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-cron-secret',
 };
 
 interface EmailReportConfig {
@@ -12,7 +12,7 @@ interface EmailReportConfig {
   recipients: string[];
   include_deviations: boolean;
   include_summary: boolean;
-  send_time?: string; // HH:MM format
+  send_time?: string;
   last_sent_at?: string;
 }
 
@@ -50,31 +50,90 @@ Deno.serve(async (req) => {
     
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+
+    // Check authentication method
+    const cronSecret = req.headers.get('X-Cron-Secret');
+    const expectedCronSecret = Deno.env.get('CRON_SECRET');
+    const authHeader = req.headers.get('Authorization');
+    
+    let isCronCall = false;
+    let userId: string | null = null;
+    let supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Determine authentication method
+    if (cronSecret) {
+      // Cron job authentication
+      if (cronSecret !== expectedCronSecret) {
+        console.error('Unauthorized cron attempt - invalid CRON_SECRET');
+        return new Response(
+          JSON.stringify({ error: 'Unauthorized' }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      isCronCall = true;
+      console.log('Packing report triggered by cron job');
+    } else if (authHeader?.startsWith('Bearer ')) {
+      // User authentication
+      const token = authHeader.replace('Bearer ', '');
+      const userClient = createClient(supabaseUrl, supabaseAnonKey, {
+        global: { headers: { Authorization: authHeader } }
+      });
+
+      const { data: claimsData, error: claimsError } = await userClient.auth.getClaims(token);
+      
+      if (claimsError || !claimsData?.claims) {
+        console.error('Auth error:', claimsError?.message);
+        return new Response(
+          JSON.stringify({ error: 'Unauthorized - Invalid token' }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      userId = claimsData.claims.sub as string;
+      supabase = userClient;
+      console.log(`Packing report triggered by user: ${userId}`);
+    } else {
+      console.error('No authentication provided');
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized - No authentication provided' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     let bakeryId: string | null = null;
     let isTest = false;
-    let isCron = false;
 
-    // Check if this is a manual test or cron job
+    // Parse request body
     if (req.method === 'POST') {
       try {
         const body = await req.json();
         bakeryId = body.bakery_id || null;
         isTest = body.is_test || false;
       } catch {
-        // No body, assume cron job
-        isCron = true;
+        // Empty body is OK for cron jobs
       }
     }
 
     const results: { bakery: string; success: boolean; error?: string }[] = [];
 
-    if (bakeryId && isTest) {
-      // Single bakery test report
+    if (bakeryId && isTest && userId) {
+      // Manual test - verify user has access to bakery
+      const { data: hasAccess } = await supabase.rpc('can_access_bakery', { 
+        _bakery_id: bakeryId 
+      });
+      
+      if (!hasAccess) {
+        console.error(`User ${userId} attempted to send report for bakery they don't have access to`);
+        return new Response(
+          JSON.stringify({ error: 'Ingen tilgang til dette bakeriet' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
       const result = await sendReportForBakery(supabase, resend, bakeryId, true);
       results.push(result);
-    } else {
+    } else if (isCronCall) {
       // Cron job: process all bakeries with enabled email reports
       const { data: bakeries, error: bakeriesError } = await supabase
         .from('bakeries')
@@ -95,7 +154,6 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        // Check if it's time to send based on frequency
         if (!shouldSendReport(config, now)) {
           continue;
         }
@@ -103,7 +161,6 @@ Deno.serve(async (req) => {
         const result = await sendReportForBakery(supabase, resend, bakery.id, false);
         results.push(result);
 
-        // Update last_sent_at on success
         if (result.success) {
           const newConfig = { ...config, last_sent_at: now.toISOString() };
           await supabase
@@ -117,16 +174,21 @@ Deno.serve(async (req) => {
             .eq('id', bakery.id);
         }
       }
+    } else {
+      return new Response(
+        JSON.stringify({ error: 'Invalid request - provide bakery_id for manual test or use cron authentication' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
-    console.log('Email report results:', results);
+    console.log('Email report results:', JSON.stringify(results));
 
     return new Response(
       JSON.stringify({ success: true, results }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
-    console.error('Error in send-packing-report:', error);
+    console.error('Error in send-packing-report:', error instanceof Error ? error.message : error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -138,16 +200,13 @@ function shouldSendReport(config: EmailReportConfig, now: Date): boolean {
   const lastSent = config.last_sent_at ? new Date(config.last_sent_at) : null;
   const currentHour = now.getHours();
   
-  // Parse configured send time (default to 06:00)
   const sendTimeStr = config.send_time || '06:00';
   const [sendHour] = sendTimeStr.split(':').map(Number);
   
-  // Only send at the configured hour (with 5-minute tolerance since cron runs every 5 mins)
   if (currentHour !== sendHour) {
     return false;
   }
 
-  // If never sent, send now
   if (!lastSent) {
     return true;
   }
@@ -156,17 +215,11 @@ function shouldSendReport(config: EmailReportConfig, now: Date): boolean {
 
   switch (config.frequency) {
     case 'daily':
-      // At least 20 hours since last send
       return hoursSinceLastSent >= 20;
-    
     case 'weekly':
-      // Monday (day 1) and at least 6 days since last send
       return now.getDay() === 1 && hoursSinceLastSent >= 144;
-    
     case 'monthly':
-      // First of month and at least 25 days since last send
       return now.getDate() === 1 && hoursSinceLastSent >= 600;
-    
     default:
       return false;
   }
@@ -179,7 +232,6 @@ async function sendReportForBakery(
   isTest: boolean
 ): Promise<{ bakery: string; success: boolean; error?: string }> {
   try {
-    // Get bakery info and settings
     const { data: bakery, error: bakeryError } = await supabase
       .from('bakeries')
       .select('id, name, settings')
@@ -197,10 +249,8 @@ async function sendReportForBakery(
       throw new Error('No recipients configured');
     }
 
-    // Calculate date range based on frequency
     const { startDate, endDate, periodLabel } = getReportPeriod(config.frequency, isTest);
 
-    // Fetch packing data
     const { data: ordersData, error: ordersError } = await supabase
       .from('orders')
       .select(`
@@ -221,7 +271,6 @@ async function sendReportForBakery(
 
     const orders = ordersData || [];
 
-    // Calculate summary
     const summary: PackingSummary = {
       total_orders: orders.length,
       packed_orders: orders.filter(o => o.packing_status?.status === 'packed').length,
@@ -229,7 +278,6 @@ async function sendReportForBakery(
       pending_orders: orders.filter(o => !o.packing_status || o.packing_status.status === 'pending').length,
     };
 
-    // Collect deviations
     const deviations: DeviationData[] = orders
       .filter(o => o.packing_status?.status === 'deviation')
       .map(o => ({
@@ -240,10 +288,8 @@ async function sendReportForBakery(
         delivery_date: o.delivery_date,
       }));
 
-    // Generate HTML email
     const html = generateEmailHtml(bakery.name, periodLabel, summary, deviations, config, isTest);
 
-    // Send email
     const { error: sendError } = await resend.emails.send({
       from: 'Loaf & Load <noreply@resend.dev>',
       to: config.recipients,
@@ -257,11 +303,11 @@ async function sendReportForBakery(
       throw sendError;
     }
 
-    console.log(`Report sent for bakery ${bakery.name} to ${config.recipients.join(', ')}`);
+    console.log(`Report sent for bakery ${bakery.name}`);
 
     return { bakery: bakery.name, success: true };
   } catch (error) {
-    console.error(`Error sending report for bakery ${bakeryId}:`, error);
+    console.error(`Error sending report for bakery ${bakeryId}:`, error instanceof Error ? error.message : error);
     return { 
       bakery: bakeryId, 
       success: false, 
@@ -277,7 +323,6 @@ function getReportPeriod(frequency: string, isTest: boolean): { startDate: strin
   let label: string;
 
   if (isTest) {
-    // For test, use today
     start = new Date(now);
     start.setHours(0, 0, 0, 0);
     end = new Date(now);
@@ -286,7 +331,6 @@ function getReportPeriod(frequency: string, isTest: boolean): { startDate: strin
   } else {
     switch (frequency) {
       case 'daily':
-        // Yesterday
         start = new Date(now);
         start.setDate(start.getDate() - 1);
         start.setHours(0, 0, 0, 0);
@@ -296,7 +340,6 @@ function getReportPeriod(frequency: string, isTest: boolean): { startDate: strin
         break;
 
       case 'weekly':
-        // Last 7 days
         end = new Date(now);
         end.setDate(end.getDate() - 1);
         end.setHours(23, 59, 59, 999);
@@ -307,7 +350,6 @@ function getReportPeriod(frequency: string, isTest: boolean): { startDate: strin
         break;
 
       case 'monthly':
-        // Previous month
         start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
         end = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
         label = start.toLocaleDateString('nb-NO', { month: 'long', year: 'numeric' });

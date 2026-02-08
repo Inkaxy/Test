@@ -2,7 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-cron-secret',
 }
 
 interface OneDriveConfig {
@@ -30,30 +30,51 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!
     
-    const supabase = createClient(supabaseUrl, supabaseServiceKey)
+    const { categoryId, cronTriggered } = await req.json()
 
-    // Get authorization header and verify user (unless automated)
-    const { categoryId, automated } = await req.json()
+    // Check if this is a cron-triggered call
+    const cronSecret = req.headers.get('X-Cron-Secret')
+    const expectedCronSecret = Deno.env.get('CRON_SECRET')
+    const isCronCall = cronTriggered && cronSecret === expectedCronSecret
 
-    if (!automated) {
+    let supabase
+    let userId: string | null = null
+
+    if (isCronCall) {
+      // Cron call - use service role
+      console.log('Sync triggered by cron job')
+      supabase = createClient(supabaseUrl, supabaseServiceKey)
+    } else {
+      // Manual call - require JWT authentication
       const authHeader = req.headers.get('Authorization')
-      if (!authHeader) {
+      if (!authHeader?.startsWith('Bearer ')) {
         return new Response(
-          JSON.stringify({ error: 'Ingen autentisering' }),
+          JSON.stringify({ error: 'Unauthorized - Missing authorization header' }),
           { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }
 
       const token = authHeader.replace('Bearer ', '')
-      const { data: { user }, error: authError } = await supabase.auth.getUser(token)
       
-      if (authError || !user) {
+      // Create client with user's token for auth validation
+      supabase = createClient(supabaseUrl, supabaseAnonKey, {
+        global: { headers: { Authorization: authHeader } }
+      })
+
+      const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token)
+      
+      if (claimsError || !claimsData?.claims) {
+        console.error('Auth error:', claimsError?.message)
         return new Response(
-          JSON.stringify({ error: 'Ugyldig autentisering' }),
+          JSON.stringify({ error: 'Unauthorized - Invalid token' }),
           { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }
+
+      userId = claimsData.claims.sub as string
+      console.log(`Sync triggered by user: ${userId}`)
     }
 
     if (!categoryId) {
@@ -75,6 +96,21 @@ Deno.serve(async (req) => {
         JSON.stringify({ error: 'Ingen OneDrive-konfigurasjon funnet for denne kategorien' }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
+    }
+
+    // For manual calls, verify user has access to this bakery
+    if (!isCronCall && userId) {
+      const { data: hasAccess } = await supabase.rpc('can_access_bakery', { 
+        _bakery_id: config.bakery_id 
+      })
+      
+      if (!hasAccess) {
+        console.error(`User ${userId} attempted to sync category in bakery they don't have access to`)
+        return new Response(
+          JSON.stringify({ error: 'Ingen tilgang til dette bakeriet' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
     }
 
     if (!config.onedrive_folder_url) {
@@ -110,12 +146,7 @@ Deno.serve(async (req) => {
       (importBatches || []).map(b => b.delivery_date)
     )
 
-    console.log(`Sync requested for category ${categoryId}`)
-    console.log(`OneDrive URL: ${config.onedrive_folder_url}`)
-    console.log(`Auto delete days: ${autoDeleteDays}`)
-    console.log(`Cutoff date: ${cutoffDateStr}`)
-    console.log(`Already imported dates: ${Array.from(importedDates).join(', ') || 'none'}`)
-    console.log(`Delete after import: ${config.delete_after_import}`)
+    console.log(`Sync for category ${categoryId}, cutoff: ${cutoffDateStr}, imported dates: ${importedDates.size}`)
 
     // Update sync status to syncing
     await supabase
@@ -123,25 +154,8 @@ Deno.serve(async (req) => {
       .update({ sync_status: 'syncing', sync_error: null })
       .eq('id', config.id)
 
-    // For now, we return a placeholder response
-    // Full OneDrive integration requires Microsoft Graph API with OAuth
-    // This would need:
-    // 1. Azure AD app registration
-    // 2. OAuth flow for user consent
-    // 3. Access tokens to call Microsoft Graph API
-    // 4. File download and parsing logic
-    // 5. File deletion logic (if delete_after_import is enabled)
-
-    // Placeholder: Simulate file filtering logic
-    // In a real implementation, we would:
-    // 1. List files in the OneDrive folder using Microsoft Graph API
-    // 2. For each file, extract date from filename (e.g., "03.02.2026.od0" -> 2026-02-03)
-    // 3. Skip if date is in importedDates
-    // 4. Skip if date < cutoffDateStr
-    // 5. Download and process the file
-    // 6. If delete_after_import is true and import succeeded, delete the file from OneDrive
-
-    // Update status - in a real implementation, we'd parse files here
+    // Placeholder: Full OneDrive integration requires Microsoft Graph API
+    // Update status
     await supabase
       .from('category_onedrive_config')
       .update({ 
@@ -167,8 +181,8 @@ Deno.serve(async (req) => {
     )
 
   } catch (error: unknown) {
-    console.error('Sync error:', error)
     const errorMessage = error instanceof Error ? error.message : 'Ukjent feil under synkronisering'
+    console.error('Sync error:', errorMessage)
     return new Response(
       JSON.stringify({ error: errorMessage }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
