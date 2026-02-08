@@ -154,7 +154,13 @@
     "noCustomersToday": "No customers to display today",
     "items": "items",
     "inProgress": "In progress",
-    "keyboardHint": "Use arrow keys to navigate, Enter to pack, D for deviation, U to undo, Esc to go back"
+    "keyboardHint": "Use arrow keys to navigate, Enter to pack, D for deviation, U to undo, Esc to go back",
+    "offline": "Offline",
+    "syncing": "Syncing...",
+    "syncErrors": "sync errors",
+    "pendingSync": "operations pending sync",
+    "syncNow": "Sync now",
+    "offlineMode": "Offline mode - changes saved locally"
   },
   "products": {
     "title": "Products",

@@ -154,7 +154,13 @@
     "noCustomersToday": "Det er ingen kunder å vise i dag",
     "items": "varer",
     "inProgress": "Pågår",
-    "keyboardHint": "Bruk piltaster for navigasjon, Enter for pakking, D for avvik, U for angre, Esc for tilbake"
+    "keyboardHint": "Bruk piltaster for navigasjon, Enter for pakking, D for avvik, U for angre, Esc for tilbake",
+    "offline": "Frakoblet",
+    "syncing": "Synkroniserer...",
+    "syncErrors": "synkroniseringsfeil",
+    "pendingSync": "operasjoner venter på synkronisering",
+    "syncNow": "Synk nå",
+    "offlineMode": "Frakoblet modus - endringer lagres lokalt"
   },
   "products": {
     "title": "Produkter",
