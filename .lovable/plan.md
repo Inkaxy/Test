@@ -8,7 +8,7 @@
 | 2 | Stabilitet | ✅ Fullført |
 | 3 | Arkitektur | ✅ Fullført |
 | 4 | UX - Tastaturnavigasjon | ✅ Fullført |
-| 5 | UX - Offline-støtte (fremtidig) | ⏳ Planlagt |
+| 5 | UX - Offline-støtte | ✅ Fullført |
 
 ---
 
@@ -134,12 +134,34 @@ const { focusedIndex, setFocusedIndex, isFocused, getItemProps, resetFocus } =
 
 ---
 
-### Del 2: Offline-støtte for Kiosk (Planlagt)
+### Del 2: Offline-støtte for Kiosk ✅
 
-Fremtidige oppgaver:
-1. **Service Worker** - Cache kritiske ressurser
-2. **Lokal operasjonskø** - Buffer pakke-operasjoner når offline
-3. **Synkronisering** - Push buffrede operasjoner når tilbake online
+**Implementert med:**
+1. **PWA / Service Worker** (`vite-plugin-pwa`)
+   - Automatisk caching av statiske ressurser (JS, CSS, HTML, bilder)
+   - Runtime caching av Supabase API-kall (NetworkFirst, 5 min cache)
+   - App-manifest for installasjon på enheter
+   
+2. **Lokal operasjonskø** (`src/hooks/useOfflineQueue.ts`)
+   - Buffer pakke-operasjoner (mark_packed, report_deviation, undo_packing) i localStorage
+   - Automatisk synkronisering når enheten kommer tilbake online
+   - Retry-mekanisme med maks 3 forsøk
+   - Operasjoner sorteres etter tidsstempel (eldste først)
+
+3. **Visuell feedback** (`src/components/packing/OfflineIndicator.tsx`)
+   - Viser frakoblet-status med antall ventende operasjoner
+   - Synkroniseringsindikator
+   - Manuell "Synk nå"-knapp
+   - Feilmeldinger ved synkroniseringsproblemer
+
+**Integrert i:**
+- ✅ `KioskPackingView.tsx` - Full offline-støtte med lokal kø
+
+**PWA Manifest:**
+- App-navn: "Loaf & Load - Pakkesystem"
+- Tema-farge: #c59b6d (Bakery Gold)
+- Standalone display-modus
+- Installasjon på hjemskjerm
 
 ---
 

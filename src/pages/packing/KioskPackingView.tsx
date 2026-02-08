@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Package, Loader2, Check, Lock, Clock, Wifi, WifiOff, AlertTriangle, Undo2 } from 'lucide-react';
 import { BackButton } from '@/components/packing/BackButton';
 import { RefreshButton } from '@/components/packing/RefreshButton';
+import { OfflineIndicator } from '@/components/packing/OfflineIndicator';
 import { format } from 'date-fns';
 import { CustomerOrderCard } from '@/components/packing/CustomerOrderCard';
 import { useBakerySettings } from '@/hooks/useBakerySettings';
@@ -18,6 +19,7 @@ import { DeviationDialog } from '@/components/packing/DeviationDialog';
 import { KioskCustomerTable } from '@/components/packing/KioskCustomerTable';
 import { useDisplaySettings, getDefaultDisplaySettings, DisplaySettings } from '@/hooks/useDisplayOrders';
 import { usePackingMutations } from '@/hooks/usePackingMutations';
+import { useOfflineQueue } from '@/hooks/useOfflineQueue';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '@/stores/authStore';
 import { 
@@ -285,6 +287,9 @@ export default function KioskPackingView() {
     });
   }, [customersData, settings.customer_sort_completed_last, settings.customer_sort_mode, settings.customer_sort_direction]);
   
+  // Offline queue for kiosk mode
+  const offlineQueue = useOfflineQueue();
+  
   // Use unified packing mutations hook in kiosk mode
   const { markAsPacked, undoPacking, reportDeviation } = usePackingMutations({
     bakeryId: bakery?.id || null,
@@ -292,6 +297,25 @@ export default function KioskPackingView() {
     categoryId,
     isKiosk: true,
   });
+  
+  // Wrap mutations with offline queue fallback
+  const handleMarkPackedWithOffline = async (orderId: string, packingStatusId?: string) => {
+    if (!offlineQueue.isOnline) {
+      // Queue for later sync
+      offlineQueue.enqueue('mark_packed', { orderId, packingStatusId });
+      // Still update UI optimistically via local state update
+      return;
+    }
+    await handleMarkPacked(orderId, packingStatusId);
+  };
+  
+  const handleUndoWithOffline = async (packingStatusId: string, orderId: string) => {
+    if (!offlineQueue.isOnline) {
+      offlineQueue.enqueue('undo_packing', { orderId, packingStatusId });
+      return;
+    }
+    await handleUndo(packingStatusId, orderId);
+  };
   
   // Helper to get lock for a customer
   const getLock = (customerId: string): KioskLock | undefined => {
@@ -771,7 +795,16 @@ export default function KioskPackingView() {
         </div>
         
         <div className="flex items-center gap-4">
-          {settings.realtime_show_connection_status && (
+          {/* Offline indicator */}
+          <OfflineIndicator
+            isOnline={offlineQueue.isOnline}
+            pendingCount={offlineQueue.pendingCount}
+            isSyncing={offlineQueue.isSyncing}
+            syncErrors={offlineQueue.syncErrors}
+            onForceSync={offlineQueue.forceSync}
+          />
+          
+          {settings.realtime_show_connection_status && offlineQueue.isOnline && (
             <div className="flex items-center gap-2">
               {isConnected ? (
                 <Wifi className="h-5 w-5" style={{ color: settings.completed_color }} />
