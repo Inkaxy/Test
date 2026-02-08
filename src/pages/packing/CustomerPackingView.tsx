@@ -22,7 +22,7 @@ import {
   isLockedByOther,
   CustomerLock 
 } from '@/hooks/useCustomerLocks';
-import { useMarkAsPacked, useReportDeviation, useUndoPacking } from '@/hooks/useOrders';
+import { usePackingMutations } from '@/hooks/usePackingMutations';
 import { useAuthStore } from '@/stores/authStore';
 import { useToast } from '@/hooks/use-toast';
 import { useBakerySettings } from '@/hooks/useBakerySettings';
@@ -90,9 +90,13 @@ export default function CustomerPackingView() {
     dateStr
   );
   
-  const markAsPacked = useMarkAsPacked();
-  const reportDeviation = useReportDeviation();
-  const undoPacking = useUndoPacking();
+  // Use unified packing mutations hook
+  const { markAsPacked, reportDeviation, undoPacking } = usePackingMutations({
+    bakeryId,
+    deliveryDate: dateStr,
+    categoryId,
+    sortOptions,
+  });
   
   // Update clock every second
   useEffect(() => {
