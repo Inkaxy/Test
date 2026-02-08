@@ -298,23 +298,48 @@ export default function KioskPackingView() {
     isKiosk: true,
   });
   
-  // Wrap mutations with offline queue fallback
-  const handleMarkPackedWithOffline = async (orderId: string, packingStatusId?: string) => {
+  // Wrap mutations with offline queue fallback - called by UI handlers below
+  const executeMarkPacked = async (orderId: string, packingStatusId?: string) => {
     if (!offlineQueue.isOnline) {
       // Queue for later sync
       offlineQueue.enqueue('mark_packed', { orderId, packingStatusId });
-      // Still update UI optimistically via local state update
+      // Show toast for offline queuing
+      toast({
+        title: t('packing.offline', 'Frakoblet'),
+        description: t('packing.queuedForSync', 'Operasjon lagret og synkroniseres når du er online igjen'),
+      });
       return;
     }
-    await handleMarkPacked(orderId, packingStatusId);
+    await markAsPacked.mutateAsync({ orderId, packingStatusId });
   };
   
-  const handleUndoWithOffline = async (packingStatusId: string, orderId: string) => {
+  const executeUndo = async (packingStatusId: string, orderId: string) => {
     if (!offlineQueue.isOnline) {
       offlineQueue.enqueue('undo_packing', { orderId, packingStatusId });
+      toast({
+        title: t('packing.offline', 'Frakoblet'),
+        description: t('packing.queuedForSync', 'Operasjon lagret og synkroniseres når du er online igjen'),
+      });
       return;
     }
-    await handleUndo(packingStatusId, orderId);
+    await undoPacking.mutateAsync({ packingStatusId, orderId });
+  };
+  
+  const executeDeviation = async (orderId: string, packingStatusId?: string, deviationType?: string, deviationNote?: string) => {
+    if (!offlineQueue.isOnline) {
+      offlineQueue.enqueue('report_deviation', { orderId, packingStatusId, deviationType, deviationNote });
+      toast({
+        title: t('packing.offline', 'Frakoblet'),
+        description: t('packing.queuedForSync', 'Operasjon lagret og synkroniseres når du er online igjen'),
+      });
+      return;
+    }
+    await reportDeviation.mutateAsync({
+      orderId,
+      packingStatusId,
+      deviationType: deviationType as 'shortage' | 'damaged' | 'wrong_product' | 'other',
+      deviationNote: deviationNote || undefined,
+    });
   };
   
   // Helper to get lock for a customer
@@ -399,23 +424,24 @@ export default function KioskPackingView() {
     }
   };
   
+  // Main handlers using offline-enabled functions
   const handleMarkPacked = async (orderId: string, packingStatusId?: string) => {
-    await markAsPacked.mutateAsync({ orderId, packingStatusId });
+    await executeMarkPacked(orderId, packingStatusId);
   };
   
   const handleUndo = async (packingStatusId: string, orderId: string) => {
-    await undoPacking.mutateAsync({ packingStatusId, orderId });
+    await executeUndo(packingStatusId, orderId);
   };
   
   const handleReportDeviation = async (data: { deviationType: string; deviationNote: string }) => {
     if (!deviationOrder) return;
     
-    await reportDeviation.mutateAsync({
-      orderId: deviationOrder.id,
-      packingStatusId: deviationOrder.packingStatusId,
-      deviationType: data.deviationType as 'shortage' | 'damaged' | 'wrong_product' | 'other',
-      deviationNote: data.deviationNote || undefined,
-    });
+    await executeDeviation(
+      deviationOrder.id,
+      deviationOrder.packingStatusId,
+      data.deviationType,
+      data.deviationNote
+    );
     setDeviationOrder(null);
   };
   

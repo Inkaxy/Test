@@ -160,6 +160,7 @@
     "syncErrors": "sync errors",
     "pendingSync": "operations pending sync",
     "syncNow": "Sync now",
+    "queuedForSync": "Operation saved and will sync when you're back online",
     "offlineMode": "Offline mode - changes saved locally"
   },
   "products": {

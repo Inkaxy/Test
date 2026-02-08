@@ -160,6 +160,7 @@
     "syncErrors": "synkroniseringsfeil",
     "pendingSync": "operasjoner venter på synkronisering",
     "syncNow": "Synk nå",
+    "queuedForSync": "Operasjon lagret og synkroniseres når du er online igjen",
     "offlineMode": "Frakoblet modus - endringer lagres lokalt"
   },
   "products": {
