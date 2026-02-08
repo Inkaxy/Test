@@ -40,6 +40,10 @@ interface CustomerOrderCardProps {
   onUndo: (packingStatusId: string, orderId: string) => void;
   isMarkingPacked: boolean;
   isUndoing: boolean;
+  /** Whether this card is focused via keyboard navigation */
+  isFocused?: boolean;
+  /** Ref callback for keyboard navigation */
+  itemRef?: (el: HTMLElement | null) => void;
 }
 
 // Size mappings for quantity display
@@ -74,6 +78,8 @@ export function CustomerOrderCard({
   onUndo,
   isMarkingPacked,
   isUndoing,
+  isFocused = false,
+  itemRef,
 }: CustomerOrderCardProps) {
   const { t } = useTranslation();
   
@@ -339,16 +345,21 @@ export function CustomerOrderCard({
   
   return (
     <motion.div
+      ref={itemRef}
       initial={animationEnabled ? { opacity: 0, y: 10 } : false}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.03, duration: 0.2 }}
+      tabIndex={isFocused ? 0 : -1}
+      data-focused={isFocused}
+      aria-selected={isFocused}
     >
       <Card
         className={cn(
           'transition-all overflow-hidden',
           status === 'packed' && 'bg-success/10 border-success/40',
           status === 'deviation' && 'bg-destructive/10 border-destructive/40',
-          status === 'pending' && 'border-border hover:border-primary/30'
+          status === 'pending' && 'border-border hover:border-primary/30',
+          isFocused && 'ring-2 ring-primary ring-offset-2 ring-offset-background'
         )}
         style={{
           borderWidth: cardBorderWidth,

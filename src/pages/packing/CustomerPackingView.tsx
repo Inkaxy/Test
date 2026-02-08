@@ -23,6 +23,7 @@ import {
   CustomerLock 
 } from '@/hooks/useCustomerLocks';
 import { usePackingMutations } from '@/hooks/usePackingMutations';
+import { useKeyboardNavigation } from '@/hooks/useKeyboardNavigation';
 import { useAuthStore } from '@/stores/authStore';
 import { useToast } from '@/hooks/use-toast';
 import { useBakerySettings } from '@/hooks/useBakerySettings';
@@ -292,6 +293,55 @@ export default function CustomerPackingView() {
   if (selectedCustomer) {
     const currentCustomer = customers.find(c => c.id === selectedCustomer.id) || selectedCustomer;
     
+    // Calculate orders to render with sorting
+    const isPacked = (order: any) => {
+      const status = order?.packing_status?.status || 'pending';
+      return status === 'packed' || status === 'deviation';
+    };
+
+    const ordersToRender = settings.customer_sort_completed_last
+      ? currentCustomer.orders
+          .map((order, originalIndex) => ({ order, originalIndex }))
+          .sort((a, b) => {
+            const aPacked = isPacked(a.order);
+            const bPacked = isPacked(b.order);
+            if (aPacked !== bPacked) return aPacked ? 1 : -1;
+            return a.originalIndex - b.originalIndex;
+          })
+          .map(({ order }) => order)
+      : currentCustomer.orders;
+    
+    // Keyboard navigation for orders
+    const orderKeyboardNav = useKeyboardNavigation({
+      itemCount: ordersToRender.length,
+      enabled: !!selectedCustomer && !deviationOrder,
+      onSelect: (index) => {
+        const order = ordersToRender[index];
+        if (order && order.packing_status?.status !== 'packed' && order.packing_status?.status !== 'deviation') {
+          handleMarkPacked(order.id, order.packing_status?.id, order.product.id, order.product.category_id);
+        }
+      },
+      onEscape: handleBack,
+      onDeviation: (index) => {
+        const order = ordersToRender[index];
+        if (order && order.packing_status?.status === 'pending') {
+          setDeviationOrder({
+            id: order.id,
+            packingStatusId: order.packing_status?.id,
+            productName: order.product.name,
+            customerName: currentCustomer.name,
+            quantity: order.quantity,
+          });
+        }
+      },
+      onUndo: (index) => {
+        const order = ordersToRender[index];
+        if (order && order.packing_status?.id && (order.packing_status.status === 'packed' || order.packing_status.status === 'deviation')) {
+          handleUndo(order.packing_status.id, order.id);
+        }
+      },
+    });
+    
     return (
       <div
         ref={containerRef}
@@ -365,6 +415,11 @@ export default function CustomerPackingView() {
           </div>
         </header>
         
+        {/* Keyboard navigation hint */}
+        <div className="mb-4 text-sm opacity-60 flex items-center gap-4">
+          <span>⌨️ {t('packing.keyboardHint', 'Bruk piltaster for navigasjon, Enter for pakking, D for avvik, U for angre, Esc for tilbake')}</span>
+        </div>
+        
         {/* Progress */}
         {settings.card_show_individual_progress && (
           <div
@@ -393,55 +448,39 @@ export default function CustomerPackingView() {
           </div>
         )}
         
-        {/* Products - touch optimized with alternating colors */}
-        {(() => {
-          const isPacked = (order: any) => {
-            const status = order?.packing_status?.status || 'pending';
-            return status === 'packed' || status === 'deviation';
-          };
-
-          const ordersToRender = settings.customer_sort_completed_last
-            ? currentCustomer.orders
-                .map((order, originalIndex) => ({ order, originalIndex }))
-                .sort((a, b) => {
-                  const aPacked = isPacked(a.order);
-                  const bPacked = isPacked(b.order);
-                  if (aPacked !== bPacked) return aPacked ? 1 : -1;
-                  return a.originalIndex - b.originalIndex;
-                })
-                .map(({ order }) => order)
-            : currentCustomer.orders;
-
-          return (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: settings.gap_size || '1rem' }}>
-              <AnimatePresence>
-                {ordersToRender.map((order, index) => (
-                  <CustomerOrderCard
-                    key={order.id}
-                    order={order}
-                    index={index}
-                    isAlternate={alternateRowsEnabled && index % 2 === 1}
-                    alternateRowColor={alternateRowColor}
-                    settings={settings}
-                    onMarkPacked={handleMarkPacked}
-                    onReportDeviation={(o) =>
-                      setDeviationOrder({
-                        id: o.id,
-                        packingStatusId: o.packing_status?.id,
-                        productName: o.product.name,
-                        customerName: currentCustomer.name,
-                        quantity: o.quantity,
-                      })
-                    }
-                    onUndo={handleUndo}
-                    isMarkingPacked={markAsPacked.isPending}
-                    isUndoing={undoPacking.isPending}
-                  />
-                ))}
-              </AnimatePresence>
-            </div>
-          );
-        })()}
+        {/* Products - touch optimized with alternating colors and keyboard navigation */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: settings.gap_size || '1rem' }}>
+          <AnimatePresence>
+            {ordersToRender.map((order, index) => {
+              const itemProps = orderKeyboardNav.getItemProps(index);
+              return (
+                <CustomerOrderCard
+                  key={order.id}
+                  order={order}
+                  index={index}
+                  isAlternate={alternateRowsEnabled && index % 2 === 1}
+                  alternateRowColor={alternateRowColor}
+                  settings={settings}
+                  onMarkPacked={handleMarkPacked}
+                  onReportDeviation={(o) =>
+                    setDeviationOrder({
+                      id: o.id,
+                      packingStatusId: o.packing_status?.id,
+                      productName: o.product.name,
+                      customerName: currentCustomer.name,
+                      quantity: o.quantity,
+                    })
+                  }
+                  onUndo={handleUndo}
+                  isMarkingPacked={markAsPacked.isPending}
+                  isUndoing={undoPacking.isPending}
+                  isFocused={orderKeyboardNav.isFocused(index)}
+                  itemRef={itemProps.ref}
+                />
+              );
+            })}
+          </AnimatePresence>
+        </div>
         
         {/* Deviation dialog */}
         <DeviationDialog

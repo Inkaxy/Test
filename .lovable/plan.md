@@ -71,12 +71,43 @@ const { markAsPacked, batchMarkAsPacked, reportDeviation, undoPacking, isAnyPend
 
 ---
 
-## Fase 4: UX (Fremtidige forbedringer)
+## Fase 4: UX Forbedringer - DELVIS FULLFØRT ✅
 
-Planlagte oppgaver:
-1. **Tastaturnavigasjon** - Piltaster for å navigere mellom kunder/produkter
-2. **Offline-støtte for kiosk** - Service Worker + lokal kø for operasjoner
-3. **Leaky Password Protection** - Aktivere i Cloud dashboard
+### Del 1: Tastaturnavigasjon ✅
+
+**Ny fil opprettet:** `src/hooks/useKeyboardNavigation.ts`
+
+En gjenbrukbar hook for tastaturnavigasjon i pakkevisninger:
+
+**Støttede tastatursnarveier:**
+| Tast | Handling |
+|------|----------|
+| ↑/↓/←/→ | Naviger mellom ordrer/kunder |
+| Enter/Space | Marker valgt ordre som pakket |
+| D | Rapporter avvik for valgt ordre |
+| U | Angre pakking for valgt ordre |
+| Esc | Gå tilbake til forrige visning |
+| Home | Gå til første element |
+| End | Gå til siste element |
+
+**Integrert i:**
+- ✅ `CustomerPackingView.tsx` - Full tastaturstøtte for ordreliste
+- ⏳ `ProductPackingView.tsx` - Planlagt
+- ⏳ `KioskPackingView.tsx` - Planlagt (hvis ønsket)
+
+**Visuell feedback:**
+- Fokusert element vises med `ring-2 ring-primary` ramme
+- Automatisk scrolling til fokusert element
+- Hint-tekst vises øverst i pakkevisningen
+
+---
+
+### Del 2: Offline-støtte for Kiosk (Planlagt)
+
+Fremtidige oppgaver:
+1. **Service Worker** - Cache kritiske ressurser
+2. **Lokal operasjonskø** - Buffer pakke-operasjoner når offline
+3. **Synkronisering** - Push buffrede operasjoner når tilbake online
 
 ---
 

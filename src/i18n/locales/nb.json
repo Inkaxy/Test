@@ -153,7 +153,8 @@
     "piecesTotal": "stykker totalt",
     "noCustomersToday": "Det er ingen kunder å vise i dag",
     "items": "varer",
-    "inProgress": "Pågår"
+    "inProgress": "Pågår",
+    "keyboardHint": "Bruk piltaster for navigasjon, Enter for pakking, D for avvik, U for angre, Esc for tilbake"
   },
   "products": {
     "title": "Produkter",
