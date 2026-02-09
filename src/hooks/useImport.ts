@@ -198,11 +198,26 @@ export function useImport() {
       const defaultCategoryId = defaultCategory?.id || null;
       
       // Build maps for existing products/customers
+      // IMPORTANT: Use normalized keys (removeLeadingZeros) to ensure consistent matching
+      // between PRD files (which may keep original numbers) and OD0 files (which normalize)
       const existingProductMap = new Map<string, string>();
-      existingProducts?.forEach(p => existingProductMap.set(p.product_number, p.id));
+      existingProducts?.forEach(p => {
+        existingProductMap.set(p.product_number, p.id);
+        // Also add normalized version for cross-format matching
+        const normalized = removeLeadingZeros(p.product_number);
+        if (normalized !== p.product_number) {
+          existingProductMap.set(normalized, p.id);
+        }
+      });
       
       const existingCustomerMap = new Map<string, string>();
-      existingCustomers?.forEach(c => existingCustomerMap.set(c.customer_number, c.id));
+      existingCustomers?.forEach(c => {
+        existingCustomerMap.set(c.customer_number, c.id);
+        const normalized = removeLeadingZeros(c.customer_number);
+        if (normalized !== c.customer_number) {
+          existingCustomerMap.set(normalized, c.id);
+        }
+      });
       
       // Build set of existing order keys for quick duplicate check
       const existingOrderKeys = new Set<string>();
