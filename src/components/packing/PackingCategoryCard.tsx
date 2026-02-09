@@ -147,6 +147,15 @@ export function PackingCategoryCard({
   
   const handleImport = async () => {
     if (selectedFiles.length === 0) return;
+
+    if (hasTrips && !selectedTripId) {
+      toast({
+        variant: 'destructive',
+        title: 'Velg tur',
+        description: 'Denne kategorien har turer. Velg hvilken tur ordrene tilhører.',
+      });
+      return;
+    }
     
     try {
       const { data, errors } = await parseFiles(selectedFiles);
@@ -174,16 +183,20 @@ export function PackingCategoryCard({
         orders: data.orders,
         deliveryDate: data.deliveryDate,
         categoryId: category.id,
+        tripId: selectedTripId,
       });
+
+      const tripName = trips.find(t => t.id === selectedTripId)?.name;
       
       toast({
         title: 'Import fullført',
-        description: `${result.ordersCreated} ordrer importert til ${category.name}`,
+        description: `${result.ordersCreated} ordrer importert til ${category.name}${tripName ? ` → ${tripName}` : ''}`,
       });
       
       setIsImportOpen(false);
       setSelectedFiles([]);
       setDetectedDate(null);
+      setSelectedTripId(undefined);
     } catch (error) {
       toast({
         variant: 'destructive',
