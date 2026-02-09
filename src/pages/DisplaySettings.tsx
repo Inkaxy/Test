@@ -2972,7 +2972,7 @@ export default function DisplaySettingsPage() {
                           {settings.stats_show_packed_count && '8 / 15'} (53%)
                         </span>
                       </div>
-                      {settings.stats_progress_bar_style !== 'none' && (
+                      {settings.stats_show_progress_bar && settings.stats_progress_bar_style !== 'none' && (
                         <div
                           className="rounded-full"
                           style={{ 
