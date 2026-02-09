@@ -288,7 +288,8 @@ export function useImport() {
       const customersToUpdate: Array<{ id: string; name: string; address: string | null }> = [];
       
       for (const customer of data.customers) {
-        const existingId = existingCustomerMap.get(customer.customerNumber);
+        const existingId = existingCustomerMap.get(customer.customerNumber)
+          || existingCustomerMap.get(removeLeadingZeros(customer.customerNumber));
         if (existingId) {
           customersToUpdate.push({ 
             id: existingId, 
@@ -296,6 +297,7 @@ export function useImport() {
             address: customer.address 
           });
           customerMap.set(customer.customerNumber, existingId);
+          customerMap.set(removeLeadingZeros(customer.customerNumber), existingId);
           customersUpdated++;
         } else {
           customersToInsert.push({
