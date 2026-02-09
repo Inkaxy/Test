@@ -7,6 +7,12 @@ interface DeleteOrdersBeforeDateParams {
   categoryId?: string;
 }
 
+interface DeleteOrdersForDateParams {
+  date: Date;
+  categoryId?: string;
+  tripId?: string;
+}
+
 interface DeleteSingleOrderParams {
   orderId: string;
 }
