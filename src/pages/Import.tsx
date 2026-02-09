@@ -208,7 +208,8 @@ export default function Import() {
   const hasCus = files.some(f => f.type === 'cus' && f.status === 'valid');
   const hasOd0 = files.some(f => f.type === 'od0' && f.status === 'valid');
   
-  const canImport = parsedData && parsedData.deliveryDate && selectedCategoryId && (
+  const canImport = parsedData && parsedData.deliveryDate && selectedCategoryId && 
+    (!hasTrips || selectedTripId) && (
     parsedData.products.length > 0 ||
     parsedData.customers.length > 0 ||
     parsedData.orders.length > 0
