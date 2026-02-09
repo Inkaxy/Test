@@ -96,7 +96,7 @@ Deno.serve(async (req) => {
       // Trigger sync via edge function (service role call)
       try {
         const { error: invokeError } = await supabase.functions.invoke('sync-onedrive', {
-          body: { categoryId: config.category_id, cronTriggered: true },
+          body: { categoryId: config.category_id, tripId: config.trip_id ?? undefined, cronTriggered: true },
           headers: { 'X-Cron-Secret': cronSecret }
         })
 
