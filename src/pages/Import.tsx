@@ -6,12 +6,13 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { Upload, File, CheckCircle2, AlertCircle, X, Package, Users, ShoppingCart, Cloud, CalendarDays, FolderOpen } from 'lucide-react';
+import { Upload, File, CheckCircle2, AlertCircle, X, Package, Users, ShoppingCart, Cloud, CalendarDays, FolderOpen, Route } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useImport } from '@/hooks/useImport';
 import { useCategories } from '@/hooks/useCategories';
 import { useOneDriveConfigs } from '@/hooks/useOneDriveConfig';
+import { useTrips } from '@/hooks/useTrips';
 import { format } from 'date-fns';
 import { nb } from 'date-fns/locale';
 import { ParsedProduct, ParsedCustomer, ParsedOrder } from '@/lib/fileParser';
@@ -43,10 +44,14 @@ export default function Import() {
   const [parseErrors, setParseErrors] = useState<string[]>([]);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | undefined>();
+  const [selectedTripId, setSelectedTripId] = useState<string | undefined>();
   
   const activeCategories = categories.filter(c => c.is_active);
   const selectedCategory = categories.find(c => c.id === selectedCategoryId);
   const categoryOneDriveConfig = oneDriveConfigs.find(c => c.category_id === selectedCategoryId);
+  const { data: trips = [] } = useTrips(selectedCategoryId);
+  const hasTrips = trips.length > 0;
+  const selectedTrip = trips.find(t => t.id === selectedTripId);
 
   const getFileType = (filename: string): FileWithPreview['type'] => {
     const ext = filename.split('.').pop()?.toLowerCase();
@@ -142,6 +147,15 @@ export default function Import() {
       });
       return;
     }
+
+    if (hasTrips && !selectedTripId) {
+      toast({
+        variant: 'destructive',
+        title: t('common.error'),
+        description: 'Velg en tur før du importerer. Denne kategorien har turer som må velges.',
+      });
+      return;
+    }
     
     setUploadProgress(10);
     
@@ -152,6 +166,7 @@ export default function Import() {
         orders: parsedData.orders,
         deliveryDate: parsedData.deliveryDate,
         categoryId: selectedCategoryId,
+        tripId: selectedTripId,
       });
       
       setUploadProgress(100);
@@ -193,7 +208,8 @@ export default function Import() {
   const hasCus = files.some(f => f.type === 'cus' && f.status === 'valid');
   const hasOd0 = files.some(f => f.type === 'od0' && f.status === 'valid');
   
-  const canImport = parsedData && parsedData.deliveryDate && selectedCategoryId && (
+  const canImport = parsedData && parsedData.deliveryDate && selectedCategoryId && 
+    (!hasTrips || selectedTripId) && (
     parsedData.products.length > 0 ||
     parsedData.customers.length > 0 ||
     parsedData.orders.length > 0
@@ -218,7 +234,7 @@ export default function Import() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <Select value={selectedCategoryId} onValueChange={setSelectedCategoryId}>
+          <Select value={selectedCategoryId} onValueChange={(val) => { setSelectedCategoryId(val); setSelectedTripId(undefined); }}>
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Velg kategori..." />
             </SelectTrigger>
@@ -249,6 +265,31 @@ export default function Import() {
                   OneDrive ikke koblet
                 </Badge>
               )}
+            </div>
+          )}
+          
+          {/* Trip selector - shown when category has trips */}
+          {hasTrips && (
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <Route className="h-4 w-4" />
+                Velg tur
+              </Label>
+              <Select value={selectedTripId} onValueChange={setSelectedTripId}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Velg tur..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {trips.map((trip) => (
+                    <SelectItem key={trip.id} value={trip.id}>
+                      {trip.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Denne kategorien har {trips.length} turer. Velg hvilken tur ordrene tilhører.
+              </p>
             </div>
           )}
           
@@ -366,6 +407,9 @@ export default function Import() {
                 <FolderOpen className="h-4 w-4 text-primary" />
                 <span className="text-sm">
                   Importeres til: <strong>{selectedCategory.name}</strong>
+                  {selectedTrip && (
+                    <> → <Route className="h-3 w-3 inline mx-1" /><strong>{selectedTrip.name}</strong></>
+                  )}
                 </span>
                 <Badge variant="outline" className="text-xs ml-auto">
                   {selectedCategory.packing_mode === 'product_based' ? 'Produktbasert' : 'Kundebasert'}

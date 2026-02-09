@@ -26,6 +26,7 @@ interface ImportData {
   orders: ParsedOrder[];
   deliveryDate: Date;
   categoryId: string;
+  tripId?: string;
 }
 
 interface ImportResult {
@@ -106,17 +107,24 @@ export function useImport() {
       
       const deliveryDateStr = toLocalDateString(data.deliveryDate);
       
-      // Check for duplicate import (same bakery + date + category)
-      const { data: existingBatch } = await supabase
+      // Check for duplicate import (same bakery + date + category + trip)
+      let duplicateQuery = supabase
         .from('import_batches')
         .select('id')
         .eq('bakery_id', bakeryId)
         .eq('delivery_date', deliveryDateStr)
-        .eq('category_id', data.categoryId)
-        .maybeSingle();
+        .eq('category_id', data.categoryId);
+      
+      if (data.tripId) {
+        duplicateQuery = duplicateQuery.eq('trip_id', data.tripId);
+      } else {
+        duplicateQuery = duplicateQuery.is('trip_id', null);
+      }
+      
+      const { data: existingBatch } = await duplicateQuery.maybeSingle();
       
       if (existingBatch) {
-        throw new Error(`Data for ${deliveryDateStr} er allerede importert til denne kategorien. Slett eksisterende import først.`);
+        throw new Error(`Data for ${deliveryDateStr} er allerede importert til denne kategorien${data.tripId ? ' og turen' : ''}. Slett eksisterende import først.`);
       }
       
       let productsCreated = 0;
@@ -301,6 +309,7 @@ export function useImport() {
           bakery_id: bakeryId,
           delivery_date: deliveryDateStr,
           category_id: data.categoryId,
+          trip_id: data.tripId || null,
           products_count: productsCreated + productsUpdated,
           customers_count: customersCreated + customersUpdated,
           orders_count: data.orders.length,
@@ -321,6 +330,7 @@ export function useImport() {
         delivery_date: string;
         import_batch_id: string;
         category_id: string;
+        trip_id: string | null;
       }> = [];
       
       for (const order of data.orders) {
@@ -358,6 +368,7 @@ export function useImport() {
             delivery_date: order.deliveryDate,
             import_batch_id: batch.id,
             category_id: data.categoryId,
+            trip_id: data.tripId || null,
           });
         }
       }
