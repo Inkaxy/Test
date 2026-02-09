@@ -21,6 +21,11 @@ import { useDisplaySettings, getDefaultDisplaySettings, DisplaySettings } from '
 import { usePackingMutations } from '@/hooks/usePackingMutations';
 import { useOfflineQueue } from '@/hooks/useOfflineQueue';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useTripsForBakery } from '@/hooks/useTrips';
+import { useTripProgression } from '@/hooks/useTripProgression';
+import { TripCompleteScreen } from '@/components/packing/TripCompleteScreen';
+import { AllTripsCompleteScreen } from '@/components/packing/AllTripsCompleteScreen';
+import { TripIndicator } from '@/components/packing/TripIndicator';
 import { useAuthStore } from '@/stores/authStore';
 import { 
   useDeviceId,
