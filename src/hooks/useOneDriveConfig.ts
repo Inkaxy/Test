@@ -68,6 +68,7 @@ export function useUpsertOneDriveConfig() {
   return useMutation({
     mutationFn: async ({ 
       categoryId, 
+      tripId,
       onedriveFolderUrl,
       syncEnabled,
       syncTime,
@@ -75,6 +76,7 @@ export function useUpsertOneDriveConfig() {
       deleteAfterImport
     }: { 
       categoryId: string; 
+      tripId?: string | null;
       onedriveFolderUrl: string;
       syncEnabled?: boolean;
       syncTime?: string;
@@ -89,6 +91,7 @@ export function useUpsertOneDriveConfig() {
         .upsert({
           bakery_id: bakeryId,
           category_id: categoryId,
+          trip_id: tripId ?? null,
           onedrive_folder_url: onedriveFolderUrl,
           sync_status: 'configured',
           sync_enabled: syncEnabled ?? false,
