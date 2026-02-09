@@ -148,6 +148,21 @@ export function useImport() {
       const customerMap = new Map<string, string>();
       
       // Fetch default category and existing data in parallel
+      // Build existing orders query with trip_id filter
+      let existingOrdersQuery = supabase
+        .from('orders')
+        .select('id, customer_id, product_id, delivery_date, category_id')
+        .eq('bakery_id', bakeryId)
+        .eq('delivery_date', deliveryDateStr)
+        .eq('category_id', data.categoryId)
+        .not('category_id', 'is', null);
+      
+      if (data.tripId) {
+        existingOrdersQuery = existingOrdersQuery.eq('trip_id', data.tripId);
+      } else {
+        existingOrdersQuery = existingOrdersQuery.is('trip_id', null);
+      }
+      
       const [
         { data: defaultCategory },
         { data: existingProducts },
@@ -170,23 +185,7 @@ export function useImport() {
           .from('customers')
           .select('id, customer_number')
           .eq('bakery_id', bakeryId),
-        supabase
-          .from('orders')
-          .select('id, customer_id, product_id, delivery_date, category_id, trip_id')
-          .eq('bakery_id', bakeryId)
-          .eq('delivery_date', deliveryDateStr)
-          .eq('category_id', data.categoryId)
-          .not('category_id', 'is', null)
-          .then(result => {
-            // Filter by trip_id client-side for correct duplicate detection
-            if (data.tripId && result.data) {
-              return { ...result, data: result.data.filter(o => o.trip_id === data.tripId) };
-            }
-            if (!data.tripId && result.data) {
-              return { ...result, data: result.data.filter(o => !o.trip_id) };
-            }
-            return result;
-          })
+        existingOrdersQuery
       ]);
       
       const defaultCategoryId = defaultCategory?.id || null;
