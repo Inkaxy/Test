@@ -425,6 +425,33 @@ export default function ProductPackingView() {
     }
   };
 
+  // Trip complete screens
+  if (hasTrips && tripProgression.allComplete) {
+    return (
+      <AllTripsCompleteScreen
+        tripStats={tripProgression.allTripStats}
+        onBackToCalendar={() => navigate('/packing')}
+        backgroundColor={settings.background_color}
+        textColor={settings.text_color}
+      />
+    );
+  }
+
+  if (hasTrips && tripProgression.isComplete && tripProgression.nextTrip) {
+    return (
+      <TripCompleteScreen
+        currentTrip={tripProgression.activeTrip!}
+        nextTrip={tripProgression.nextTrip}
+        packedOrders={tripProgression.stats.packedOrders}
+        deviations={tripProgression.stats.deviations}
+        onStartNext={tripProgression.startNextTrip}
+        onBackToOverview={() => navigate('/packing')}
+        backgroundColor={settings.background_color}
+        textColor={settings.text_color}
+      />
+    );
+  }
+
   // Loading state
   if (productsLoading) {
     return (
