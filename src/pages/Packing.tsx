@@ -21,6 +21,8 @@ export default function Packing() {
   const { data: categories = [], isLoading } = useCategories();
   const updateCategory = useUpdateCategory();
   const [oneDriveCategory, setOneDriveCategory] = useState<Category | null>(null);
+  const [oneDriveTripId, setOneDriveTripId] = useState<string | null>(null);
+  const [oneDriveTripName, setOneDriveTripName] = useState<string | null>(null);
   const [tripsCategory, setTripsCategory] = useState<Category | null>(null);
   const [isEditMode, setIsEditMode] = useState(false);
   const [orderedCategories, setOrderedCategories] = useState<Category[]>([]);
