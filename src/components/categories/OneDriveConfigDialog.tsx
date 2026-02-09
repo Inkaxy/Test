@@ -18,6 +18,8 @@ import { supabase } from '@/integrations/supabase/client';
 
 interface OneDriveConfigDialogProps {
   category: Category | null;
+  tripId?: string | null;
+  tripName?: string | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -32,7 +34,7 @@ const WEEKDAYS = [
   { key: 'sunday', label: 'Søn' },
 ];
 
-export function OneDriveConfigDialog({ category, open, onOpenChange }: OneDriveConfigDialogProps) {
+export function OneDriveConfigDialog({ category, tripId, tripName, open, onOpenChange }: OneDriveConfigDialogProps) {
   const { t } = useTranslation();
   const { toast } = useToast();
   
@@ -43,7 +45,7 @@ export function OneDriveConfigDialog({ category, open, onOpenChange }: OneDriveC
   const [deleteAfterImport, setDeleteAfterImport] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   
-  const { data: config, isLoading } = useOneDriveConfigForCategory(category?.id || null);
+  const { data: config, isLoading } = useOneDriveConfigForCategory(category?.id || null, tripId);
   const upsertConfig = useUpsertOneDriveConfig();
   const deleteConfig = useDeleteOneDriveConfig();
   
@@ -77,6 +79,7 @@ export function OneDriveConfigDialog({ category, open, onOpenChange }: OneDriveC
     try {
       await upsertConfig.mutateAsync({
         categoryId: category.id,
+        tripId: tripId ?? null,
         onedriveFolderUrl: folderUrl,
         syncEnabled,
         syncTime,
@@ -103,7 +106,7 @@ export function OneDriveConfigDialog({ category, open, onOpenChange }: OneDriveC
     if (!category) return;
     
     try {
-      await deleteConfig.mutateAsync(category.id);
+      await deleteConfig.mutateAsync({ categoryId: category.id, tripId: tripId ?? null });
       setFolderUrl('');
       setSyncEnabled(false);
       setSyncTime('05:00');
@@ -131,7 +134,7 @@ export function OneDriveConfigDialog({ category, open, onOpenChange }: OneDriveC
       const { data: { session } } = await supabase.auth.getSession();
       
       const { data, error } = await supabase.functions.invoke('sync-onedrive', {
-        body: { categoryId: category.id },
+        body: { categoryId: category.id, tripId: tripId ?? undefined },
         headers: session?.access_token ? {
           Authorization: `Bearer ${session.access_token}`
         } : undefined
@@ -183,7 +186,11 @@ export function OneDriveConfigDialog({ category, open, onOpenChange }: OneDriveC
             OneDrive-konfigurasjon
           </DialogTitle>
           <DialogDescription>
-            Koble <strong>{category.name}</strong> til en OneDrive-mappe for automatisk import
+            Koble {tripName ? (
+              <><strong>{tripName}</strong> ({category.name})</>
+            ) : (
+              <strong>{category.name}</strong>
+            )} til en OneDrive-mappe for automatisk import
           </DialogDescription>
         </DialogHeader>
         

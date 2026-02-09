@@ -20,7 +20,7 @@ interface TripsManagementDialogProps {
   category: Category | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onOpenOneDriveForTrip?: (tripId: string) => void;
+  onOpenOneDriveForTrip?: (tripId: string, tripName: string) => void;
 }
 
 export function TripsManagementDialog({ category, open, onOpenChange, onOpenOneDriveForTrip }: TripsManagementDialogProps) {
@@ -280,7 +280,7 @@ export function TripsManagementDialog({ category, open, onOpenChange, onOpenOneD
                                 className="h-7 w-7 shrink-0"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  onOpenOneDriveForTrip?.(trip.id);
+                                  onOpenOneDriveForTrip?.(trip.id, trip.name);
                                 }}
                                 title="OneDrive-konfigurasjon"
                               >

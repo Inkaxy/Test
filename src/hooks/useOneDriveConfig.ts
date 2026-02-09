@@ -40,19 +40,26 @@ export function useOneDriveConfigs() {
   });
 }
 
-export function useOneDriveConfigForCategory(categoryId: string | null) {
+export function useOneDriveConfigForCategory(categoryId: string | null, tripId?: string | null) {
   const { getActiveBakeryId } = useAuthStore();
   
   return useQuery({
-    queryKey: ['onedrive-config', categoryId],
+    queryKey: ['onedrive-config', categoryId, tripId ?? 'no-trip'],
     queryFn: async () => {
       if (!categoryId) return null;
       
-      const { data, error } = await supabase
+      let query = supabase
         .from('category_onedrive_config')
         .select('*')
-        .eq('category_id', categoryId)
-        .maybeSingle();
+        .eq('category_id', categoryId);
+      
+      if (tripId) {
+        query = query.eq('trip_id', tripId);
+      } else {
+        query = query.is('trip_id', null);
+      }
+      
+      const { data, error } = await query.maybeSingle();
       
       if (error) throw error;
       return data as OneDriveConfig | null;
@@ -86,26 +93,52 @@ export function useUpsertOneDriveConfig() {
       const bakeryId = getActiveBakeryId();
       if (!bakeryId) throw new Error('Ingen bakeri valgt');
       
-      const { data, error } = await supabase
+      // Check if config already exists for this category+trip combo
+      let existingQuery = supabase
         .from('category_onedrive_config')
-        .upsert({
-          bakery_id: bakeryId,
-          category_id: categoryId,
-          trip_id: tripId ?? null,
-          onedrive_folder_url: onedriveFolderUrl,
-          sync_status: 'configured',
-          sync_enabled: syncEnabled ?? false,
-          sync_time: syncTime ?? '05:00',
-          sync_days: syncDays ?? ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
-          delete_after_import: deleteAfterImport ?? false,
-        }, {
-          onConflict: 'category_id',
-        })
-        .select()
-        .single();
+        .select('id')
+        .eq('category_id', categoryId);
       
-      if (error) throw error;
-      return data;
+      if (tripId) {
+        existingQuery = existingQuery.eq('trip_id', tripId);
+      } else {
+        existingQuery = existingQuery.is('trip_id', null);
+      }
+      
+      const { data: existing } = await existingQuery.maybeSingle();
+      
+      const payload = {
+        bakery_id: bakeryId,
+        category_id: categoryId,
+        trip_id: tripId ?? null,
+        onedrive_folder_url: onedriveFolderUrl,
+        sync_status: 'configured',
+        sync_enabled: syncEnabled ?? false,
+        sync_time: syncTime ?? '05:00',
+        sync_days: syncDays ?? ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
+        delete_after_import: deleteAfterImport ?? false,
+      };
+      
+      if (existing?.id) {
+        // Update existing
+        const { data, error } = await supabase
+          .from('category_onedrive_config')
+          .update(payload)
+          .eq('id', existing.id)
+          .select()
+          .single();
+        if (error) throw error;
+        return data;
+      } else {
+        // Insert new
+        const { data, error } = await supabase
+          .from('category_onedrive_config')
+          .insert(payload)
+          .select()
+          .single();
+        if (error) throw error;
+        return data;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['onedrive-configs'] });
@@ -118,12 +151,19 @@ export function useDeleteOneDriveConfig() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async (categoryId: string) => {
-      const { error } = await supabase
+    mutationFn: async ({ categoryId, tripId }: { categoryId: string; tripId?: string | null }) => {
+      let query = supabase
         .from('category_onedrive_config')
         .delete()
         .eq('category_id', categoryId);
       
+      if (tripId) {
+        query = query.eq('trip_id', tripId);
+      } else {
+        query = query.is('trip_id', null);
+      }
+      
+      const { error } = await query;
       if (error) throw error;
     },
     onSuccess: () => {

@@ -21,6 +21,8 @@ export default function Packing() {
   const { data: categories = [], isLoading } = useCategories();
   const updateCategory = useUpdateCategory();
   const [oneDriveCategory, setOneDriveCategory] = useState<Category | null>(null);
+  const [oneDriveTripId, setOneDriveTripId] = useState<string | null>(null);
+  const [oneDriveTripName, setOneDriveTripName] = useState<string | null>(null);
   const [tripsCategory, setTripsCategory] = useState<Category | null>(null);
   const [isEditMode, setIsEditMode] = useState(false);
   const [orderedCategories, setOrderedCategories] = useState<Category[]>([]);
@@ -249,8 +251,16 @@ export default function Packing() {
       {/* OneDrive config dialog */}
       <OneDriveConfigDialog
         category={oneDriveCategory}
+        tripId={oneDriveTripId}
+        tripName={oneDriveTripName}
         open={!!oneDriveCategory}
-        onOpenChange={(open) => !open && setOneDriveCategory(null)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setOneDriveCategory(null);
+            setOneDriveTripId(null);
+            setOneDriveTripName(null);
+          }
+        }}
       />
 
       {/* Trips management dialog */}
@@ -258,6 +268,13 @@ export default function Packing() {
         category={tripsCategory}
         open={!!tripsCategory}
         onOpenChange={(open) => !open && setTripsCategory(null)}
+        onOpenOneDriveForTrip={(tripId, tripName) => {
+          if (tripsCategory) {
+            setOneDriveCategory(tripsCategory);
+            setOneDriveTripId(tripId);
+            setOneDriveTripName(tripName);
+          }
+        }}
       />
     </div>
   );
