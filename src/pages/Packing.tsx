@@ -252,6 +252,13 @@ export default function Packing() {
         open={!!oneDriveCategory}
         onOpenChange={(open) => !open && setOneDriveCategory(null)}
       />
+
+      {/* Trips management dialog */}
+      <TripsManagementDialog
+        category={tripsCategory}
+        open={!!tripsCategory}
+        onOpenChange={(open) => !open && setTripsCategory(null)}
+      />
     </div>
   );
 }
