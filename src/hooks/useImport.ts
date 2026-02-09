@@ -330,6 +330,7 @@ export function useImport() {
         delivery_date: string;
         import_batch_id: string;
         category_id: string;
+        trip_id: string | null;
       }> = [];
       
       for (const order of data.orders) {
