@@ -104,7 +104,9 @@ export function OrderManagementCard() {
           customers_count,
           created_at,
           category_id,
-          category:categories(name)
+          trip_id,
+          category:categories(name),
+          trip:category_trips(name)
         `)
         .eq('bakery_id', bakeryId)
         .order('delivery_date', { ascending: false });
