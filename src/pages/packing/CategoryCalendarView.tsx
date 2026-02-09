@@ -15,11 +15,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Loader2, Package, Users, ChevronLeft, ChevronRight, Calendar as CalendarIcon, ArrowLeft, AlertTriangle } from 'lucide-react';
+import { Loader2, Package, Users, ChevronLeft, ChevronRight, Calendar as CalendarIcon, ArrowLeft, AlertTriangle, Truck, CheckCircle2 } from 'lucide-react';
 import { format, addMonths, subMonths, isToday, isSameDay } from 'date-fns';
 import { nb, enUS } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
-import { useMonthOrderSummary, useDateOrderStats } from '@/hooks/usePackingCalendar';
+import { useMonthOrderSummary, useDateOrderStats, useDateTripStats } from '@/hooks/usePackingCalendar';
 import { useCategories, Category } from '@/hooks/useCategories';
 import { useAuthStore } from '@/stores/authStore';
 import { CARD_COLORS } from '@/components/packing/PackingCategoryCard';
