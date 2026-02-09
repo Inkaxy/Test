@@ -235,10 +235,12 @@ export function useImport() {
       const productsToUpdate: Array<{ id: string; name: string }> = [];
       
       for (const product of data.products) {
-        const existingId = existingProductMap.get(product.productNumber);
+        const existingId = existingProductMap.get(product.productNumber) 
+          || existingProductMap.get(removeLeadingZeros(product.productNumber));
         if (existingId) {
           productsToUpdate.push({ id: existingId, name: product.name });
           productMap.set(product.productNumber, existingId);
+          productMap.set(removeLeadingZeros(product.productNumber), existingId);
           productsUpdated++;
         } else {
           productsToInsert.push({
