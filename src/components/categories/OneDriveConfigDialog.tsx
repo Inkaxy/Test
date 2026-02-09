@@ -34,7 +34,7 @@ const WEEKDAYS = [
   { key: 'sunday', label: 'Søn' },
 ];
 
-export function OneDriveConfigDialog({ category, open, onOpenChange }: OneDriveConfigDialogProps) {
+export function OneDriveConfigDialog({ category, tripId, tripName, open, onOpenChange }: OneDriveConfigDialogProps) {
   const { t } = useTranslation();
   const { toast } = useToast();
   
@@ -45,7 +45,7 @@ export function OneDriveConfigDialog({ category, open, onOpenChange }: OneDriveC
   const [deleteAfterImport, setDeleteAfterImport] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   
-  const { data: config, isLoading } = useOneDriveConfigForCategory(category?.id || null);
+  const { data: config, isLoading } = useOneDriveConfigForCategory(category?.id || null, tripId);
   const upsertConfig = useUpsertOneDriveConfig();
   const deleteConfig = useDeleteOneDriveConfig();
   
