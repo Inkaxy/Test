@@ -15,11 +15,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Loader2, Package, Users, ChevronLeft, ChevronRight, Calendar as CalendarIcon, ArrowLeft, AlertTriangle } from 'lucide-react';
+import { Loader2, Package, Users, ChevronLeft, ChevronRight, Calendar as CalendarIcon, ArrowLeft, AlertTriangle, Truck, CheckCircle2 } from 'lucide-react';
 import { format, addMonths, subMonths, isToday, isSameDay } from 'date-fns';
 import { nb, enUS } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
-import { useMonthOrderSummary, useDateOrderStats } from '@/hooks/usePackingCalendar';
+import { useMonthOrderSummary, useDateOrderStats, useDateTripStats } from '@/hooks/usePackingCalendar';
 import { useCategories, Category } from '@/hooks/useCategories';
 import { useAuthStore } from '@/stores/authStore';
 import { CARD_COLORS } from '@/components/packing/PackingCategoryCard';
@@ -48,6 +48,7 @@ export default function CategoryCalendarView() {
   );
   
   const { data: dateStats, isLoading: statsLoading } = useDateOrderStats(dateStr, categoryId);
+  const { data: tripStats = [] } = useDateTripStats(dateStr, categoryId);
   
   // Get category color
   const colorConfig = CARD_COLORS.find(c => c.id === (category?.card_color || 'primary')) || CARD_COLORS[0];
@@ -338,6 +339,63 @@ export default function CategoryCalendarView() {
                   </div>
                 )}
                 
+                {/* Trip breakdown */}
+                {tripStats.length > 1 && (
+                  <div className="space-y-3">
+                    <h4 className="font-medium text-sm text-muted-foreground flex items-center gap-1.5">
+                      <Truck className="h-4 w-4" />
+                      Turer ({tripStats.length})
+                    </h4>
+                    <div className="space-y-2">
+                      {tripStats.map((trip) => {
+                        const tripProgress = trip.totalOrders > 0
+                          ? Math.round((trip.packedOrders / trip.totalOrders) * 100)
+                          : 0;
+                        const isComplete = trip.status === 'completed';
+                        return (
+                          <div
+                            key={trip.tripId}
+                            className={cn(
+                              "rounded-lg border p-3 space-y-2 transition-colors",
+                              isComplete ? "bg-success/10 border-success/30" : "bg-muted/30 border-border"
+                            )}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                {isComplete && <CheckCircle2 className="h-4 w-4 text-success" />}
+                                <span className="font-medium text-sm">{trip.tripName}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs text-muted-foreground">
+                                  {trip.packedOrders}/{trip.totalOrders}
+                                </span>
+                                <Badge 
+                                  variant="secondary" 
+                                  className={cn(
+                                    "text-xs",
+                                    isComplete && "bg-success/20 text-success-foreground border-success/30"
+                                  )}
+                                >
+                                  {tripProgress}%
+                                </Badge>
+                              </div>
+                            </div>
+                            <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                              <div 
+                                className={cn(
+                                  "h-full transition-all rounded-full",
+                                  isComplete ? "bg-success" : "bg-primary"
+                                )}
+                                style={{ width: `${tripProgress}%` }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
                 {/* Top products */}
                 {dateStats.topProducts.length > 0 && (
                   <div className="space-y-3">
