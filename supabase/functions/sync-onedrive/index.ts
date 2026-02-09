@@ -702,7 +702,7 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!
     
-    const { categoryId, cronTriggered } = await req.json()
+    const { categoryId, tripId, cronTriggered } = await req.json()
 
     // Check if cron-triggered
     const cronSecret = req.headers.get('X-Cron-Secret')
