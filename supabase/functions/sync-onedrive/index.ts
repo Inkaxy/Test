@@ -750,12 +750,19 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Get OneDrive config
-    const { data: config, error: configError } = await supabase
+    // Get OneDrive config - filter by tripId if provided
+    let configQuery = supabase
       .from('category_onedrive_config')
       .select('*')
       .eq('category_id', categoryId)
-      .single()
+
+    if (tripId) {
+      configQuery = configQuery.eq('trip_id', tripId)
+    } else {
+      configQuery = configQuery.is('trip_id', null)
+    }
+
+    const { data: config, error: configError } = await configQuery.single()
 
     if (configError || !config) {
       return new Response(
