@@ -280,7 +280,7 @@ export function TripsManagementDialog({ category, open, onOpenChange, onOpenOneD
                                 className="h-7 w-7 shrink-0"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  onOpenOneDriveForTrip?.(trip.id);
+                                  onOpenOneDriveForTrip?.(trip.id, trip.name);
                                 }}
                                 title="OneDrive-konfigurasjon"
                               >
