@@ -139,34 +139,28 @@ export function useDeleteImportBatch() {
   
   return useMutation({
     mutationFn: async ({ batchId }: DeleteImportBatchParams): Promise<number> => {
-      // First get all orders in this batch
-      const { data: ordersToDelete, error: fetchError } = await supabase
-        .from('orders')
-        .select('id')
-        .eq('import_batch_id', batchId);
+      // Fetch all orders in this batch
+      let allOrderIds: string[] = [];
+      let from = 0;
+      const pageSize = 1000;
       
-      if (fetchError) throw fetchError;
-      
-      const deletedCount = ordersToDelete?.length || 0;
-      
-      if (ordersToDelete && ordersToDelete.length > 0) {
-        const orderIds = ordersToDelete.map(o => o.id);
-        
-        // Delete packing_status entries first
-        const { error: packingError } = await supabase
-          .from('packing_status')
-          .delete()
-          .in('order_id', orderIds);
-        
-        if (packingError) throw packingError;
-        
-        // Delete the orders
-        const { error: ordersError } = await supabase
+      while (true) {
+        const { data, error } = await supabase
           .from('orders')
-          .delete()
-          .in('id', orderIds);
+          .select('id')
+          .eq('import_batch_id', batchId)
+          .range(from, from + pageSize - 1);
         
-        if (ordersError) throw ordersError;
+        if (error) throw error;
+        if (!data || data.length === 0) break;
+        
+        allOrderIds = allOrderIds.concat(data.map(o => o.id));
+        if (data.length < pageSize) break;
+        from += pageSize;
+      }
+      
+      if (allOrderIds.length > 0) {
+        await batchDeleteByOrderIds(allOrderIds);
       }
       
       // Delete the import batch
@@ -177,7 +171,7 @@ export function useDeleteImportBatch() {
       
       if (batchError) throw batchError;
       
-      return deletedCount;
+      return allOrderIds.length;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['orders'] });
