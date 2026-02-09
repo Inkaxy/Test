@@ -114,6 +114,77 @@ export function useDeleteOrdersBeforeDate() {
   });
 }
 
+export function useDeleteOrdersForDate() {
+  const queryClient = useQueryClient();
+  const { getActiveBakeryId } = useAuthStore();
+  
+  return useMutation({
+    mutationFn: async ({ date, categoryId, tripId }: DeleteOrdersForDateParams): Promise<number> => {
+      const bakeryId = getActiveBakeryId();
+      if (!bakeryId) throw new Error('Ingen bakeri valgt');
+      
+      const dateStr = date.toISOString().split('T')[0];
+      
+      let allOrderIds: string[] = [];
+      let from = 0;
+      const pageSize = 1000;
+      
+      while (true) {
+        let query = supabase
+          .from('orders')
+          .select('id')
+          .eq('bakery_id', bakeryId)
+          .eq('delivery_date', dateStr)
+          .range(from, from + pageSize - 1);
+        
+        if (categoryId) {
+          query = query.eq('category_id', categoryId);
+        }
+        if (tripId) {
+          query = query.eq('trip_id', tripId);
+        }
+        
+        const { data, error } = await query;
+        if (error) throw error;
+        if (!data || data.length === 0) break;
+        
+        allOrderIds = allOrderIds.concat(data.map(o => o.id));
+        if (data.length < pageSize) break;
+        from += pageSize;
+      }
+      
+      if (allOrderIds.length === 0) return 0;
+      
+      await batchDeleteByOrderIds(allOrderIds);
+      
+      // Clean up import batches for this date
+      let batchCleanupQuery = supabase
+        .from('import_batches')
+        .delete()
+        .eq('bakery_id', bakeryId)
+        .eq('delivery_date', dateStr);
+      
+      if (categoryId) {
+        batchCleanupQuery = batchCleanupQuery.eq('category_id', categoryId);
+      }
+      
+      const { error: batchCleanupError } = await batchCleanupQuery;
+      if (batchCleanupError) {
+        console.warn('Could not clean up import batches:', batchCleanupError);
+      }
+      
+      return allOrderIds.length;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      queryClient.invalidateQueries({ queryKey: ['import-batches'] });
+      queryClient.invalidateQueries({ queryKey: ['packing-status'] });
+      queryClient.invalidateQueries({ queryKey: ['month-order-summary'] });
+      queryClient.invalidateQueries({ queryKey: ['date-trip-stats'] });
+    },
+  });
+}
+
 export function useDeleteSingleOrder() {
   const queryClient = useQueryClient();
   
