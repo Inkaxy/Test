@@ -48,6 +48,7 @@ export default function CategoryCalendarView() {
   );
   
   const { data: dateStats, isLoading: statsLoading } = useDateOrderStats(dateStr, categoryId);
+  const { data: tripStats = [] } = useDateTripStats(dateStr, categoryId);
   
   // Get category color
   const colorConfig = CARD_COLORS.find(c => c.id === (category?.card_color || 'primary')) || CARD_COLORS[0];
