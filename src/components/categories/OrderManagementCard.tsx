@@ -50,10 +50,16 @@ export function OrderManagementCard() {
   const [selectedBatch, setSelectedBatch] = useState<ImportBatch | null>(null);
   
   const { data: categories = [] } = useCategories();
+  const { data: trips = [] } = useTrips(selectedCategoryId !== 'all' ? selectedCategoryId : undefined);
   const deleteOrdersBeforeDate = useDeleteOrdersBeforeDate();
   const deleteOrdersForDate = useDeleteOrdersForDate();
   const deleteImportBatch = useDeleteImportBatch();
   const deleteOrphanedOrders = useDeleteOrphanedOrders();
+  
+  const handleCategoryChange = (value: string) => {
+    setSelectedCategoryId(value);
+    setSelectedTripId('all');
+  };
   
   // Fetch orphaned orders count
   const { data: orphanedOrdersData, isLoading: orphanedLoading } = useQuery({
