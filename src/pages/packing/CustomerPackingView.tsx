@@ -85,7 +85,21 @@ export default function CustomerPackingView() {
     sortDirection: settings.customer_sort_direction || 'asc',
   };
   
-  const { data: customers = [], isLoading: customersLoading } = useCustomersForDate(dateStr, categoryId, sortOptions);
+  // Trips support
+  const { data: trips = [] } = useTrips(categoryId);
+  const hasTrips = trips.length > 0;
+  
+  const getTripStats = useCallback((tripId: string) => {
+    // Stats are computed from the current customers data
+    const total = customers.reduce((s, c) => s + c.totalOrders, 0);
+    const packed = customers.reduce((s, c) => s + c.packedOrders, 0);
+    return { totalOrders: total, packedOrders: packed, deviations: 0 };
+  }, [customers]);
+  
+  const tripProgression = useTripProgression({ trips, getTripStats });
+  const activeTripId = hasTrips ? tripProgression.activeTripId : null;
+  
+  const { data: customers = [], isLoading: customersLoading } = useCustomersForDate(dateStr, categoryId, sortOptions, activeTripId);
   const { data: locks = [] } = useCustomerLocks(dateStr, bakeryId);
   const { data: bakerySettings } = useBakerySettings();
   useRealtimeCustomerLocks(dateStr, bakeryId);
