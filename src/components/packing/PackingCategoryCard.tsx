@@ -61,6 +61,7 @@ interface PackingCategoryCardProps {
 export function PackingCategoryCard({ 
   category, 
   onOneDriveConfig,
+  onManageTrips,
   isEditMode = false,
   bakeryShortId = ''
 }: PackingCategoryCardProps) {
