@@ -10,7 +10,7 @@ import { RefreshButton } from '@/components/packing/RefreshButton';
 import { format } from 'date-fns';
 import { nb, enUS } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useCustomersForDate, CustomerWithOrders } from '@/hooks/useCustomersForDate';
 import { 
