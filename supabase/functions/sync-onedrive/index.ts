@@ -838,9 +838,11 @@ Deno.serve(async (req) => {
       const cusFiles = relevantFiles.filter(f => f.name.toLowerCase().endsWith('.cus'))
       const od0Files = relevantFiles.filter(f => f.name.toLowerCase().endsWith('.od0'))
 
-      // Parse products and customers (usually single files)
+      // Track all files to delete after successful import
+      const filesToDelete: { id: string; name: string }[] = []
+      
+      // Parse products first (step 1)
       let allProducts: ParsedProduct[] = []
-      let allCustomers: ParsedCustomer[] = []
       const allErrors: string[] = []
 
       for (const file of prdFiles) {
@@ -849,7 +851,15 @@ Deno.serve(async (req) => {
         const { products, errors } = parsePrdFile(content)
         allProducts = [...allProducts, ...products]
         allErrors.push(...errors.map(e => `${file.name}: ${e}`))
+        
+        // Mark PRD files for deletion if configured
+        if (config.delete_after_import) {
+          filesToDelete.push({ id: file.id, name: file.name })
+        }
       }
+
+      // Parse customers second (step 2)
+      let allCustomers: ParsedCustomer[] = []
 
       for (const file of cusFiles) {
         console.log(`Processing customer file: ${file.name}`)
@@ -857,12 +867,16 @@ Deno.serve(async (req) => {
         const { customers, errors } = parseCusFile(content)
         allCustomers = [...allCustomers, ...customers]
         allErrors.push(...errors.map(e => `${file.name}: ${e}`))
+        
+        // Mark CUS files for deletion if configured
+        if (config.delete_after_import) {
+          filesToDelete.push({ id: file.id, name: file.name })
+        }
       }
 
-      // Process order files
+      // Process order files third (step 3)
       let totalOrdersImported = 0
       const processedFiles: string[] = []
-      const filesToDelete: { id: string; name: string }[] = []
 
       for (const file of od0Files) {
         console.log(`Processing order file: ${file.name}`)
@@ -907,18 +921,20 @@ Deno.serve(async (req) => {
           totalOrdersImported += result.ordersCount
           processedFiles.push(file.name)
           
-          // Mark for deletion if configured
+          // Mark OD0 file for deletion if configured
           if (config.delete_after_import) {
             filesToDelete.push({ id: file.id, name: file.name })
           }
         }
       }
 
-      // Delete processed files if configured
+      // Delete all processed files after successful import
+      let filesDeletedCount = 0
       for (const file of filesToDelete) {
         try {
           await deleteFile(accessToken, driveId, file.id)
           console.log(`Deleted file: ${file.name}`)
+          filesDeletedCount++
         } catch (deleteError) {
           console.error(`Failed to delete ${file.name}:`, deleteError)
           allErrors.push(`Kunne ikke slette ${file.name} fra OneDrive`)
@@ -944,7 +960,7 @@ Deno.serve(async (req) => {
             customersFound: allCustomers.length,
             ordersImported: totalOrdersImported,
             filesProcessed: processedFiles.length,
-            filesDeleted: filesToDelete.length,
+            filesDeleted: filesDeletedCount,
           },
           processedFiles,
           errors: allErrors.length > 0 ? allErrors : undefined,
