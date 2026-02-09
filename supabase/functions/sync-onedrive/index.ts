@@ -9,6 +9,7 @@ interface OneDriveConfig {
   id: string
   bakery_id: string
   category_id: string
+  trip_id: string | null
   onedrive_folder_url: string | null
   onedrive_folder_id: string | null
   sync_enabled: boolean
