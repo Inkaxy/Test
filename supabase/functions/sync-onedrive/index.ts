@@ -624,6 +624,7 @@ async function importData(
         orderInserts.push({
           bakery_id: bakeryId,
           category_id: categoryId,
+          trip_id: tripId,
           customer_id: customerId,
           product_id: productId,
           delivery_date: order.deliveryDate,
