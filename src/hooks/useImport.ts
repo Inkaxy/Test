@@ -390,8 +390,9 @@ export function useImport() {
         const customerId = customerMap.get(order.customerNumber);
         
         if (!customerId) {
-          console.warn(`Hopper over ordre: kunde ${order.customerNumber} ikke funnet`);
+          console.warn(`Hopper over ordre: kunde ${order.customerNumber} ikke funnet. Tilgjengelige: ${Array.from(customerMap.keys()).slice(0, 5).join(', ')}...`);
           skippedOrders++;
+          skippedMissingCustomer++;
           continue;
         }
         
@@ -399,7 +400,8 @@ export function useImport() {
           const productId = productMap.get(orderProduct.productNumber);
           
           if (!productId) {
-            console.warn(`Hopper over ordrelinje: produkt ${orderProduct.productNumber} ikke funnet`);
+            console.warn(`Hopper over ordrelinje: produkt "${orderProduct.productNumber}" ikke funnet. Tilgjengelige: ${Array.from(productMap.keys()).slice(0, 5).join(', ')}...`);
+            skippedMissingProduct++;
             continue;
           }
           
@@ -407,6 +409,7 @@ export function useImport() {
           const orderKey = `${customerId}:${productId}`;
           if (existingOrderKeys.has(orderKey)) {
             console.log(`Duplikat ordre: kunde ${order.customerNumber}, produkt ${orderProduct.productNumber}`);
+            skippedDuplicate++;
             continue;
           }
           
@@ -426,6 +429,8 @@ export function useImport() {
         }
       }
       
+      console.log(`Import stats: ${ordersToInsert.length} to insert, skipped: ${skippedMissingCustomer} missing customer, ${skippedMissingProduct} missing product, ${skippedDuplicate} duplicate`);
+      
       // Batch insert orders in chunks of 500
       const CHUNK_SIZE = 500;
       const createdOrderIds: string[] = [];
@@ -439,7 +444,7 @@ export function useImport() {
         
         if (orderError) {
           console.error(`Feil ved batch-innsetting av ordrer:`, orderError);
-          continue;
+          throw new Error(`Kunne ikke sette inn ordrer: ${orderError.message}`);
         }
         
         if (newOrders) {
@@ -471,6 +476,9 @@ export function useImport() {
         ordersCreated,
         orderProductsCreated,
         skippedOrders,
+        skippedMissingCustomer,
+        skippedMissingProduct,
+        skippedDuplicate,
         batchId: batch.id,
       };
     },
