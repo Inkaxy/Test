@@ -26,8 +26,12 @@ interface GraphDriveItem {
   name: string
   file?: { mimeType: string }
   folder?: { childCount: number }
-  '@microsoft.graph.downloadUrl'?: string
   size?: number
+}
+
+interface FolderContents {
+  driveId: string
+  files: GraphDriveItem[]
 }
 
 interface ParsedProduct {
@@ -119,10 +123,10 @@ function extractShareIdFromUrl(url: string): string {
 // MICROSOFT GRAPH API OPERATIONS
 // ============================================================================
 
-async function getFilesInFolder(accessToken: string, shareUrl: string): Promise<GraphDriveItem[]> {
+async function getFilesInFolder(accessToken: string, shareUrl: string): Promise<FolderContents> {
   const shareId = extractShareIdFromUrl(shareUrl)
   
-  // First get the shared folder to verify access
+  // First get the shared folder to extract driveId from parentReference
   const shareResponse = await fetch(
     `https://graph.microsoft.com/v1.0/shares/${shareId}/driveItem`,
     {
@@ -136,9 +140,19 @@ async function getFilesInFolder(accessToken: string, shareUrl: string): Promise<
     throw new Error(`Kunne ikke få tilgang til OneDrive-mappen. Sjekk at delingslenken er gyldig og at appen har tilgang. Status: ${shareResponse.status}`)
   }
 
-  // Get children with select to ensure we get download URLs
+  const shareData = await shareResponse.json()
+  const driveId = shareData.parentReference?.driveId
+
+  if (!driveId) {
+    console.error('Missing driveId in parentReference:', JSON.stringify(shareData.parentReference))
+    throw new Error('Kunne ikke ekstrahere Drive ID fra delt mappe. Kontroller at delingslenken er gyldig.')
+  }
+
+  console.log(`Extracted driveId: ${driveId}`)
+
+  // Get children (no $select for downloadUrl - it doesn't work for shared folders)
   const childrenResponse = await fetch(
-    `https://graph.microsoft.com/v1.0/shares/${shareId}/driveItem/children?$select=id,name,file,folder,size,@microsoft.graph.downloadUrl`,
+    `https://graph.microsoft.com/v1.0/shares/${shareId}/driveItem/children`,
     {
       headers: { Authorization: `Bearer ${accessToken}` }
     }
@@ -151,29 +165,36 @@ async function getFilesInFolder(accessToken: string, shareUrl: string): Promise<
   }
 
   const data = await childrenResponse.json()
-  return data.value || []
+  
+  return {
+    driveId,
+    files: data.value || []
+  }
 }
 
-async function downloadFileContent(accessToken: string, file: GraphDriveItem): Promise<string> {
-  // Use the download URL directly from the file item
-  const downloadUrl = file['@microsoft.graph.downloadUrl']
+async function downloadFileContent(
+  accessToken: string, 
+  driveId: string, 
+  itemId: string, 
+  fileName: string
+): Promise<string> {
+  // Use the /content endpoint which returns a 302 redirect to the actual file
+  const contentUrl = `https://graph.microsoft.com/v1.0/drives/${driveId}/items/${itemId}/content`
   
-  if (!downloadUrl) {
-    console.error(`No download URL available for file: ${file.name}`)
-    throw new Error(`Ingen nedlastings-URL funnet for filen: ${file.name}`)
-  }
+  console.log(`Downloading file: ${fileName}`)
 
-  console.log(`Downloading file: ${file.name} (${file.size || 'unknown'} bytes)`)
-
-  // Download the actual file content
-  const contentResponse = await fetch(downloadUrl)
+  const response = await fetch(contentUrl, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+    redirect: 'follow'  // Automatically follow 302 redirect
+  })
   
-  if (!contentResponse.ok) {
-    throw new Error(`Kunne ikke laste ned fil ${file.name}: ${contentResponse.status}`)
+  if (!response.ok) {
+    console.error(`Failed to download ${fileName}: ${response.status}`)
+    throw new Error(`Kunne ikke laste ned fil ${fileName}: ${response.status}`)
   }
 
   // Try to detect encoding - first try UTF-8, then fallback to Windows-1252
-  const buffer = await contentResponse.arrayBuffer()
+  const buffer = await response.arrayBuffer()
   let content = new TextDecoder('utf-8').decode(buffer)
   
   // Check for garbled Nordic characters
@@ -182,14 +203,17 @@ async function downloadFileContent(accessToken: string, file: GraphDriveItem): P
     content = new TextDecoder('windows-1252').decode(buffer)
   }
 
+  console.log(`Successfully downloaded ${fileName} (${buffer.byteLength} bytes)`)
   return content
 }
 
-async function deleteFile(accessToken: string, shareUrl: string, itemId: string): Promise<void> {
-  const shareId = extractShareIdFromUrl(shareUrl)
-  
+async function deleteFile(
+  accessToken: string, 
+  driveId: string, 
+  itemId: string
+): Promise<void> {
   const response = await fetch(
-    `https://graph.microsoft.com/v1.0/shares/${shareId}/driveItem/children/${itemId}`,
+    `https://graph.microsoft.com/v1.0/drives/${driveId}/items/${itemId}`,
     {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${accessToken}` }
@@ -198,6 +222,7 @@ async function deleteFile(accessToken: string, shareUrl: string, itemId: string)
 
   if (!response.ok && response.status !== 204) {
     console.error(`Failed to delete file ${itemId}: ${response.status}`)
+    throw new Error(`Kunne ikke slette fil: ${response.status}`)
   } else {
     console.log(`Successfully deleted file ${itemId}`)
   }
@@ -796,9 +821,9 @@ Deno.serve(async (req) => {
       const accessToken = await getGraphAccessToken()
       console.log('Successfully obtained Azure AD access token')
 
-      // Get files from OneDrive folder
-      const files = await getFilesInFolder(accessToken, config.onedrive_folder_url)
-      console.log(`Found ${files.length} items in OneDrive folder`)
+      // Get files from OneDrive folder (now returns driveId + files)
+      const { driveId, files } = await getFilesInFolder(accessToken, config.onedrive_folder_url)
+      console.log(`Found ${files.length} items in OneDrive folder (driveId: ${driveId})`)
 
       // Filter to only relevant file types
       const relevantFiles = files.filter(f => {
@@ -820,7 +845,7 @@ Deno.serve(async (req) => {
 
       for (const file of prdFiles) {
         console.log(`Processing product file: ${file.name}`)
-        const content = await downloadFileContent(accessToken, file)
+        const content = await downloadFileContent(accessToken, driveId, file.id, file.name)
         const { products, errors } = parsePrdFile(content)
         allProducts = [...allProducts, ...products]
         allErrors.push(...errors.map(e => `${file.name}: ${e}`))
@@ -828,7 +853,7 @@ Deno.serve(async (req) => {
 
       for (const file of cusFiles) {
         console.log(`Processing customer file: ${file.name}`)
-        const content = await downloadFileContent(accessToken, file)
+        const content = await downloadFileContent(accessToken, driveId, file.id, file.name)
         const { customers, errors } = parseCusFile(content)
         allCustomers = [...allCustomers, ...customers]
         allErrors.push(...errors.map(e => `${file.name}: ${e}`))
@@ -863,7 +888,7 @@ Deno.serve(async (req) => {
           continue
         }
 
-        const content = await downloadFileContent(accessToken, file)
+        const content = await downloadFileContent(accessToken, driveId, file.id, file.name)
         const { orders, errors } = parseOd0File(content)
         allErrors.push(...errors.map(e => `${file.name}: ${e}`))
 
@@ -892,7 +917,7 @@ Deno.serve(async (req) => {
       // Delete processed files if configured
       for (const file of filesToDelete) {
         try {
-          await deleteFile(accessToken, config.onedrive_folder_url, file.id)
+          await deleteFile(accessToken, driveId, file.id)
           console.log(`Deleted file: ${file.name}`)
         } catch (deleteError) {
           console.error(`Failed to delete ${file.name}:`, deleteError)
