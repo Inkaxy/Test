@@ -604,12 +604,23 @@ export default function DisplaySettingsPage() {
                 <AccordionContent className="space-y-4 pt-2">
                   <div className="flex items-center justify-between">
                     <div>
-                      <Label>Vis total fremdrift</Label>
-                      <p className="text-xs text-muted-foreground">Overordnet prosent ferdig</p>
+                      <Label>Vis fremdriftskort</Label>
+                      <p className="text-xs text-muted-foreground">Kort med overordnet prosent ferdig</p>
                     </div>
                     <Switch
                       checked={settings.stats_show_total_progress}
                       onCheckedChange={(v) => updateSetting('stats_show_total_progress', v)}
+                    />
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label>Vis fremdriftsbar</Label>
+                      <p className="text-xs text-muted-foreground">Progresjonslinjen i fremdriftskortet</p>
+                    </div>
+                    <Switch
+                      checked={settings.stats_show_progress_bar}
+                      onCheckedChange={(v) => updateSetting('stats_show_progress_bar', v)}
                     />
                   </div>
                   
