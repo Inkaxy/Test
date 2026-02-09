@@ -165,6 +165,7 @@ export function OrderManagementCard() {
       const count = await deleteOrdersForDate.mutateAsync({
         date: forDate,
         categoryId: selectedCategoryId !== 'all' ? selectedCategoryId : undefined,
+        tripId: selectedTripId !== 'all' ? selectedTripId : undefined,
       });
       
       toast({
