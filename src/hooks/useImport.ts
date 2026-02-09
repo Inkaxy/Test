@@ -54,7 +54,15 @@ export function useImport() {
     const errors: string[] = [];
     let deliveryDate: Date | null = null;
     
-    for (const file of files) {
+    // Sort files in correct processing order: PRD first, then CUS, then OD0
+    const FILE_ORDER: Record<string, number> = { prd: 0, cus: 1, od0: 2 };
+    const sortedFiles = [...files].sort((a, b) => {
+      const extA = a.name.split('.').pop()?.toLowerCase() || '';
+      const extB = b.name.split('.').pop()?.toLowerCase() || '';
+      return (FILE_ORDER[extA] ?? 99) - (FILE_ORDER[extB] ?? 99);
+    });
+    
+    for (const file of sortedFiles) {
       const content = await readFileAsText(file);
       const ext = file.name.split('.').pop()?.toLowerCase();
       
