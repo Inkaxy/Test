@@ -143,7 +143,14 @@ export function useDeleteImportBatch() {
   
   return useMutation({
     mutationFn: async ({ batchId }: DeleteImportBatchParams): Promise<number> => {
-      // Fetch all orders in this batch
+      // First fetch the batch metadata so we can use it as fallback
+      const { data: batchInfo } = await supabase
+        .from('import_batches')
+        .select('id, bakery_id, delivery_date, category_id, trip_id')
+        .eq('id', batchId)
+        .maybeSingle();
+      
+      // Fetch all orders in this batch by import_batch_id
       let allOrderIds: string[] = [];
       let from = 0;
       const pageSize = 1000;
@@ -161,6 +168,40 @@ export function useDeleteImportBatch() {
         allOrderIds = allOrderIds.concat(data.map(o => o.id));
         if (data.length < pageSize) break;
         from += pageSize;
+      }
+      
+      // Fallback: if no orders matched import_batch_id, find by delivery_date + category_id + trip_id
+      // This handles orders imported before import_batch_id was consistently set
+      if (allOrderIds.length === 0 && batchInfo) {
+        from = 0;
+        while (true) {
+          let query = supabase
+            .from('orders')
+            .select('id')
+            .eq('bakery_id', batchInfo.bakery_id)
+            .eq('delivery_date', batchInfo.delivery_date)
+            .range(from, from + pageSize - 1);
+          
+          if (batchInfo.category_id) {
+            query = query.eq('category_id', batchInfo.category_id);
+          } else {
+            query = query.is('category_id', null);
+          }
+          
+          if (batchInfo.trip_id) {
+            query = query.eq('trip_id', batchInfo.trip_id);
+          } else {
+            query = query.is('trip_id', null);
+          }
+          
+          const { data, error } = await query;
+          if (error) throw error;
+          if (!data || data.length === 0) break;
+          
+          allOrderIds = allOrderIds.concat(data.map(o => o.id));
+          if (data.length < pageSize) break;
+          from += pageSize;
+        }
       }
       
       if (allOrderIds.length > 0) {
