@@ -407,6 +407,9 @@ export default function Import() {
                 <FolderOpen className="h-4 w-4 text-primary" />
                 <span className="text-sm">
                   Importeres til: <strong>{selectedCategory.name}</strong>
+                  {selectedTrip && (
+                    <> → <Route className="h-3 w-3 inline mx-1" /><strong>{selectedTrip.name}</strong></>
+                  )}
                 </span>
                 <Badge variant="outline" className="text-xs ml-auto">
                   {selectedCategory.packing_mode === 'product_based' ? 'Produktbasert' : 'Kundebasert'}
