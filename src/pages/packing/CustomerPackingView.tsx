@@ -34,6 +34,11 @@ import { DeviationDialog } from '@/components/packing/DeviationDialog';
 import { CustomerOrderCard } from '@/components/packing/CustomerOrderCard';
 import { KioskCustomerTable } from '@/components/packing/KioskCustomerTable';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useTrips } from '@/hooks/useTrips';
+import { useTripProgression } from '@/hooks/useTripProgression';
+import { TripCompleteScreen } from '@/components/packing/TripCompleteScreen';
+import { AllTripsCompleteScreen } from '@/components/packing/AllTripsCompleteScreen';
+import { TripIndicator } from '@/components/packing/TripIndicator';
 
 interface DeviationOrderInfo {
   id: string;
