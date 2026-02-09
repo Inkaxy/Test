@@ -309,6 +309,7 @@ export function useImport() {
           bakery_id: bakeryId,
           delivery_date: deliveryDateStr,
           category_id: data.categoryId,
+          trip_id: data.tripId || null,
           products_count: productsCreated + productsUpdated,
           customers_count: customersCreated + customersUpdated,
           orders_count: data.orders.length,
