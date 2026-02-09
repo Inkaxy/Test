@@ -147,6 +147,15 @@ export default function Import() {
       });
       return;
     }
+
+    if (hasTrips && !selectedTripId) {
+      toast({
+        variant: 'destructive',
+        title: t('common.error'),
+        description: 'Velg en tur før du importerer. Denne kategorien har turer som må velges.',
+      });
+      return;
+    }
     
     setUploadProgress(10);
     
@@ -157,6 +166,7 @@ export default function Import() {
         orders: parsedData.orders,
         deliveryDate: parsedData.deliveryDate,
         categoryId: selectedCategoryId,
+        tripId: selectedTripId,
       });
       
       setUploadProgress(100);
