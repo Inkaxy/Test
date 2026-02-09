@@ -424,7 +424,7 @@ export function OrderManagementCard() {
             Du er i ferd med å slette importen for{' '}
             <strong>{selectedBatch ? format(new Date(selectedBatch.delivery_date), 'dd.MM.yyyy', { locale: nb }) : ''}</strong>
             {selectedBatch?.category?.name && (
-              <> ({selectedBatch.category.name})</>
+              <> ({selectedBatch.category.name}{selectedBatch?.trip?.name ? ` – ${selectedBatch.trip.name}` : ''})</>
             )}
             . Dette vil slette <strong>{selectedBatch?.orders_count || 0} ordre(r)</strong>.
             Denne handlingen kan ikke angres.
