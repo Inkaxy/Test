@@ -103,6 +103,7 @@ export type Database = {
           sync_error: string | null
           sync_status: string | null
           sync_time: string | null
+          trip_id: string | null
           updated_at: string
         }
         Insert: {
@@ -119,6 +120,7 @@ export type Database = {
           sync_error?: string | null
           sync_status?: string | null
           sync_time?: string | null
+          trip_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -135,6 +137,7 @@ export type Database = {
           sync_error?: string | null
           sync_status?: string | null
           sync_time?: string | null
+          trip_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -148,7 +151,62 @@ export type Database = {
           {
             foreignKeyName: "category_onedrive_config_category_id_fkey"
             columns: ["category_id"]
-            isOneToOne: true
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "category_onedrive_config_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "category_trips"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      category_trips: {
+        Row: {
+          bakery_id: string
+          category_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          bakery_id: string
+          category_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          bakery_id?: string
+          category_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "category_trips_bakery_id_fkey"
+            columns: ["bakery_id"]
+            isOneToOne: false
+            referencedRelation: "bakeries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "category_trips_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
             referencedRelation: "categories"
             referencedColumns: ["id"]
           },
@@ -314,6 +372,7 @@ export type Database = {
           imported_by: string | null
           orders_count: number | null
           products_count: number | null
+          trip_id: string | null
         }
         Insert: {
           bakery_id: string
@@ -325,6 +384,7 @@ export type Database = {
           imported_by?: string | null
           orders_count?: number | null
           products_count?: number | null
+          trip_id?: string | null
         }
         Update: {
           bakery_id?: string
@@ -336,6 +396,7 @@ export type Database = {
           imported_by?: string | null
           orders_count?: number | null
           products_count?: number | null
+          trip_id?: string | null
         }
         Relationships: [
           {
@@ -350,6 +411,13 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_batches_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "category_trips"
             referencedColumns: ["id"]
           },
         ]
@@ -416,6 +484,7 @@ export type Database = {
           import_batch_id: string | null
           product_id: string
           quantity: number
+          trip_id: string | null
           updated_at: string | null
         }
         Insert: {
@@ -428,6 +497,7 @@ export type Database = {
           import_batch_id?: string | null
           product_id: string
           quantity?: number
+          trip_id?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -440,6 +510,7 @@ export type Database = {
           import_batch_id?: string | null
           product_id?: string
           quantity?: number
+          trip_id?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -469,6 +540,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "category_trips"
             referencedColumns: ["id"]
           },
         ]
