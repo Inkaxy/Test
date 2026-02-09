@@ -241,10 +241,10 @@ export function OrderManagementCard() {
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Filter by category */}
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end flex-wrap">
             <div className="space-y-2">
               <label className="text-sm font-medium">Filtrer på kategori</label>
-              <Select value={selectedCategoryId} onValueChange={setSelectedCategoryId}>
+              <Select value={selectedCategoryId} onValueChange={handleCategoryChange}>
                 <SelectTrigger className="w-[200px]">
                   <SelectValue placeholder="Velg kategori" />
                 </SelectTrigger>
@@ -258,6 +258,26 @@ export function OrderManagementCard() {
                 </SelectContent>
               </Select>
             </div>
+            
+            {/* Trip filter - only show when a category is selected and has trips */}
+            {selectedCategoryId !== 'all' && trips.length > 0 && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Filtrer på tur</label>
+                <Select value={selectedTripId} onValueChange={setSelectedTripId}>
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue placeholder="Velg tur" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Alle turer</SelectItem>
+                    {trips.map((trip) => (
+                      <SelectItem key={trip.id} value={trip.id}>
+                        {trip.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             
             {/* Delete before date */}
             <div className="flex items-end gap-2">
