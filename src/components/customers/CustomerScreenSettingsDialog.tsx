@@ -98,9 +98,10 @@ export function CustomerScreenSettingsDialog({
 
       const updated = await updateCustomer.mutateAsync(updateData);
 
-      // Ensure UI reflects server truth (and keeps working even if parent keeps a stale customer object)
+      // Ensure UI reflects server truth
       setLocalHasDedicatedDisplay(updated.has_dedicated_display ?? enabled);
       setLocalDisplayToken(updated.display_token ?? (updateData.display_token ?? prevToken) ?? null);
+      setLocalShortDisplayId(updated.short_display_id ?? null);
 
       toast({
         title: t('common.success'),
