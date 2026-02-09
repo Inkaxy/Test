@@ -68,6 +68,11 @@ export function useCustomersForDate(deliveryDate: string, categoryId?: string, s
         query = query.eq('category_id', categoryId);
       }
       
+      // Filter by trip_id if provided
+      if (tripId) {
+        query = query.eq('trip_id', tripId);
+      }
+      
       const { data: orders, error } = await query;
       
       if (error) throw error;
