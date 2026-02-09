@@ -285,6 +285,43 @@ export function OrderManagementCard() {
                 Slett
               </Button>
             </div>
+            
+            {/* Delete for specific date */}
+            <div className="flex items-end gap-2">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Slett ordrer for dato</label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        'w-[200px] justify-start text-left font-normal',
+                        !forDate && 'text-muted-foreground'
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {forDate ? format(forDate, 'dd.MM.yyyy', { locale: nb }) : 'Velg dato'}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={forDate}
+                      onSelect={setForDate}
+                      locale={nb}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <Button
+                variant="destructive"
+                disabled={!forDate}
+                onClick={() => setDeleteForDateOpen(true)}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Slett
+              </Button>
+            </div>
           </div>
           
           {/* Orphaned orders cleanup */}
