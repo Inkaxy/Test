@@ -44,11 +44,11 @@ interface ProductOrder {
   } | null;
 }
 
-function useProductsForDate(date: string, categoryId?: string) {
+function useProductsForDate(date: string, categoryId?: string, tripId?: string | null) {
   const { getActiveBakeryId } = useAuthStore();
   
   return useQuery({
-    queryKey: ['products-for-date', getActiveBakeryId(), date, categoryId],
+    queryKey: ['products-for-date', getActiveBakeryId(), date, categoryId, tripId],
     queryFn: async () => {
       const bakeryId = getActiveBakeryId();
       if (!bakeryId) return [];
