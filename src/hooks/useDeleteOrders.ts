@@ -209,21 +209,7 @@ export function useDeleteOrphanedOrders() {
       
       const orderIds = ordersToDelete.map(o => o.id);
       
-      // Delete packing_status entries first (foreign key constraint)
-      const { error: packingError } = await supabase
-        .from('packing_status')
-        .delete()
-        .in('order_id', orderIds);
-      
-      if (packingError) throw packingError;
-      
-      // Delete the orders
-      const { error: ordersError } = await supabase
-        .from('orders')
-        .delete()
-        .in('id', orderIds);
-      
-      if (ordersError) throw ordersError;
+      await batchDeleteByOrderIds(orderIds);
       
       return orderIds.length;
     },
