@@ -81,6 +81,7 @@ export function PackingCategoryCard({
   const [editColor, setEditColor] = useState(category.card_color || 'primary');
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [detectedDate, setDetectedDate] = useState<Date | null>(null);
+  const [selectedTripId, setSelectedTripId] = useState<string | undefined>();
   
   const updateCategory = useUpdateCategory();
   const deleteCategory = useDeleteCategory();
@@ -91,6 +92,7 @@ export function PackingCategoryCard({
   // Get color classes
   const colorConfig = CARD_COLORS.find(c => c.id === (category.card_color || 'primary')) || CARD_COLORS[0];
   const tripCount = trips.length;
+  const hasTrips = tripCount > 0;
   
   const handleCardClick = () => {
     // Navigate to calendar view for this category
@@ -145,6 +147,15 @@ export function PackingCategoryCard({
   
   const handleImport = async () => {
     if (selectedFiles.length === 0) return;
+
+    if (hasTrips && !selectedTripId) {
+      toast({
+        variant: 'destructive',
+        title: 'Velg tur',
+        description: 'Denne kategorien har turer. Velg hvilken tur ordrene tilhører.',
+      });
+      return;
+    }
     
     try {
       const { data, errors } = await parseFiles(selectedFiles);
@@ -172,16 +183,20 @@ export function PackingCategoryCard({
         orders: data.orders,
         deliveryDate: data.deliveryDate,
         categoryId: category.id,
+        tripId: selectedTripId,
       });
+
+      const tripName = trips.find(t => t.id === selectedTripId)?.name;
       
       toast({
         title: 'Import fullført',
-        description: `${result.ordersCreated} ordrer importert til ${category.name}`,
+        description: `${result.ordersCreated} ordrer importert til ${category.name}${tripName ? ` → ${tripName}` : ''}`,
       });
       
       setIsImportOpen(false);
       setSelectedFiles([]);
       setDetectedDate(null);
+      setSelectedTripId(undefined);
     } catch (error) {
       toast({
         variant: 'destructive',
@@ -494,6 +509,31 @@ export function PackingCategoryCard({
           </DialogHeader>
           
           <div className="space-y-4 py-4">
+            {/* Trip selector */}
+            {hasTrips && (
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <Route className="h-4 w-4" />
+                  Velg tur
+                </Label>
+                <Select value={selectedTripId} onValueChange={setSelectedTripId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Velg tur..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {trips.map((trip) => (
+                      <SelectItem key={trip.id} value={trip.id}>
+                        {trip.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Hver tur har sitt eget OD0-dataområde. Ordrer isoleres per tur.
+                </p>
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label>Velg filer (.CUS, .PRD, .OD0)</Label>
               <div 
@@ -543,7 +583,7 @@ export function PackingCategoryCard({
             </Button>
             <Button 
               onClick={handleImport}
-              disabled={isImporting || selectedFiles.length === 0}
+              disabled={isImporting || selectedFiles.length === 0 || (hasTrips && !selectedTripId)}
             >
               {isImporting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Importer
