@@ -20,7 +20,7 @@ interface TripsManagementDialogProps {
   category: Category | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onOpenOneDriveForTrip?: (tripId: string) => void;
+  onOpenOneDriveForTrip?: (tripId: string, tripName: string) => void;
 }
 
 export function TripsManagementDialog({ category, open, onOpenChange, onOpenOneDriveForTrip }: TripsManagementDialogProps) {
