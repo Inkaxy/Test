@@ -505,6 +505,9 @@ export function OrderManagementCard() {
             {selectedCategoryId !== 'all' && (
               <> i kategorien <strong>{categories.find(c => c.id === selectedCategoryId)?.name}</strong></>
             )}
+            {selectedTripId !== 'all' && (
+              <> for turen <strong>{trips.find(t => t.id === selectedTripId)?.name}</strong></>
+            )}
             . Denne handlingen kan ikke angres.
           </span>
         }
