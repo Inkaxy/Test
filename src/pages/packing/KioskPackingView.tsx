@@ -21,6 +21,11 @@ import { useDisplaySettings, getDefaultDisplaySettings, DisplaySettings } from '
 import { usePackingMutations } from '@/hooks/usePackingMutations';
 import { useOfflineQueue } from '@/hooks/useOfflineQueue';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useTripsForBakery } from '@/hooks/useTrips';
+import { useTripProgression } from '@/hooks/useTripProgression';
+import { TripCompleteScreen } from '@/components/packing/TripCompleteScreen';
+import { AllTripsCompleteScreen } from '@/components/packing/AllTripsCompleteScreen';
+import { TripIndicator } from '@/components/packing/TripIndicator';
 import { useAuthStore } from '@/stores/authStore';
 import { 
   useDeviceId,
@@ -106,9 +111,9 @@ function useCategoryById(categoryId: string | null) {
 }
 
 // Hook to get customers with orders for a date
-function useKioskCustomersForDate(bakeryId: string | null, date: string, categoryId?: string) {
+function useKioskCustomersForDate(bakeryId: string | null, date: string, categoryId?: string, tripId?: string | null) {
   return useQuery({
-    queryKey: ['kiosk-customers-for-date', bakeryId, date, categoryId],
+    queryKey: ['kiosk-customers-for-date', bakeryId, date, categoryId, tripId],
     queryFn: async () => {
       if (!bakeryId) return [];
       
@@ -124,9 +129,13 @@ function useKioskCustomersForDate(bakeryId: string | null, date: string, categor
         .eq('bakery_id', bakeryId)
         .eq('delivery_date', date);
       
-       // Filter by order category (orders.category_id is the source of truth for imported batches)
+       // Filter by order category
        if (categoryId) {
          query = query.eq('category_id', categoryId);
+       }
+       
+       if (tripId) {
+         query = query.eq('trip_id', tripId);
        }
       
       const { data, error } = await query.order('customer(name)');
@@ -236,10 +245,28 @@ export default function KioskPackingView() {
   
   const { data: bakery, isLoading: bakeryLoading } = useBakeryByShortId(bakeryShortId || null);
   const { data: category } = useCategoryById(categoryId || null);
+  
+  // Trips support
+  const { data: trips = [] } = useTripsForBakery(bakery?.id || null, categoryId);
+  const hasTrips = trips.length > 0;
+  
+  // All customers (no trip filter) for trip stats
+  const { data: allCustomersData = [] } = useKioskCustomersForDate(bakery?.id || null, dateStr, categoryId);
+  
+  const getTripStats = useCallback((_tripId: string) => {
+    const total = allCustomersData.reduce((s, c) => s + c.totalOrders, 0);
+    const packed = allCustomersData.reduce((s, c) => s + c.packedOrders, 0);
+    return { totalOrders: total, packedOrders: packed, deviations: 0 };
+  }, [allCustomersData]);
+  
+  const tripProgression = useTripProgression({ trips, getTripStats });
+  const activeTripId = hasTrips ? tripProgression.activeTripId : null;
+  
   const { data: customersData = [], isLoading: customersLoading } = useKioskCustomersForDate(
     bakery?.id || null, 
     dateStr, 
-    categoryId
+    categoryId,
+    activeTripId
   );
   const { data: displaySettings } = useDisplaySettings(bakery?.id || null, categoryId, 'packing');
   const settings: DisplaySettings = displaySettings || getDefaultDisplaySettings();
@@ -579,6 +606,33 @@ export default function KioskPackingView() {
     }
   };
   
+  // Trip complete screens
+  if (hasTrips && tripProgression.allComplete) {
+    return (
+      <AllTripsCompleteScreen
+        tripStats={tripProgression.allTripStats}
+        onBackToCalendar={() => window.history.back()}
+        backgroundColor={settings.background_color}
+        textColor={settings.text_color}
+      />
+    );
+  }
+
+  if (hasTrips && tripProgression.isComplete && tripProgression.nextTrip) {
+    return (
+      <TripCompleteScreen
+        currentTrip={tripProgression.activeTrip!}
+        nextTrip={tripProgression.nextTrip}
+        packedOrders={tripProgression.stats.packedOrders}
+        deviations={tripProgression.stats.deviations}
+        onStartNext={tripProgression.startNextTrip}
+        onBackToOverview={() => window.history.back()}
+        backgroundColor={settings.background_color}
+        textColor={settings.text_color}
+      />
+    );
+  }
+
   // Loading state
   if (bakeryLoading || customersLoading) {
     return (
@@ -862,6 +916,28 @@ export default function KioskPackingView() {
           />
         </div>
       </header>
+
+      {/* Trip indicator */}
+      {hasTrips && tripProgression.activeTrip && (
+        <div className="mb-4 flex justify-center">
+          <TripIndicator
+            activeTrip={tripProgression.activeTrip}
+            activeTripIndex={tripProgression.activeTripIndex}
+            totalTrips={tripProgression.totalTrips}
+            progress={tripProgression.progress}
+            onPrevTrip={() => {
+              const prev = tripProgression.sortedTrips[tripProgression.activeTripIndex - 1];
+              if (prev) tripProgression.goToTrip(prev.id);
+            }}
+            onNextTrip={() => {
+              const next = tripProgression.sortedTrips[tripProgression.activeTripIndex + 1];
+              if (next) tripProgression.goToTrip(next.id);
+            }}
+            textColor={settings.text_color}
+            accentColor={settings.packing_color}
+          />
+        </div>
+      )}
 
       {/* Stats section */}
       {(settings.stats_show_total_progress || settings.stats_show_packed_count || settings.stats_show_remaining_count) && customers.length > 0 && (

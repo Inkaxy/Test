@@ -161,7 +161,16 @@
     "pendingSync": "operations pending sync",
     "syncNow": "Sync now",
     "queuedForSync": "Operation saved and will sync when you're back online",
-    "offlineMode": "Offline mode - changes saved locally"
+    "offlineMode": "Offline mode - changes saved locally",
+    "tripComplete": "{{name}} complete!",
+    "tripPackedCount": "{{count}} orders packed",
+    "tripDeviationCount": "{{count}} deviations",
+    "startNextTrip": "Start packing {{name}}",
+    "backToOverview": "Back to overview",
+    "backToCalendar": "Back to calendar",
+    "allTripsComplete": "All done for today!",
+    "totalPackedSummary": "{{count}} orders packed total",
+    "tripOf": "Trip {{current}} of {{total}}"
   },
   "products": {
     "title": "Products",

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
@@ -13,6 +13,11 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { usePackingMutations } from '@/hooks/usePackingMutations';
 import { DeviationDialog } from '@/components/packing/DeviationDialog';
+import { useTripsForBakery } from '@/hooks/useTrips';
+import { useTripProgression } from '@/hooks/useTripProgression';
+import { TripCompleteScreen } from '@/components/packing/TripCompleteScreen';
+import { AllTripsCompleteScreen } from '@/components/packing/AllTripsCompleteScreen';
+import { TripIndicator } from '@/components/packing/TripIndicator';
 
 interface DeviationOrderInfo {
   id: string;
@@ -84,9 +89,9 @@ function useCategoryById(categoryId: string | null) {
 }
 
 // Hook to get products with orders for a date (product-based view)
-function useKioskProductsForDate(bakeryId: string | null, date: string, categoryId?: string) {
+function useKioskProductsForDate(bakeryId: string | null, date: string, categoryId?: string, tripId?: string | null) {
   return useQuery({
-    queryKey: ['kiosk-products-for-date', bakeryId, date, categoryId],
+    queryKey: ['kiosk-products-for-date', bakeryId, date, categoryId, tripId],
     queryFn: async () => {
       if (!bakeryId) return [];
       
@@ -104,6 +109,10 @@ function useKioskProductsForDate(bakeryId: string | null, date: string, category
       
       if (categoryId) {
         query = query.eq('product.category_id', categoryId);
+      }
+      
+      if (tripId) {
+        query = query.eq('trip_id', tripId);
       }
       
       const { data, error } = await query.order('product(name)');
@@ -184,10 +193,27 @@ export default function ProductKioskPackingView() {
   
   const { data: bakery, isLoading: bakeryLoading } = useBakeryByShortId(bakeryShortId || null);
   const { data: category } = useCategoryById(categoryId || null);
+  
+  // Trips support
+  const { data: trips = [] } = useTripsForBakery(bakery?.id || null, categoryId);
+  const hasTrips = trips.length > 0;
+  
+  const { data: allProducts = [] } = useKioskProductsForDate(bakery?.id || null, dateStr, categoryId);
+  
+  const getTripStats = useCallback((_tripId: string) => {
+    const total = allProducts.reduce((s, p) => s + p.totalOrders, 0);
+    const packed = allProducts.reduce((s, p) => s + p.packedOrders, 0);
+    return { totalOrders: total, packedOrders: packed, deviations: 0 };
+  }, [allProducts]);
+  
+  const tripProgression = useTripProgression({ trips, getTripStats });
+  const activeTripId = hasTrips ? tripProgression.activeTripId : null;
+  
   const { data: products = [], isLoading: productsLoading } = useKioskProductsForDate(
     bakery?.id || null, 
     dateStr, 
-    categoryId
+    categoryId,
+    activeTripId
   );
   
   // Use unified packing mutations hook in kiosk mode
@@ -290,6 +316,29 @@ export default function ProductKioskPackingView() {
         return <Badge variant="secondary" className="text-lg px-3 py-1">{t('packing.pending')}</Badge>;
     }
   };
+  
+  // Trip complete screens
+  if (hasTrips && tripProgression.allComplete) {
+    return (
+      <AllTripsCompleteScreen
+        tripStats={tripProgression.allTripStats}
+        onBackToCalendar={() => window.history.back()}
+      />
+    );
+  }
+
+  if (hasTrips && tripProgression.isComplete && tripProgression.nextTrip) {
+    return (
+      <TripCompleteScreen
+        currentTrip={tripProgression.activeTrip!}
+        nextTrip={tripProgression.nextTrip}
+        packedOrders={tripProgression.stats.packedOrders}
+        deviations={tripProgression.stats.deviations}
+        onStartNext={tripProgression.startNextTrip}
+        onBackToOverview={() => window.history.back()}
+      />
+    );
+  }
   
   // Loading state
   if (bakeryLoading || productsLoading) {

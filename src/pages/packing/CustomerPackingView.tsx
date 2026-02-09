@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -34,6 +34,11 @@ import { DeviationDialog } from '@/components/packing/DeviationDialog';
 import { CustomerOrderCard } from '@/components/packing/CustomerOrderCard';
 import { KioskCustomerTable } from '@/components/packing/KioskCustomerTable';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useTrips } from '@/hooks/useTrips';
+import { useTripProgression } from '@/hooks/useTripProgression';
+import { TripCompleteScreen } from '@/components/packing/TripCompleteScreen';
+import { AllTripsCompleteScreen } from '@/components/packing/AllTripsCompleteScreen';
+import { TripIndicator } from '@/components/packing/TripIndicator';
 
 interface DeviationOrderInfo {
   id: string;
@@ -80,7 +85,23 @@ export default function CustomerPackingView() {
     sortDirection: settings.customer_sort_direction || 'asc',
   };
   
-  const { data: customers = [], isLoading: customersLoading } = useCustomersForDate(dateStr, categoryId, sortOptions);
+  // Trips support
+  const { data: trips = [] } = useTrips(categoryId);
+  const hasTrips = trips.length > 0;
+  
+  // Fetch all customers (no trip filter) for computing trip stats
+  const { data: allCustomers = [] } = useCustomersForDate(dateStr, categoryId, sortOptions);
+  
+  const getTripStats = useCallback((_tripId: string) => {
+    const total = allCustomers.reduce((s, c) => s + c.totalOrders, 0);
+    const packed = allCustomers.reduce((s, c) => s + c.packedOrders, 0);
+    return { totalOrders: total, packedOrders: packed, deviations: 0 };
+  }, [allCustomers]);
+  
+  const tripProgression = useTripProgression({ trips, getTripStats });
+  const activeTripId = hasTrips ? tripProgression.activeTripId : null;
+  
+  const { data: customers = [], isLoading: customersLoading } = useCustomersForDate(dateStr, categoryId, sortOptions, activeTripId);
   const { data: locks = [] } = useCustomerLocks(dateStr, bakeryId);
   const { data: bakerySettings } = useBakerySettings();
   useRealtimeCustomerLocks(dateStr, bakeryId);
@@ -277,6 +298,33 @@ export default function CustomerPackingView() {
   const alternateRowsEnabled = bakerySettings?.packing_row_style?.alternateRowsEnabled || false;
   const alternateRowColor = bakerySettings?.packing_row_style?.alternateRowColor || 'amber';
   
+  // Trip complete screens
+  if (hasTrips && tripProgression.allComplete) {
+    return (
+      <AllTripsCompleteScreen
+        tripStats={tripProgression.allTripStats}
+        onBackToCalendar={() => navigate('/packing')}
+        backgroundColor={settings.background_color}
+        textColor={settings.text_color}
+      />
+    );
+  }
+
+  if (hasTrips && tripProgression.isComplete && tripProgression.nextTrip) {
+    return (
+      <TripCompleteScreen
+        currentTrip={tripProgression.activeTrip!}
+        nextTrip={tripProgression.nextTrip}
+        packedOrders={tripProgression.stats.packedOrders}
+        deviations={tripProgression.stats.deviations}
+        onStartNext={tripProgression.startNextTrip}
+        onBackToOverview={() => navigate('/packing')}
+        backgroundColor={settings.background_color}
+        textColor={settings.text_color}
+      />
+    );
+  }
+
   // Loading state
   if (customersLoading) {
     return (
@@ -583,6 +631,28 @@ export default function CustomerPackingView() {
           />
         </div>
       </header>
+
+      {/* Trip indicator */}
+      {hasTrips && tripProgression.activeTrip && (
+        <div className="mb-4 flex justify-center">
+          <TripIndicator
+            activeTrip={tripProgression.activeTrip}
+            activeTripIndex={tripProgression.activeTripIndex}
+            totalTrips={tripProgression.totalTrips}
+            progress={tripProgression.progress}
+            onPrevTrip={() => {
+              const prev = tripProgression.sortedTrips[tripProgression.activeTripIndex - 1];
+              if (prev) tripProgression.goToTrip(prev.id);
+            }}
+            onNextTrip={() => {
+              const next = tripProgression.sortedTrips[tripProgression.activeTripIndex + 1];
+              if (next) tripProgression.goToTrip(next.id);
+            }}
+            textColor={settings.text_color}
+            accentColor={settings.packing_color}
+          />
+        </div>
+      )}
 
       {/* Stats section */}
       {(settings.stats_show_total_progress || settings.stats_show_packed_count || settings.stats_show_remaining_count) && customers.length > 0 && (

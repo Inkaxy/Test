@@ -27,6 +27,11 @@ import { useDisplaySettings, getDefaultDisplaySettings, DisplaySettings } from '
 import { useCategories } from '@/hooks/useCategories';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useKeyboardNavigation } from '@/hooks/useKeyboardNavigation';
+import { useTrips } from '@/hooks/useTrips';
+import { useTripProgression } from '@/hooks/useTripProgression';
+import { TripCompleteScreen } from '@/components/packing/TripCompleteScreen';
+import { AllTripsCompleteScreen } from '@/components/packing/AllTripsCompleteScreen';
+import { TripIndicator } from '@/components/packing/TripIndicator';
 
 type DeviationType = 'shortage' | 'damaged' | 'wrong_product' | 'other';
 
@@ -44,11 +49,11 @@ interface ProductOrder {
   } | null;
 }
 
-function useProductsForDate(date: string, categoryId?: string) {
+function useProductsForDate(date: string, categoryId?: string, tripId?: string | null) {
   const { getActiveBakeryId } = useAuthStore();
   
   return useQuery({
-    queryKey: ['products-for-date', getActiveBakeryId(), date, categoryId],
+    queryKey: ['products-for-date', getActiveBakeryId(), date, categoryId, tripId],
     queryFn: async () => {
       const bakeryId = getActiveBakeryId();
       if (!bakeryId) return [];
@@ -67,6 +72,10 @@ function useProductsForDate(date: string, categoryId?: string) {
       
       if (categoryId) {
         query = query.eq('product.category_id', categoryId);
+      }
+      
+      if (tripId) {
+        query = query.eq('trip_id', tripId);
       }
       
       const { data, error } = await query.order('product(name)');
@@ -144,7 +153,26 @@ export default function ProductPackingView() {
   const dateStr = date || format(new Date(), 'yyyy-MM-dd');
   const bakeryId = getActiveBakeryId();
   
-  const { data: products = [], isLoading: productsLoading } = useProductsForDate(dateStr, categoryId);
+  // Trips support
+  const { data: trips = [] } = useTrips(categoryId);
+  const hasTrips = trips.length > 0;
+  
+  // All products (unfiltered by trip) for trip stats calculation
+  const { data: allProducts = [] } = useProductsForDate(dateStr, categoryId);
+  
+  const getTripStats = useCallback((tripId: string) => {
+    // We need to calculate stats from allProducts filtered by tripId
+    // Since products query doesn't have tripId info per-order, we use a separate approach
+    // For now, we rely on the filtered products query per active trip
+    const total = allProducts.reduce((s, p) => s + p.totalOrders, 0);
+    const packed = allProducts.reduce((s, p) => s + p.packedOrders, 0);
+    return { totalOrders: total, packedOrders: packed, deviations: 0 };
+  }, [allProducts]);
+  
+  const tripProgression = useTripProgression({ trips, getTripStats });
+  const activeTripId = hasTrips ? tripProgression.activeTripId : null;
+  
+  const { data: products = [], isLoading: productsLoading } = useProductsForDate(dateStr, categoryId, activeTripId);
   
   // Get display settings (use 'shared' type for product-based packing)
   const { data: displaySettings } = useDisplaySettings(bakeryId || null, categoryId, 'shared');
@@ -177,7 +205,7 @@ export default function ProductPackingView() {
         },
         () => {
           queryClient.invalidateQueries({ 
-            queryKey: ['products-for-date', bakeryId, dateStr, categoryId] 
+            queryKey: ['products-for-date', bakeryId, dateStr] 
           });
         }
       )
@@ -396,6 +424,33 @@ export default function ProductPackingView() {
         return <Badge style={{ backgroundColor: settings.pending_color, color: '#fff' }}>{t('packing.pending')}</Badge>;
     }
   };
+
+  // Trip complete screens
+  if (hasTrips && tripProgression.allComplete) {
+    return (
+      <AllTripsCompleteScreen
+        tripStats={tripProgression.allTripStats}
+        onBackToCalendar={() => navigate('/packing')}
+        backgroundColor={settings.background_color}
+        textColor={settings.text_color}
+      />
+    );
+  }
+
+  if (hasTrips && tripProgression.isComplete && tripProgression.nextTrip) {
+    return (
+      <TripCompleteScreen
+        currentTrip={tripProgression.activeTrip!}
+        nextTrip={tripProgression.nextTrip}
+        packedOrders={tripProgression.stats.packedOrders}
+        deviations={tripProgression.stats.deviations}
+        onStartNext={tripProgression.startNextTrip}
+        onBackToOverview={() => navigate('/packing')}
+        backgroundColor={settings.background_color}
+        textColor={settings.text_color}
+      />
+    );
+  }
 
   // Loading state
   if (productsLoading) {
@@ -867,6 +922,28 @@ export default function ProductPackingView() {
           />
         </div>
       </header>
+
+      {/* Trip indicator */}
+      {hasTrips && tripProgression.activeTrip && (
+        <div className="mb-4 flex justify-center">
+          <TripIndicator
+            activeTrip={tripProgression.activeTrip}
+            activeTripIndex={tripProgression.activeTripIndex}
+            totalTrips={tripProgression.totalTrips}
+            progress={tripProgression.progress}
+            onPrevTrip={() => {
+              const prev = tripProgression.sortedTrips[tripProgression.activeTripIndex - 1];
+              if (prev) tripProgression.goToTrip(prev.id);
+            }}
+            onNextTrip={() => {
+              const next = tripProgression.sortedTrips[tripProgression.activeTripIndex + 1];
+              if (next) tripProgression.goToTrip(next.id);
+            }}
+            textColor={settings.text_color}
+            accentColor={settings.packing_color}
+          />
+        </div>
+      )}
 
       {/* Stats section */}
       {(settings.stats_show_total_progress || settings.stats_show_packed_count || settings.stats_show_remaining_count) && products.length > 0 && (
