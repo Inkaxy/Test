@@ -516,6 +516,7 @@ async function importData(
   supabase: ReturnType<typeof createClient>,
   bakeryId: string,
   categoryId: string,
+  tripId: string | null,
   products: ParsedProduct[],
   customers: ParsedCustomer[],
   orders: ParsedOrder[],
