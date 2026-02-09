@@ -11,6 +11,7 @@ import {
   readFileAsText,
   extractDateFromFilename 
 } from '@/lib/fileParser';
+import { removeLeadingZeros } from '@/lib/idUtils';
 
 function toLocalDateString(date: Date): string {
   // Avoid timezone drift from toISOString() when we treat dates as date-only.
@@ -37,6 +38,9 @@ interface ImportResult {
   ordersCreated: number;
   orderProductsCreated: number;
   skippedOrders: number;
+  skippedMissingCustomer: number;
+  skippedMissingProduct: number;
+  skippedDuplicate: number;
   batchId: string;
 }
 
@@ -142,8 +146,11 @@ export function useImport() {
       let ordersCreated = 0;
       let orderProductsCreated = 0;
       let skippedOrders = 0;
+      let skippedMissingCustomer = 0;
+      let skippedMissingProduct = 0;
+      let skippedDuplicate = 0;
       
-      // Map to store product_number -> product_id
+      // Map to store product_number -> product_id (normalized keys)
       const productMap = new Map<string, string>();
       const customerMap = new Map<string, string>();
       
@@ -191,11 +198,26 @@ export function useImport() {
       const defaultCategoryId = defaultCategory?.id || null;
       
       // Build maps for existing products/customers
+      // IMPORTANT: Use normalized keys (removeLeadingZeros) to ensure consistent matching
+      // between PRD files (which may keep original numbers) and OD0 files (which normalize)
       const existingProductMap = new Map<string, string>();
-      existingProducts?.forEach(p => existingProductMap.set(p.product_number, p.id));
+      existingProducts?.forEach(p => {
+        existingProductMap.set(p.product_number, p.id);
+        // Also add normalized version for cross-format matching
+        const normalized = removeLeadingZeros(p.product_number);
+        if (normalized !== p.product_number) {
+          existingProductMap.set(normalized, p.id);
+        }
+      });
       
       const existingCustomerMap = new Map<string, string>();
-      existingCustomers?.forEach(c => existingCustomerMap.set(c.customer_number, c.id));
+      existingCustomers?.forEach(c => {
+        existingCustomerMap.set(c.customer_number, c.id);
+        const normalized = removeLeadingZeros(c.customer_number);
+        if (normalized !== c.customer_number) {
+          existingCustomerMap.set(normalized, c.id);
+        }
+      });
       
       // Build set of existing order keys for quick duplicate check
       const existingOrderKeys = new Set<string>();
@@ -213,10 +235,12 @@ export function useImport() {
       const productsToUpdate: Array<{ id: string; name: string }> = [];
       
       for (const product of data.products) {
-        const existingId = existingProductMap.get(product.productNumber);
+        const existingId = existingProductMap.get(product.productNumber) 
+          || existingProductMap.get(removeLeadingZeros(product.productNumber));
         if (existingId) {
           productsToUpdate.push({ id: existingId, name: product.name });
           productMap.set(product.productNumber, existingId);
+          productMap.set(removeLeadingZeros(product.productNumber), existingId);
           productsUpdated++;
         } else {
           productsToInsert.push({
@@ -237,6 +261,7 @@ export function useImport() {
         
         newProducts?.forEach(p => {
           productMap.set(p.product_number, p.id);
+          productMap.set(removeLeadingZeros(p.product_number), p.id);
           productsCreated++;
         });
       }
@@ -263,7 +288,8 @@ export function useImport() {
       const customersToUpdate: Array<{ id: string; name: string; address: string | null }> = [];
       
       for (const customer of data.customers) {
-        const existingId = existingCustomerMap.get(customer.customerNumber);
+        const existingId = existingCustomerMap.get(customer.customerNumber)
+          || existingCustomerMap.get(removeLeadingZeros(customer.customerNumber));
         if (existingId) {
           customersToUpdate.push({ 
             id: existingId, 
@@ -271,6 +297,7 @@ export function useImport() {
             address: customer.address 
           });
           customerMap.set(customer.customerNumber, existingId);
+          customerMap.set(removeLeadingZeros(customer.customerNumber), existingId);
           customersUpdated++;
         } else {
           customersToInsert.push({
@@ -291,6 +318,7 @@ export function useImport() {
         
         newCustomers?.forEach(c => {
           customerMap.set(c.customer_number, c.id);
+          customerMap.set(removeLeadingZeros(c.customer_number), c.id);
           customersCreated++;
         });
       }
@@ -307,15 +335,23 @@ export function useImport() {
         );
       }
       
-      // Add remaining products/customers to maps
+      // Add remaining products/customers to maps (with normalized keys)
       existingProducts?.forEach(p => {
         if (!productMap.has(p.product_number)) {
           productMap.set(p.product_number, p.id);
+        }
+        const normalizedPn = removeLeadingZeros(p.product_number);
+        if (!productMap.has(normalizedPn)) {
+          productMap.set(normalizedPn, p.id);
         }
       });
       existingCustomers?.forEach(c => {
         if (!customerMap.has(c.customer_number)) {
           customerMap.set(c.customer_number, c.id);
+        }
+        const normalizedCn = removeLeadingZeros(c.customer_number);
+        if (!customerMap.has(normalizedCn)) {
+          customerMap.set(normalizedCn, c.id);
         }
       });
       
@@ -354,8 +390,9 @@ export function useImport() {
         const customerId = customerMap.get(order.customerNumber);
         
         if (!customerId) {
-          console.warn(`Hopper over ordre: kunde ${order.customerNumber} ikke funnet`);
+          console.warn(`Hopper over ordre: kunde ${order.customerNumber} ikke funnet. Tilgjengelige: ${Array.from(customerMap.keys()).slice(0, 5).join(', ')}...`);
           skippedOrders++;
+          skippedMissingCustomer++;
           continue;
         }
         
@@ -363,7 +400,8 @@ export function useImport() {
           const productId = productMap.get(orderProduct.productNumber);
           
           if (!productId) {
-            console.warn(`Hopper over ordrelinje: produkt ${orderProduct.productNumber} ikke funnet`);
+            console.warn(`Hopper over ordrelinje: produkt "${orderProduct.productNumber}" ikke funnet. Tilgjengelige: ${Array.from(productMap.keys()).slice(0, 5).join(', ')}...`);
+            skippedMissingProduct++;
             continue;
           }
           
@@ -371,6 +409,7 @@ export function useImport() {
           const orderKey = `${customerId}:${productId}`;
           if (existingOrderKeys.has(orderKey)) {
             console.log(`Duplikat ordre: kunde ${order.customerNumber}, produkt ${orderProduct.productNumber}`);
+            skippedDuplicate++;
             continue;
           }
           
@@ -390,6 +429,8 @@ export function useImport() {
         }
       }
       
+      console.log(`Import stats: ${ordersToInsert.length} to insert, skipped: ${skippedMissingCustomer} missing customer, ${skippedMissingProduct} missing product, ${skippedDuplicate} duplicate`);
+      
       // Batch insert orders in chunks of 500
       const CHUNK_SIZE = 500;
       const createdOrderIds: string[] = [];
@@ -403,7 +444,7 @@ export function useImport() {
         
         if (orderError) {
           console.error(`Feil ved batch-innsetting av ordrer:`, orderError);
-          continue;
+          throw new Error(`Kunne ikke sette inn ordrer: ${orderError.message}`);
         }
         
         if (newOrders) {
@@ -435,6 +476,9 @@ export function useImport() {
         ordersCreated,
         orderProductsCreated,
         skippedOrders,
+        skippedMissingCustomer,
+        skippedMissingProduct,
+        skippedDuplicate,
         batchId: batch.id,
       };
     },
