@@ -56,7 +56,7 @@ Deno.serve(async (req) => {
     // Get all configs with sync_enabled = true
     const { data: configs, error: configsError } = await supabase
       .from('category_onedrive_config')
-      .select('id, category_id, sync_days, sync_time')
+      .select('id, category_id, trip_id, sync_days, sync_time')
       .eq('sync_enabled', true)
 
     if (configsError) {
@@ -96,7 +96,7 @@ Deno.serve(async (req) => {
       // Trigger sync via edge function (service role call)
       try {
         const { error: invokeError } = await supabase.functions.invoke('sync-onedrive', {
-          body: { categoryId: config.category_id, cronTriggered: true },
+          body: { categoryId: config.category_id, tripId: config.trip_id ?? undefined, cronTriggered: true },
           headers: { 'X-Cron-Secret': cronSecret }
         })
 
