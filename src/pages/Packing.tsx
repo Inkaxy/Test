@@ -9,6 +9,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { PackingCategoryCard } from '@/components/packing/PackingCategoryCard';
 import { AddPackingCategoryCard } from '@/components/packing/AddPackingCategoryCard';
 import { OneDriveConfigDialog } from '@/components/categories/OneDriveConfigDialog';
+import { TripsManagementDialog } from '@/components/packing/TripsManagementDialog';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -20,6 +21,7 @@ export default function Packing() {
   const { data: categories = [], isLoading } = useCategories();
   const updateCategory = useUpdateCategory();
   const [oneDriveCategory, setOneDriveCategory] = useState<Category | null>(null);
+  const [tripsCategory, setTripsCategory] = useState<Category | null>(null);
   const [isEditMode, setIsEditMode] = useState(false);
   const [orderedCategories, setOrderedCategories] = useState<Category[]>([]);
   const [isSaving, setIsSaving] = useState(false);
@@ -175,6 +177,7 @@ export default function Packing() {
                 <PackingCategoryCard
                   category={category}
                   onOneDriveConfig={() => setOneDriveCategory(category)}
+                  onManageTrips={() => setTripsCategory(category)}
                   isEditMode={true}
                   bakeryShortId={bakery?.short_id || ''}
                 />
@@ -213,6 +216,7 @@ export default function Packing() {
                 <PackingCategoryCard
                   category={category}
                   onOneDriveConfig={() => setOneDriveCategory(category)}
+                  onManageTrips={() => setTripsCategory(category)}
                   isEditMode={false}
                   bakeryShortId={bakery?.short_id || ''}
                 />
@@ -247,6 +251,13 @@ export default function Packing() {
         category={oneDriveCategory}
         open={!!oneDriveCategory}
         onOpenChange={(open) => !open && setOneDriveCategory(null)}
+      />
+
+      {/* Trips management dialog */}
+      <TripsManagementDialog
+        category={tripsCategory}
+        open={!!tripsCategory}
+        onOpenChange={(open) => !open && setTripsCategory(null)}
       />
     </div>
   );
