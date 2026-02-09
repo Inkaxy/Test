@@ -26,6 +26,7 @@ interface ImportData {
   orders: ParsedOrder[];
   deliveryDate: Date;
   categoryId: string;
+  tripId?: string;
 }
 
 interface ImportResult {
