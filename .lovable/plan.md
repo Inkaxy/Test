@@ -1,193 +1,171 @@
 
-# Plan: Nye Lyse Temaer for Pakkedisplay
+# Microsoft Graph API-integrasjon for OneDrive Automatisk Import
 
 ## Oversikt
-Utvide tema-biblioteket med **8 nye lyse temaer** som er innovative, gjennomførte og optimalisert for bakerimiljøer med god belysning. Alle fargevalg følger WCAG AA-kontraststandarder (minimum 4.5:1 for tekst) og bruker smarte fargepaletter inspirert av bakeri, natur og moderne design.
-
-## Nye Temaer
-
-### 1. **Nordic Frost** ❄️
-Skandinavisk minimalistisk design med kalde blåtoner
-- Bakgrunn: `#f0f5ff` (frosthvit med blå undertone)
-- Kort: `#ffffff`
-- Tekst: `#1e3a5f` (dyp nordisk blå)
-- Ventende: `#64748b` (skifer)
-- Pakking: `#0ea5e9` (nordisk turkis)
-- Fullført: `#059669` (gran-grønn)
-
-### 2. **Morning Bakery** 🌅
-Varm morgenglød som nybakt brød i sollys
-- Bakgrunn: `#fefbf3` (morgenlys kremhvit)
-- Kort: `#ffffff`
-- Tekst: `#5c4033` (mørk kakao)
-- Ventende: `#a8896c` (lys brødkrust)
-- Pakking: `#e07c24` (gyldent lys)
-- Fullført: `#2d9944` (frisk mynte)
-
-### 3. **Lavender Dreams** 💜
-Elegant og moderne med lavendel-aksenter
-- Bakgrunn: `#f8f5ff` (lys lavendel)
-- Kort: `#ffffff`
-- Tekst: `#3d3466` (dyp aubergine)
-- Ventende: `#8b7fc7` (myk lavendel)
-- Pakking: `#a855f7` (levende lilla)
-- Fullført: `#10b981` (smaragd)
-
-### 4. **Ocean Breeze** 🌊
-Frisk og klar som havet en sommerdag
-- Bakgrunn: `#f0f9ff` (himmelhvit)
-- Kort: `#ffffff`
-- Tekst: `#164e63` (dyp havblå)
-- Ventende: `#0891b2` (turkis)
-- Pakking: `#0284c7` (klar havblå)
-- Fullført: `#059669` (sjøgrønn)
-
-### 5. **Peach Blossom** 🍑
-Myk og innbydende fersken-palett
-- Bakgrunn: `#fff7f4` (lys fersken)
-- Kort: `#ffffff`
-- Tekst: `#7c4a3a` (terrakotta-brun)
-- Ventende: `#c19a8b` (dus fersken)
-- Pakking: `#f97316` (levende oransje)
-- Fullført: `#16a34a` (vårgrønn)
-
-### 6. **Sage Garden** 🌿
-Rolig og naturlig med salviegrønne toner
-- Bakgrunn: `#f4f9f4` (lys løvverk)
-- Kort: `#ffffff`
-- Tekst: `#2d4a3e` (skoggrønn)
-- Ventende: `#6b8e7d` (salvie)
-- Pakking: `#ca8a04` (gyllen honning)
-- Fullført: `#16a34a` (eplegrønn)
-
-### 7. **Vanilla Cream** 🍦
-Klassisk kremhvit med varm undertone
-- Bakgrunn: `#fefdf8` (vaniljekrem)
-- Kort: `#ffffff`
-- Tekst: `#422006` (mørk karamell)
-- Ventende: `#a16207` (gyllen sirup)
-- Pakking: `#ea580c` (varm oransje)
-- Fullført: `#15803d` (naturgrønn)
-
-### 8. **Cherry Blossom** 🌸
-Japansk-inspirert med myke rosa toner
-- Bakgrunn: `#fff5f7` (lys kirsebær)
-- Kort: `#ffffff`
-- Tekst: `#831843` (dyp rose)
-- Ventende: `#be185d` (myk rosa)
-- Pakking: `#db2777` (levende rosa)
-- Fullført: `#059669` (jade-grønn)
+Implementer fullstendig Microsoft Graph API-integrasjon for å automatisere henting, parsing og import av `.PRD`, `.CUS` og `.OD0`-filer fra OneDrive. Systemet bruker Azure AD-autentisering og fungerer for flere bakerier.
 
 ---
 
-## Teknisk Implementasjon
+## Fase 1: Lagre Azure-hemmeligheter
 
-### Fil: `src/components/display-editor/ThemePresetMenu.tsx`
+### Hemmeligheter som må lagres
+Tre nye hemmeligheter i Lovable Cloud:
+1. **AZURE_CLIENT_ID** - Application (client) ID fra Azure Portal
+2. **AZURE_TENANT_ID** - Directory (tenant) ID fra Azure Portal
+3. **AZURE_CLIENT_SECRET** - Client Secret Value fra Azure Portal
 
-#### Nye imports
-Legg til nye ikoner fra Lucide for de nye temaene:
-- `Snowflake` (Nordic Frost)
-- `Sunrise` (Morning Bakery)
-- `Flower2` (Lavender Dreams)
-- `Waves` (Ocean Breeze)
-- `Cherry` (Peach Blossom)
-- `Leaf` (Sage Garden)
-- `IceCream` (Vanilla Cream)
-- `Sparkles` (Cherry Blossom)
+---
 
-#### Utvid THEME_PRESETS array
-Legg til 8 nye tema-objekter i `light` kategorien med alle fargeverdier og beskrivelser på norsk.
+## Fase 2: Reskriv `sync-onedrive` Edge Function
 
-Eksempel på ett tema:
-```typescript
-{
-  id: 'nordic-frost',
-  label: 'Nordisk Frost',
-  description: 'Skandinavisk minimalistisk med kalde blåtoner',
-  icon: <Snowflake className="h-4 w-4" />,
-  category: 'light',
-  background_color: '#f0f5ff',
-  card_background_color: '#ffffff',
-  text_color: '#1e3a5f',
-  pending_color: '#64748b',
-  packing_color: '#0ea5e9',
-  completed_color: '#059669',
-}
+### 2.1 Azure AD OAuth2-autentisering
+```text
+┌─────────────────┐     ┌──────────────────────┐     ┌─────────────────┐
+│  Edge Function  │────▶│  Azure AD Token EP   │────▶│  Access Token   │
+│  (sync-onedrive)│     │  /oauth2/v2.0/token  │     │  (Graph API)    │
+└─────────────────┘     └──────────────────────┘     └─────────────────┘
 ```
 
-### Fil: `src/types/display/appearance.ts`
+**Token-endepunkt:**
+```
+POST https://login.microsoftonline.com/{AZURE_TENANT_ID}/oauth2/v2.0/token
+```
 
-Utvid `ThemePreset` type med de 8 nye tema-IDene:
-```typescript
-export type ThemePreset = 
-  | 'dark' 
-  | 'light' 
-  | 'high-contrast' 
-  | 'bakery-gold' 
-  | 'industrial' 
-  | 'minimalist' 
-  | 'ocean' 
-  | 'forest' 
-  | 'coffee' 
-  | 'wine' 
-  | 'sunrise' 
-  // Nye lyse temaer
-  | 'nordic-frost'
-  | 'morning-bakery'
-  | 'lavender-dreams'
-  | 'ocean-breeze'
-  | 'peach-blossom'
-  | 'sage-garden'
-  | 'vanilla-cream'
-  | 'cherry-blossom'
-  | 'custom';
+**Request body:**
+- `client_id`: AZURE_CLIENT_ID
+- `client_secret`: AZURE_CLIENT_SECRET
+- `scope`: `https://graph.microsoft.com/.default`
+- `grant_type`: `client_credentials`
+
+### 2.2 OneDrive URL-parsing
+Konverter OneDrive delingslenker til Graph API-kompatible identifikatorer:
+- **Input**: `https://1drv.ms/f/...` eller `https://onedrive.live.com/...`
+- **Output**: Drive ID + Item ID for Graph API-kall
+
+### 2.3 Filhenting via Microsoft Graph API
+**Hent filer i mappe:**
+```
+GET https://graph.microsoft.com/v1.0/shares/{shareId}/driveItem/children
+```
+
+**Last ned filinnhold:**
+```
+GET https://graph.microsoft.com/v1.0/shares/{shareId}/driveItem/children/{itemId}/content
+```
+
+### 2.4 Filparsing
+Gjenbruk eksisterende parsing-logikk fra `src/lib/fileParser.ts`:
+- `parsePrdFile()` → Produkter (.PRD)
+- `parseCusFile()` → Kunder (.CUS)
+- `parseOd0File()` → Ordrer (.OD0)
+
+### 2.5 Duplikat-filtrering
+- Les `import_batches` for kombinasjon av bakery + kategori
+- Ignorer filer der `delivery_date` allerede er importert
+- Respekter `auto_delete_days` fra bakery-innstillinger
+
+### 2.6 Database-import
+**Rekkefølge:**
+1. Opprett/oppdater produkter
+2. Opprett/oppdater kunder
+3. Opprett ordrer + packing_status
+4. Opprett import_batch-record
+
+### 2.7 Fil-sletting (valgfritt)
+Hvis `delete_after_import = true`:
+```
+DELETE https://graph.microsoft.com/v1.0/shares/{shareId}/driveItem/children/{itemId}
 ```
 
 ---
 
-## Fargevalg-prinsipper
+## Fase 3: Oppdater Synk-status
 
-### WCAG AA Kontrast-sikring
-Alle fargekombinasjoner er testet for å oppfylle:
-- **4.5:1** kontrast mellom tekst og bakgrunn
-- **3:1** kontrast for større tekst (24px+)
-- Status-farger er valgt for å være tydelig synlige på hvit kortbakgrunn
-
-### Innovativt Design
-- **Gradient-inspirert**: Hver palett er bygget rundt en hovedfarge med komplementære nyanser
-- **Bakeri-kontekst**: Temaer som "Morning Bakery" og "Vanilla Cream" reflekterer produktene som pakkes
-- **Naturlige toner**: Flere temaer bruker natur-inspirerte paletter for et rolig arbeidsmiljø
-- **Moderne aksenter**: "Lavender Dreams" og "Cherry Blossom" tilbyr trendy alternativer
-
-### Praktiske hensyn
-- Hvit kortbakgrunn for maksimal lesbarhet av produktnavn
-- Sterke statusfarger som er synlige på avstand
-- Dempede bakgrunnsfarger som ikke tretter øynene over tid
+| Status | Beskrivelse |
+|--------|-------------|
+| `syncing` | Synkronisering pågår |
+| `completed` | Vellykket synkronisering |
+| `error` | Feil oppstod (detaljer i `sync_error`) |
+| `configured` | Konfigurert, venter på neste synk |
 
 ---
 
-## Filendringer
+## Fase 4: Feilhåndtering
+
+### Feiltyper og meldinger
+| Feil | Melding |
+|------|---------|
+| Token-feil | "Azure AD-autentisering feilet. Kontroller Client ID og Secret." |
+| Mappe-tilgang | "Kunne ikke få tilgang til OneDrive-mappen. Sjekk delingslenken." |
+| Parsing-feil | "Feil ved parsing av fil: {filnavn}" |
+| Import-feil | "Feil ved import av data: {detaljer}" |
+
+---
+
+## Teknisk Arkitektur
+
+```text
+┌─────────────────────────────────────────────────────────────────────────┐
+│                           AUTOMATISK FLYT                                │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  ┌──────────────┐    ┌───────────────┐    ┌──────────────────────┐      │
+│  │ Cron Job     │───▶│ sync-onedrive │───▶│ Microsoft Graph API  │      │
+│  │ (hvert 15m)  │    │ -cron         │    └──────────────────────┘      │
+│  └──────────────┘    └───────────────┘             │                    │
+│                              │                      ▼                    │
+│                              │            ┌──────────────────────┐      │
+│                              │            │ OneDrive Folder      │      │
+│                              │            │ ├── products.PRD     │      │
+│                              │            │ ├── customers.CUS    │      │
+│                              │            │ └── 2025-02-10.OD0   │      │
+│                              │            └──────────────────────┘      │
+│                              │                      │                    │
+│                              ▼                      ▼                    │
+│                     ┌───────────────┐    ┌──────────────────────┐      │
+│                     │ sync-onedrive │◀───│ Download + Parse     │      │
+│                     │ (main func)   │    └──────────────────────┘      │
+│                     └───────────────┘                                   │
+│                              │                                          │
+│                              ▼                                          │
+│                     ┌───────────────────────────────────────┐          │
+│                     │           Supabase Database            │          │
+│                     │  ┌─────────┐ ┌─────────┐ ┌─────────┐  │          │
+│                     │  │products │ │customers│ │ orders  │  │          │
+│                     │  └─────────┘ └─────────┘ └─────────┘  │          │
+│                     └───────────────────────────────────────┘          │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Fil-endringer
+
+### Nye/Oppdaterte filer:
 
 | Fil | Endring |
 |-----|---------|
-| `src/components/display-editor/ThemePresetMenu.tsx` | Legg til 8 nye temaer med ikoner og fargekoder |
-| `src/types/display/appearance.ts` | Utvid ThemePreset type med nye tema-IDer |
+| `supabase/functions/sync-onedrive/index.ts` | Full reskriving med Graph API |
 
 ---
 
-## Visuell Kategorisering
+## Sikkerhet
 
-Lyse-kategorien vil nå inneholde **11 temaer** totalt:
-1. Lys Ren (eksisterende)
-2. Lys Varm (eksisterende)
-3. Kremhvit (eksisterende)
-4. **Nordisk Frost** (ny)
-5. **Morgen Bakeri** (ny)
-6. **Lavendel Drøm** (ny)
-7. **Havbris** (ny)
-8. **Ferskenblomst** (ny)
-9. **Salvie Hage** (ny)
-10. **Vaniljekrem** (ny)
-11. **Kirsebærblomst** (ny)
+- **Hemmeligheter**: Azure-legitimasjon lagres som Lovable Cloud-hemmeligheter
+- **Autentisering**: Cron bruker CRON_SECRET; manuelle kall krever JWT
+- **RLS**: Eksisterende policyer sikrer data-isolasjon mellom bakerier
+- **Multitenant**: Azure AD multitenant-oppsett støtter flere organisasjoner
 
-Dette gir administratorer et bredt utvalg av profesjonelle, lyse temaer tilpasset ulike preferanser og arbeidsmiljøer.
+---
+
+## Implementeringssteg
+
+1. Lagre tre Azure-hemmeligheter
+2. Reskriv `sync-onedrive` edge function med Microsoft Graph API
+3. Test Azure-autentisering
+4. Test filhenting fra OneDrive
+5. Test parsing og database-import
+6. Verifiser duplikat-filtrering
+7. Test valgfri fil-sletting
+8. Bekreft cron-triggering fungerer
