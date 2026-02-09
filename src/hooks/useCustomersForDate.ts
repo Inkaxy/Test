@@ -37,11 +37,11 @@ export interface CustomerSortOptions {
   sortDirection?: 'asc' | 'desc';
 }
 
-export function useCustomersForDate(deliveryDate: string, categoryId?: string, sortOptions?: CustomerSortOptions) {
+export function useCustomersForDate(deliveryDate: string, categoryId?: string, sortOptions?: CustomerSortOptions, tripId?: string | null) {
   const { getActiveBakeryId } = useAuthStore();
   
   return useQuery({
-    queryKey: ['customers-for-date', deliveryDate, getActiveBakeryId(), categoryId, sortOptions],
+    queryKey: ['customers-for-date', deliveryDate, getActiveBakeryId(), categoryId, sortOptions, tripId],
     queryFn: async () => {
       const bakeryId = getActiveBakeryId();
       if (!bakeryId) return [];
