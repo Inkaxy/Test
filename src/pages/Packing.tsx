@@ -9,6 +9,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { PackingCategoryCard } from '@/components/packing/PackingCategoryCard';
 import { AddPackingCategoryCard } from '@/components/packing/AddPackingCategoryCard';
 import { OneDriveConfigDialog } from '@/components/categories/OneDriveConfigDialog';
+import { TripsManagementDialog } from '@/components/packing/TripsManagementDialog';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
