@@ -2892,7 +2892,7 @@ export default function DisplaySettingsPage() {
                   </div>
                   
                   {/* Progress bar */}
-                  {settings.stats_show_total_progress && (
+                  {settings.stats_show_progress_bar && settings.stats_show_total_progress && (
                     <div className="bg-card border rounded-xl p-4">
                       <div className="relative mb-2">
                         <div 
