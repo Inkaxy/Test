@@ -37,6 +37,9 @@ interface ImportResult {
   ordersCreated: number;
   orderProductsCreated: number;
   skippedOrders: number;
+  skippedMissingCustomer: number;
+  skippedMissingProduct: number;
+  skippedDuplicate: number;
   batchId: string;
 }
 
