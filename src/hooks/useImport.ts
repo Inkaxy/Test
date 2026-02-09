@@ -54,7 +54,15 @@ export function useImport() {
     const errors: string[] = [];
     let deliveryDate: Date | null = null;
     
-    for (const file of files) {
+    // Sort files in correct processing order: PRD first, then CUS, then OD0
+    const FILE_ORDER: Record<string, number> = { prd: 0, cus: 1, od0: 2 };
+    const sortedFiles = [...files].sort((a, b) => {
+      const extA = a.name.split('.').pop()?.toLowerCase() || '';
+      const extB = b.name.split('.').pop()?.toLowerCase() || '';
+      return (FILE_ORDER[extA] ?? 99) - (FILE_ORDER[extB] ?? 99);
+    });
+    
+    for (const file of sortedFiles) {
       const content = await readFileAsText(file);
       const ext = file.name.split('.').pop()?.toLowerCase();
       
@@ -140,6 +148,21 @@ export function useImport() {
       const customerMap = new Map<string, string>();
       
       // Fetch default category and existing data in parallel
+      // Build existing orders query with trip_id filter
+      let existingOrdersQuery = supabase
+        .from('orders')
+        .select('id, customer_id, product_id, delivery_date, category_id')
+        .eq('bakery_id', bakeryId)
+        .eq('delivery_date', deliveryDateStr)
+        .eq('category_id', data.categoryId)
+        .not('category_id', 'is', null);
+      
+      if (data.tripId) {
+        existingOrdersQuery = existingOrdersQuery.eq('trip_id', data.tripId);
+      } else {
+        existingOrdersQuery = existingOrdersQuery.is('trip_id', null);
+      }
+      
       const [
         { data: defaultCategory },
         { data: existingProducts },
@@ -162,13 +185,7 @@ export function useImport() {
           .from('customers')
           .select('id, customer_number')
           .eq('bakery_id', bakeryId),
-        supabase
-          .from('orders')
-          .select('id, customer_id, product_id, delivery_date, category_id')
-          .eq('bakery_id', bakeryId)
-          .eq('delivery_date', deliveryDateStr)
-          .eq('category_id', data.categoryId)
-          .not('category_id', 'is', null)
+        existingOrdersQuery
       ]);
       
       const defaultCategoryId = defaultCategory?.id || null;
