@@ -350,7 +350,7 @@ export function PackingCategoryCard({
                   onClick={() => handleMenuAction('trips')}
                 >
                   <Route className="h-4 w-4" />
-                  Turer
+                  <span>Administrer turer{tripCount > 0 && <span className="text-muted-foreground ml-1">({tripCount})</span>}</span>
                 </Button>
                 <Button
                   variant="ghost"
