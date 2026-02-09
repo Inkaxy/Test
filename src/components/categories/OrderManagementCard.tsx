@@ -13,7 +13,7 @@ import { format } from 'date-fns';
 import { nb } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { useCategories } from '@/hooks/useCategories';
-import { useDeleteOrdersBeforeDate, useDeleteImportBatch, useDeleteOrphanedOrders } from '@/hooks/useDeleteOrders';
+import { useDeleteOrdersBeforeDate, useDeleteImportBatch, useDeleteOrphanedOrders, useDeleteOrdersForDate } from '@/hooks/useDeleteOrders';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuthStore } from '@/stores/authStore';
@@ -39,14 +39,17 @@ export function OrderManagementCard() {
   
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('all');
   const [beforeDate, setBeforeDate] = useState<Date>();
+  const [forDate, setForDate] = useState<Date>();
   const [orphanDate, setOrphanDate] = useState<Date>();
   const [deleteBeforeDateOpen, setDeleteBeforeDateOpen] = useState(false);
+  const [deleteForDateOpen, setDeleteForDateOpen] = useState(false);
   const [deleteBatchOpen, setDeleteBatchOpen] = useState(false);
   const [deleteOrphanedOpen, setDeleteOrphanedOpen] = useState(false);
   const [selectedBatch, setSelectedBatch] = useState<ImportBatch | null>(null);
   
   const { data: categories = [] } = useCategories();
   const deleteOrdersBeforeDate = useDeleteOrdersBeforeDate();
+  const deleteOrdersForDate = useDeleteOrdersForDate();
   const deleteImportBatch = useDeleteImportBatch();
   const deleteOrphanedOrders = useDeleteOrphanedOrders();
   
@@ -137,6 +140,31 @@ export function OrderManagementCard() {
       
       setDeleteBeforeDateOpen(false);
       setBeforeDate(undefined);
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Feil',
+        description: error instanceof Error ? error.message : 'Kunne ikke slette ordrer',
+      });
+    }
+  };
+  
+  const handleDeleteForDate = async () => {
+    if (!forDate) return;
+    
+    try {
+      const count = await deleteOrdersForDate.mutateAsync({
+        date: forDate,
+        categoryId: selectedCategoryId !== 'all' ? selectedCategoryId : undefined,
+      });
+      
+      toast({
+        title: 'Ordrer slettet',
+        description: `${count} ordre(r) for ${format(forDate, 'dd.MM.yyyy', { locale: nb })} ble slettet.`,
+      });
+      
+      setDeleteForDateOpen(false);
+      setForDate(undefined);
     } catch (error) {
       toast({
         variant: 'destructive',
@@ -252,6 +280,43 @@ export function OrderManagementCard() {
                 variant="destructive"
                 disabled={!beforeDate}
                 onClick={() => setDeleteBeforeDateOpen(true)}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Slett
+              </Button>
+            </div>
+            
+            {/* Delete for specific date */}
+            <div className="flex items-end gap-2">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Slett ordrer for dato</label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        'w-[200px] justify-start text-left font-normal',
+                        !forDate && 'text-muted-foreground'
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {forDate ? format(forDate, 'dd.MM.yyyy', { locale: nb }) : 'Velg dato'}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={forDate}
+                      onSelect={setForDate}
+                      locale={nb}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <Button
+                variant="destructive"
+                disabled={!forDate}
+                onClick={() => setDeleteForDateOpen(true)}
               >
                 <Trash2 className="mr-2 h-4 w-4" />
                 Slett
@@ -412,6 +477,25 @@ export function OrderManagementCard() {
         }
         onConfirm={handleDeleteBeforeDate}
         isLoading={deleteOrdersBeforeDate.isPending}
+      />
+      
+      {/* Delete for date confirmation */}
+      <TypeConfirmDialog
+        open={deleteForDateOpen}
+        onOpenChange={setDeleteForDateOpen}
+        title="Slett ordrer for dato"
+        description={
+          <span>
+            Du er i ferd med å slette <strong>alle ordrer</strong> for{' '}
+            <strong>{forDate ? format(forDate, 'dd.MM.yyyy', { locale: nb }) : ''}</strong>
+            {selectedCategoryId !== 'all' && (
+              <> i kategorien <strong>{categories.find(c => c.id === selectedCategoryId)?.name}</strong></>
+            )}
+            . Denne handlingen kan ikke angres.
+          </span>
+        }
+        onConfirm={handleDeleteForDate}
+        isLoading={deleteOrdersForDate.isPending}
       />
       
       {/* Delete batch confirmation */}

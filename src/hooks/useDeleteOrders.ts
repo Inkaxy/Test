@@ -7,6 +7,12 @@ interface DeleteOrdersBeforeDateParams {
   categoryId?: string;
 }
 
+interface DeleteOrdersForDateParams {
+  date: Date;
+  categoryId?: string;
+  tripId?: string;
+}
+
 interface DeleteSingleOrderParams {
   orderId: string;
 }
@@ -108,6 +114,77 @@ export function useDeleteOrdersBeforeDate() {
   });
 }
 
+export function useDeleteOrdersForDate() {
+  const queryClient = useQueryClient();
+  const { getActiveBakeryId } = useAuthStore();
+  
+  return useMutation({
+    mutationFn: async ({ date, categoryId, tripId }: DeleteOrdersForDateParams): Promise<number> => {
+      const bakeryId = getActiveBakeryId();
+      if (!bakeryId) throw new Error('Ingen bakeri valgt');
+      
+      const dateStr = date.toISOString().split('T')[0];
+      
+      let allOrderIds: string[] = [];
+      let from = 0;
+      const pageSize = 1000;
+      
+      while (true) {
+        let query = supabase
+          .from('orders')
+          .select('id')
+          .eq('bakery_id', bakeryId)
+          .eq('delivery_date', dateStr)
+          .range(from, from + pageSize - 1);
+        
+        if (categoryId) {
+          query = query.eq('category_id', categoryId);
+        }
+        if (tripId) {
+          query = query.eq('trip_id', tripId);
+        }
+        
+        const { data, error } = await query;
+        if (error) throw error;
+        if (!data || data.length === 0) break;
+        
+        allOrderIds = allOrderIds.concat(data.map(o => o.id));
+        if (data.length < pageSize) break;
+        from += pageSize;
+      }
+      
+      if (allOrderIds.length === 0) return 0;
+      
+      await batchDeleteByOrderIds(allOrderIds);
+      
+      // Clean up import batches for this date
+      let batchCleanupQuery = supabase
+        .from('import_batches')
+        .delete()
+        .eq('bakery_id', bakeryId)
+        .eq('delivery_date', dateStr);
+      
+      if (categoryId) {
+        batchCleanupQuery = batchCleanupQuery.eq('category_id', categoryId);
+      }
+      
+      const { error: batchCleanupError } = await batchCleanupQuery;
+      if (batchCleanupError) {
+        console.warn('Could not clean up import batches:', batchCleanupError);
+      }
+      
+      return allOrderIds.length;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      queryClient.invalidateQueries({ queryKey: ['import-batches'] });
+      queryClient.invalidateQueries({ queryKey: ['packing-status'] });
+      queryClient.invalidateQueries({ queryKey: ['month-order-summary'] });
+      queryClient.invalidateQueries({ queryKey: ['date-trip-stats'] });
+    },
+  });
+}
+
 export function useDeleteSingleOrder() {
   const queryClient = useQueryClient();
   
@@ -143,7 +220,14 @@ export function useDeleteImportBatch() {
   
   return useMutation({
     mutationFn: async ({ batchId }: DeleteImportBatchParams): Promise<number> => {
-      // Fetch all orders in this batch
+      // First fetch the batch metadata so we can use it as fallback
+      const { data: batchInfo } = await supabase
+        .from('import_batches')
+        .select('id, bakery_id, delivery_date, category_id, trip_id')
+        .eq('id', batchId)
+        .maybeSingle();
+      
+      // Fetch all orders in this batch by import_batch_id
       let allOrderIds: string[] = [];
       let from = 0;
       const pageSize = 1000;
@@ -161,6 +245,40 @@ export function useDeleteImportBatch() {
         allOrderIds = allOrderIds.concat(data.map(o => o.id));
         if (data.length < pageSize) break;
         from += pageSize;
+      }
+      
+      // Fallback: if no orders matched import_batch_id, find by delivery_date + category_id + trip_id
+      // This handles orders imported before import_batch_id was consistently set
+      if (allOrderIds.length === 0 && batchInfo) {
+        from = 0;
+        while (true) {
+          let query = supabase
+            .from('orders')
+            .select('id')
+            .eq('bakery_id', batchInfo.bakery_id)
+            .eq('delivery_date', batchInfo.delivery_date)
+            .range(from, from + pageSize - 1);
+          
+          if (batchInfo.category_id) {
+            query = query.eq('category_id', batchInfo.category_id);
+          } else {
+            query = query.is('category_id', null);
+          }
+          
+          if (batchInfo.trip_id) {
+            query = query.eq('trip_id', batchInfo.trip_id);
+          } else {
+            query = query.is('trip_id', null);
+          }
+          
+          const { data, error } = await query;
+          if (error) throw error;
+          if (!data || data.length === 0) break;
+          
+          allOrderIds = allOrderIds.concat(data.map(o => o.id));
+          if (data.length < pageSize) break;
+          from += pageSize;
+        }
       }
       
       if (allOrderIds.length > 0) {
