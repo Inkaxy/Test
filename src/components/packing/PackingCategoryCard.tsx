@@ -85,10 +85,12 @@ export function PackingCategoryCard({
   const updateCategory = useUpdateCategory();
   const deleteCategory = useDeleteCategory();
   const { data: oneDriveConfig } = useOneDriveConfigForCategory(category.id);
+  const { data: trips = [] } = useTrips(category.id);
   const { parseFiles, importData, isImporting } = useImport();
   
   // Get color classes
   const colorConfig = CARD_COLORS.find(c => c.id === (category.card_color || 'primary')) || CARD_COLORS[0];
+  const tripCount = trips.length;
   
   const handleCardClick = () => {
     // Navigate to calendar view for this category
