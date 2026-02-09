@@ -583,7 +583,7 @@ export function PackingCategoryCard({
             </Button>
             <Button 
               onClick={handleImport}
-              disabled={isImporting || selectedFiles.length === 0}
+              disabled={isImporting || selectedFiles.length === 0 || (hasTrips && !selectedTripId)}
             >
               {isImporting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Importer
