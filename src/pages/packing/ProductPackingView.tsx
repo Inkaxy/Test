@@ -27,6 +27,11 @@ import { useDisplaySettings, getDefaultDisplaySettings, DisplaySettings } from '
 import { useCategories } from '@/hooks/useCategories';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useKeyboardNavigation } from '@/hooks/useKeyboardNavigation';
+import { useTrips } from '@/hooks/useTrips';
+import { useTripProgression } from '@/hooks/useTripProgression';
+import { TripCompleteScreen } from '@/components/packing/TripCompleteScreen';
+import { AllTripsCompleteScreen } from '@/components/packing/AllTripsCompleteScreen';
+import { TripIndicator } from '@/components/packing/TripIndicator';
 
 type DeviationType = 'shortage' | 'damaged' | 'wrong_product' | 'other';
 
