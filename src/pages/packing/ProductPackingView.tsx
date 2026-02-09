@@ -923,6 +923,28 @@ export default function ProductPackingView() {
         </div>
       </header>
 
+      {/* Trip indicator */}
+      {hasTrips && tripProgression.activeTrip && (
+        <div className="mb-4 flex justify-center">
+          <TripIndicator
+            activeTrip={tripProgression.activeTrip}
+            activeTripIndex={tripProgression.activeTripIndex}
+            totalTrips={tripProgression.totalTrips}
+            progress={tripProgression.progress}
+            onPrevTrip={() => {
+              const prev = tripProgression.sortedTrips[tripProgression.activeTripIndex - 1];
+              if (prev) tripProgression.goToTrip(prev.id);
+            }}
+            onNextTrip={() => {
+              const next = tripProgression.sortedTrips[tripProgression.activeTripIndex + 1];
+              if (next) tripProgression.goToTrip(next.id);
+            }}
+            textColor={settings.text_color}
+            accentColor={settings.packing_color}
+          />
+        </div>
+      )}
+
       {/* Stats section */}
       {(settings.stats_show_total_progress || settings.stats_show_packed_count || settings.stats_show_remaining_count) && products.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
