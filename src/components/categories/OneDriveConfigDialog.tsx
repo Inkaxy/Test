@@ -18,6 +18,8 @@ import { supabase } from '@/integrations/supabase/client';
 
 interface OneDriveConfigDialogProps {
   category: Category | null;
+  tripId?: string | null;
+  tripName?: string | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
