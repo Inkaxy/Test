@@ -172,11 +172,21 @@ export function useImport() {
           .eq('bakery_id', bakeryId),
         supabase
           .from('orders')
-          .select('id, customer_id, product_id, delivery_date, category_id')
+          .select('id, customer_id, product_id, delivery_date, category_id, trip_id')
           .eq('bakery_id', bakeryId)
           .eq('delivery_date', deliveryDateStr)
           .eq('category_id', data.categoryId)
           .not('category_id', 'is', null)
+          .then(result => {
+            // Filter by trip_id client-side for correct duplicate detection
+            if (data.tripId && result.data) {
+              return { ...result, data: result.data.filter(o => o.trip_id === data.tripId) };
+            }
+            if (!data.tripId && result.data) {
+              return { ...result, data: result.data.filter(o => !o.trip_id) };
+            }
+            return result;
+          })
       ]);
       
       const defaultCategoryId = defaultCategory?.id || null;
