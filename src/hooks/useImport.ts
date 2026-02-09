@@ -367,6 +367,7 @@ export function useImport() {
             delivery_date: order.deliveryDate,
             import_batch_id: batch.id,
             category_id: data.categoryId,
+            trip_id: data.tripId || null,
           });
         }
       }
