@@ -187,10 +187,14 @@ export function PackingCategoryCard({
       });
 
       const tripName = trips.find(t => t.id === selectedTripId)?.name;
+      const skipDetails = [];
+      if (result.skippedMissingCustomer > 0) skipDetails.push(`${result.skippedMissingCustomer} mangler kunde`);
+      if (result.skippedMissingProduct > 0) skipDetails.push(`${result.skippedMissingProduct} mangler produkt`);
+      if (result.skippedDuplicate > 0) skipDetails.push(`${result.skippedDuplicate} duplikater`);
       
       toast({
         title: 'Import fullført',
-        description: `${result.ordersCreated} ordrer importert til ${category.name}${tripName ? ` → ${tripName}` : ''}`,
+        description: `${result.ordersCreated} ordrer importert til ${category.name}${tripName ? ` → ${tripName}` : ''}${skipDetails.length > 0 ? ` (hoppet over: ${skipDetails.join(', ')})` : ''}`,
       });
       
       setIsImportOpen(false);
