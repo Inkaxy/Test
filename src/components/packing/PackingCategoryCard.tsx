@@ -188,7 +188,7 @@ export function PackingCategoryCard({
     }
   };
   
-  const handleMenuAction = (action: 'import' | 'edit' | 'onedrive' | 'kiosklink' | 'display-settings' | 'delete') => {
+  const handleMenuAction = (action: 'import' | 'edit' | 'onedrive' | 'kiosklink' | 'display-settings' | 'trips' | 'delete') => {
     setIsMenuOpen(false);
     switch (action) {
       case 'import':
@@ -209,6 +209,9 @@ export function PackingCategoryCard({
       case 'display-settings':
         const displayType = category.packing_mode === 'customer_based' ? 'packing' : 'shared';
         navigate(`/display-settings?category=${category.id}&type=${displayType}`);
+        break;
+      case 'trips':
+        onManageTrips?.();
         break;
       case 'delete':
         setIsDeleteOpen(true);
