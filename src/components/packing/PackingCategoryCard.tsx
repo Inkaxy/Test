@@ -81,6 +81,7 @@ export function PackingCategoryCard({
   const [editColor, setEditColor] = useState(category.card_color || 'primary');
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [detectedDate, setDetectedDate] = useState<Date | null>(null);
+  const [selectedTripId, setSelectedTripId] = useState<string | undefined>();
   
   const updateCategory = useUpdateCategory();
   const deleteCategory = useDeleteCategory();
