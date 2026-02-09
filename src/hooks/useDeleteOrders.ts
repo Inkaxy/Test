@@ -5,6 +5,7 @@ import { useAuthStore } from '@/stores/authStore';
 interface DeleteOrdersBeforeDateParams {
   beforeDate: Date;
   categoryId?: string;
+  tripId?: string;
 }
 
 interface DeleteOrdersForDateParams {
