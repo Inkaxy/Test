@@ -318,6 +318,7 @@ export function useImport() {
         
         newCustomers?.forEach(c => {
           customerMap.set(c.customer_number, c.id);
+          customerMap.set(removeLeadingZeros(c.customer_number), c.id);
           customersCreated++;
         });
       }
