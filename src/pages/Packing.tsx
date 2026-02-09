@@ -216,6 +216,7 @@ export default function Packing() {
                 <PackingCategoryCard
                   category={category}
                   onOneDriveConfig={() => setOneDriveCategory(category)}
+                  onManageTrips={() => setTripsCategory(category)}
                   isEditMode={false}
                   bakeryShortId={bakery?.short_id || ''}
                 />
