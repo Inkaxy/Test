@@ -33,6 +33,7 @@ export function CustomerScreenSettingsDialog({
   const [showSharedQrCode, setShowSharedQrCode] = useState(false);
   const [localHasDedicatedDisplay, setLocalHasDedicatedDisplay] = useState(false);
   const [localDisplayToken, setLocalDisplayToken] = useState<string | null>(null);
+  const [localShortDisplayId, setLocalShortDisplayId] = useState<string | null>(null);
 
   const bakeryId = getActiveBakeryId();
 
