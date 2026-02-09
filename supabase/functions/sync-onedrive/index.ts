@@ -600,6 +600,7 @@ async function importData(
     const orderInserts: Array<{
       bakery_id: string
       category_id: string
+      trip_id: string | null
       customer_id: string
       product_id: string
       delivery_date: string
