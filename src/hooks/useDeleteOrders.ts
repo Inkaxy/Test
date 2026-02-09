@@ -223,6 +223,8 @@ export function useDeleteOrphanedOrders() {
       queryClient.invalidateQueries({ queryKey: ['orders'] });
       queryClient.invalidateQueries({ queryKey: ['orphaned-orders'] });
       queryClient.invalidateQueries({ queryKey: ['packing-status'] });
+      queryClient.invalidateQueries({ queryKey: ['month-order-summary'] });
+      queryClient.invalidateQueries({ queryKey: ['date-trip-stats'] });
     },
   });
 }
