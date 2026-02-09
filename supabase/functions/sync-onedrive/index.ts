@@ -808,13 +808,20 @@ Deno.serve(async (req) => {
     cutoffDate.setDate(cutoffDate.getDate() - autoDeleteDays)
     const cutoffDateStr = cutoffDate.toISOString().split('T')[0]
 
-    // Get already imported dates
-    const { data: importBatches } = await supabase
+    // Get already imported dates - scoped to trip if applicable
+    let importQuery = supabase
       .from('import_batches')
       .select('delivery_date')
       .eq('bakery_id', config.bakery_id)
       .eq('category_id', categoryId)
-    
+
+    if (config.trip_id) {
+      importQuery = importQuery.eq('trip_id', config.trip_id)
+    } else {
+      importQuery = importQuery.is('trip_id', null)
+    }
+
+    const { data: importBatches } = await importQuery
     const importedDates = new Set((importBatches || []).map(b => b.delivery_date))
 
     console.log(`Sync for category ${categoryId}, cutoff: ${cutoffDateStr}, imported dates: ${importedDates.size}`)
