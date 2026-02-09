@@ -1,171 +1,244 @@
 
-# Microsoft Graph API-integrasjon for OneDrive Automatisk Import
+# Rettelse: Bruk `/content`-endepunkt i stedet for downloadUrl
 
-## Oversikt
-Implementer fullstendig Microsoft Graph API-integrasjon for å automatisere henting, parsing og import av `.PRD`, `.CUS` og `.OD0`-filer fra OneDrive. Systemet bruker Azure AD-autentisering og fungerer for flere bakerier.
+## Problemet
 
----
+Koden forsøker å bruke `@microsoft.graph.downloadUrl` fra `/children?$select=...`, men for SharePoint/Microsoft 365 delte mapper returnerer Microsoft Graph API **IKKE** denne verdien automatisk - selv med `$select`-parameteren. Dette forårsaker at alle filer får `null` downloadUrl, og `downloadFileContent()` kaster en feil.
 
-## Fase 1: Lagre Azure-hemmeligheter
+**Resultat**: Synkroniseringen feiler ved den første `.PRD`-filen, og ingen av de 9 filene blir lastet ned. Systemet importerer ingen data fra noen av dagene (05-02, 06-02, 09-02).
 
-### Hemmeligheter som må lagres
-Tre nye hemmeligheter i Lovable Cloud:
-1. **AZURE_CLIENT_ID** - Application (client) ID fra Azure Portal
-2. **AZURE_TENANT_ID** - Directory (tenant) ID fra Azure Portal
-3. **AZURE_CLIENT_SECRET** - Client Secret Value fra Azure Portal
+## Løsning
 
----
+I stedet for å stole på `@microsoft.graph.downloadUrl`, skal vi bruke Graph API's `/content`-endepunkt som **returnerer en 302-redirect** til den virkelige nedlastings-URLen.
 
-## Fase 2: Reskriv `sync-onedrive` Edge Function
-
-### 2.1 Azure AD OAuth2-autentisering
-```text
-┌─────────────────┐     ┌──────────────────────┐     ┌─────────────────┐
-│  Edge Function  │────▶│  Azure AD Token EP   │────▶│  Access Token   │
-│  (sync-onedrive)│     │  /oauth2/v2.0/token  │     │  (Graph API)    │
-└─────────────────┘     └──────────────────────┘     └─────────────────┘
-```
-
-**Token-endepunkt:**
-```
-POST https://login.microsoftonline.com/{AZURE_TENANT_ID}/oauth2/v2.0/token
-```
-
-**Request body:**
-- `client_id`: AZURE_CLIENT_ID
-- `client_secret`: AZURE_CLIENT_SECRET
-- `scope`: `https://graph.microsoft.com/.default`
-- `grant_type`: `client_credentials`
-
-### 2.2 OneDrive URL-parsing
-Konverter OneDrive delingslenker til Graph API-kompatible identifikatorer:
-- **Input**: `https://1drv.ms/f/...` eller `https://onedrive.live.com/...`
-- **Output**: Drive ID + Item ID for Graph API-kall
-
-### 2.3 Filhenting via Microsoft Graph API
-**Hent filer i mappe:**
-```
-GET https://graph.microsoft.com/v1.0/shares/{shareId}/driveItem/children
-```
-
-**Last ned filinnhold:**
-```
-GET https://graph.microsoft.com/v1.0/shares/{shareId}/driveItem/children/{itemId}/content
-```
-
-### 2.4 Filparsing
-Gjenbruk eksisterende parsing-logikk fra `src/lib/fileParser.ts`:
-- `parsePrdFile()` → Produkter (.PRD)
-- `parseCusFile()` → Kunder (.CUS)
-- `parseOd0File()` → Ordrer (.OD0)
-
-### 2.5 Duplikat-filtrering
-- Les `import_batches` for kombinasjon av bakery + kategori
-- Ignorer filer der `delivery_date` allerede er importert
-- Respekter `auto_delete_days` fra bakery-innstillinger
-
-### 2.6 Database-import
-**Rekkefølge:**
-1. Opprett/oppdater produkter
-2. Opprett/oppdater kunder
-3. Opprett ordrer + packing_status
-4. Opprett import_batch-record
-
-### 2.7 Fil-sletting (valgfritt)
-Hvis `delete_after_import = true`:
-```
-DELETE https://graph.microsoft.com/v1.0/shares/{shareId}/driveItem/children/{itemId}
-```
-
----
-
-## Fase 3: Oppdater Synk-status
-
-| Status | Beskrivelse |
-|--------|-------------|
-| `syncing` | Synkronisering pågår |
-| `completed` | Vellykket synkronisering |
-| `error` | Feil oppstod (detaljer i `sync_error`) |
-| `configured` | Konfigurert, venter på neste synk |
-
----
-
-## Fase 4: Feilhåndtering
-
-### Feiltyper og meldinger
-| Feil | Melding |
-|------|---------|
-| Token-feil | "Azure AD-autentisering feilet. Kontroller Client ID og Secret." |
-| Mappe-tilgang | "Kunne ikke få tilgang til OneDrive-mappen. Sjekk delingslenken." |
-| Parsing-feil | "Feil ved parsing av fil: {filnavn}" |
-| Import-feil | "Feil ved import av data: {detaljer}" |
-
----
-
-## Teknisk Arkitektur
+### Dataflyt (ny)
 
 ```text
-┌─────────────────────────────────────────────────────────────────────────┐
-│                           AUTOMATISK FLYT                                │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                          │
-│  ┌──────────────┐    ┌───────────────┐    ┌──────────────────────┐      │
-│  │ Cron Job     │───▶│ sync-onedrive │───▶│ Microsoft Graph API  │      │
-│  │ (hvert 15m)  │    │ -cron         │    └──────────────────────┘      │
-│  └──────────────┘    └───────────────┘             │                    │
-│                              │                      ▼                    │
-│                              │            ┌──────────────────────┐      │
-│                              │            │ OneDrive Folder      │      │
-│                              │            │ ├── products.PRD     │      │
-│                              │            │ ├── customers.CUS    │      │
-│                              │            │ └── 2025-02-10.OD0   │      │
-│                              │            └──────────────────────┘      │
-│                              │                      │                    │
-│                              ▼                      ▼                    │
-│                     ┌───────────────┐    ┌──────────────────────┐      │
-│                     │ sync-onedrive │◀───│ Download + Parse     │      │
-│                     │ (main func)   │    └──────────────────────┘      │
-│                     └───────────────┘                                   │
-│                              │                                          │
-│                              ▼                                          │
-│                     ┌───────────────────────────────────────┐          │
-│                     │           Supabase Database            │          │
-│                     │  ┌─────────┐ ┌─────────┐ ┌─────────┐  │          │
-│                     │  │products │ │customers│ │ orders  │  │          │
-│                     │  └─────────┘ └─────────┘ └─────────┘  │          │
-│                     └───────────────────────────────────────┘          │
-│                                                                          │
-└─────────────────────────────────────────────────────────────────────────┘
+1. getFilesInFolder() 
+   └─ GET /shares/{shareId}/driveItem
+   └─ GET /shares/{shareId}/driveItem/children
+      └─ Returnerer: [{ id, name, file, folder, size }, ...]
+      
+2. downloadFileContent(driveId, itemId, fileName)
+   └─ GET /drives/{driveId}/items/{itemId}/content
+      └─ HTTP 302 Redirect
+      └─ Location: https://...downloadUrl
+      └─ Følg redirect
+      └─ Last ned filinnhold
 ```
 
----
+## Implementering
 
-## Fil-endringer
+### Steg 1: Oppdater `getFilesInFolder()`
 
-### Nye/Oppdaterte filer:
+Endre funksjonen til å returnere både `driveId` og filer-listen:
 
-| Fil | Endring |
-|-----|---------|
-| `supabase/functions/sync-onedrive/index.ts` | Full reskriving med Graph API |
+```typescript
+interface FolderContents {
+  driveId: string
+  files: GraphDriveItem[]
+}
 
----
+async function getFilesInFolder(
+  accessToken: string,
+  shareUrl: string
+): Promise<FolderContents> {
+  const shareId = extractShareIdFromUrl(shareUrl)
+  
+  // Get shared folder - ekstrahér driveId fra parentReference
+  const shareResponse = await fetch(
+    `https://graph.microsoft.com/v1.0/shares/${shareId}/driveItem`,
+    { headers: { Authorization: `Bearer ${accessToken}` } }
+  )
+  
+  if (!shareResponse.ok) {
+    throw new Error(`Kunne ikke få tilgang til OneDrive-mappen...`)
+  }
+  
+  const shareData = await shareResponse.json()
+  const driveId = shareData.parentReference?.driveId
+  
+  if (!driveId) {
+    throw new Error('Kunne ikke ekstrahere Drive ID fra delt mappe')
+  }
+  
+  // Get children (NO $select for downloadUrl - det fungerer ikke)
+  const childrenResponse = await fetch(
+    `https://graph.microsoft.com/v1.0/shares/${shareId}/driveItem/children`,
+    { headers: { Authorization: `Bearer ${accessToken}` } }
+  )
+  
+  if (!childrenResponse.ok) {
+    throw new Error(`Kunne ikke hente filer fra OneDrive-mappen...`)
+  }
+  
+  const data = await childrenResponse.json()
+  
+  return {
+    driveId,
+    files: data.value || []
+  }
+}
+```
+
+### Steg 2: Oppdater `downloadFileContent()`
+
+Erstatt hele logikken til å bruke `/content`-endepunktet:
+
+```typescript
+async function downloadFileContent(
+  accessToken: string,
+  driveId: string,
+  itemId: string,
+  fileName: string
+): Promise<string> {
+  // Bruk /content-endepunktet som returnerer 302 redirect
+  const contentUrl = 
+    `https://graph.microsoft.com/v1.0/drives/${driveId}/items/${itemId}/content`
+  
+  console.log(`Downloading file: ${fileName}`)
+  
+  const response = await fetch(contentUrl, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+    redirect: 'follow'  // Automatisk følg 302-redirect
+  })
+  
+  if (!response.ok) {
+    throw new Error(
+      `Kunne ikke laste ned fil ${fileName}: ${response.status}`
+    )
+  }
+  
+  // Hent filinnholdet
+  const buffer = await response.arrayBuffer()
+  
+  // Detekter encoding (UTF-8 eller Windows-1252)
+  let content = new TextDecoder('utf-8').decode(buffer)
+  
+  if (hasGarbledCharacters(content)) {
+    console.log('Detected encoding issue, trying Windows-1252...')
+    content = new TextDecoder('windows-1252').decode(buffer)
+  }
+  
+  return content
+}
+```
+
+### Steg 3: Oppdater alle kallesteder
+
+I hoveddelen av koden hvor vi behandler PRD-, CUS- og OD0-filer:
+
+```typescript
+// Old code:
+const files = await getFilesInFolder(accessToken, config.onedrive_folder_url)
+
+// New code:
+const { driveId, files } = await getFilesInFolder(
+  accessToken, 
+  config.onedrive_folder_url
+)
+
+// For PRD-filer:
+for (const file of prdFiles) {
+  console.log(`Processing product file: ${file.name}`)
+  const content = await downloadFileContent(
+    accessToken,
+    driveId,
+    file.id,
+    file.name
+  )
+  // ... rest av logikken
+}
+
+// For CUS-filer:
+for (const file of cusFiles) {
+  console.log(`Processing customer file: ${file.name}`)
+  const content = await downloadFileContent(
+    accessToken,
+    driveId,
+    file.id,
+    file.name
+  )
+  // ... rest av logikken
+}
+
+// For OD0-filer:
+for (const file of od0Files) {
+  // ... dato-ekstraksjon og duplikat-sjekk ...
+  const content = await downloadFileContent(
+    accessToken,
+    driveId,
+    file.id,
+    file.name
+  )
+  // ... rest av logikken
+}
+```
+
+### Steg 4: Oppdater `deleteFile()`
+
+Endre til å bruke `driveId` og `itemId` i stedet for `shareUrl`:
+
+```typescript
+async function deleteFile(
+  accessToken: string,
+  driveId: string,
+  itemId: string
+): Promise<void> {
+  const response = await fetch(
+    `https://graph.microsoft.com/v1.0/drives/${driveId}/items/${itemId}`,
+    {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${accessToken}` }
+    }
+  )
+
+  if (!response.ok && response.status !== 204) {
+    throw new Error(`Kunne ikke slette fil: ${response.status}`)
+  }
+}
+```
+
+Og oppdater stedet hvor vi sletter filer:
+
+```typescript
+// Old:
+await deleteFile(accessToken, config.onedrive_folder_url, file.id)
+
+// New:
+await deleteFile(accessToken, driveId, file.id)
+```
+
+## Resultat etter fix
+
+✅ **Alle 9 filene fra alle 3 datoene vil bli lastet ned**
+- 05-02-2026.PRD, .CUS, .OD0
+- 06-02-2026.PRD, .CUS, .OD0
+- 09-02-2026.PRD, .CUS, .OD0
+
+✅ **Duplikat-filtreringen fungerer**
+- Hvis 05-02-2026 allerede er importert, hoppes den over
+- Men 06-02-2026 og 09-02-2026 importeres allikevel
+
+✅ **Valgfri fil-sletting fungerer**
+- Hvis `delete_after_import = true`, slettes alle 9 filene etter vellykket import
+
+✅ **Automatisk cron-synk fungerer**
+- Hver dag ved 08:00 laster systemet ned alle nye filer fra OneDrive
 
 ## Sikkerhet
 
-- **Hemmeligheter**: Azure-legitimasjon lagres som Lovable Cloud-hemmeligheter
-- **Autentisering**: Cron bruker CRON_SECRET; manuelle kall krever JWT
-- **RLS**: Eksisterende policyer sikrer data-isolasjon mellom bakerier
-- **Multitenant**: Azure AD multitenant-oppsett støtter flere organisasjoner
+- Bruker fortsatt samme Azure AD-token
+- `/content`-endepunktet krever samme JWT-autentisering
+- Redirect-håndtering er sikker (Microsoft Graph endepunkt)
+- Ingen nye hemmeligheter kreves
 
----
+## Testing etter implementering
 
-## Implementeringssteg
+1. Klikk "Synk nå" i OneDrive-konfigurasjonen
+2. Sjekk at loggene viser: "Downloading file: 05-02-2026.PRD", osv. for alle 9 filene
+3. Verifiser at alle 9 filene blir lastet ned uten feil
+4. Sjekk databasen for importerte produkter, kunder og ordrer fra alle 3 datoer
+5. Verifiser at sync-status endres til "completed" (eller bekreft status i UI)
+6. Hvis `delete_after_import = true`, verifiser at filene forsvinner fra OneDrive
 
-1. Lagre tre Azure-hemmeligheter
-2. Reskriv `sync-onedrive` edge function med Microsoft Graph API
-3. Test Azure-autentisering
-4. Test filhenting fra OneDrive
-5. Test parsing og database-import
-6. Verifiser duplikat-filtrering
-7. Test valgfri fil-sletting
-8. Bekreft cron-triggering fungerer
