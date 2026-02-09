@@ -149,6 +149,31 @@ export function OrderManagementCard() {
     }
   };
   
+  const handleDeleteForDate = async () => {
+    if (!forDate) return;
+    
+    try {
+      const count = await deleteOrdersForDate.mutateAsync({
+        date: forDate,
+        categoryId: selectedCategoryId !== 'all' ? selectedCategoryId : undefined,
+      });
+      
+      toast({
+        title: 'Ordrer slettet',
+        description: `${count} ordre(r) for ${format(forDate, 'dd.MM.yyyy', { locale: nb })} ble slettet.`,
+      });
+      
+      setDeleteForDateOpen(false);
+      setForDate(undefined);
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Feil',
+        description: error instanceof Error ? error.message : 'Kunne ikke slette ordrer',
+      });
+    }
+  };
+  
   const handleDeleteBatch = async () => {
     if (!selectedBatch) return;
     
