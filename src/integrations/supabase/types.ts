@@ -217,6 +217,7 @@ export type Database = {
           is_active: boolean | null
           name: string
           priority: number | null
+          short_display_id: string | null
           updated_at: string | null
         }
         Insert: {
@@ -230,6 +231,7 @@ export type Database = {
           is_active?: boolean | null
           name: string
           priority?: number | null
+          short_display_id?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -243,6 +245,7 @@ export type Database = {
           is_active?: boolean | null
           name?: string
           priority?: number | null
+          short_display_id?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -674,6 +677,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      generate_short_display_id: { Args: never; Returns: string }
       get_bakery_public_info: {
         Args: { _short_id: string }
         Returns: {
@@ -708,15 +712,19 @@ export type Database = {
         Args: { _bakery_name: string; _display_name?: string; _user_id: string }
         Returns: string
       }
-      validate_display_token: {
-        Args: { _token: string }
-        Returns: {
-          bakery_id: string
-          bakery_name: string
-          customer_id: string
-          customer_name: string
-        }[]
-      }
+      validate_display_token:
+        | {
+            Args: { _token: string }
+            Returns: {
+              error: true
+            } & "Could not choose the best candidate function between: public.validate_display_token(_token => text), public.validate_display_token(_token => uuid). Try renaming the parameters or the function itself in the database so function overloading can be resolved"[]
+          }
+        | {
+            Args: { _token: string }
+            Returns: {
+              error: true
+            } & "Could not choose the best candidate function between: public.validate_display_token(_token => text), public.validate_display_token(_token => uuid). Try renaming the parameters or the function itself in the database so function overloading can be resolved"[]
+          }
     }
     Enums: {
       app_role: "super_admin" | "bakery_admin" | "bakery_user"
