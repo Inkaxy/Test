@@ -157,17 +157,32 @@ export default function ProductPackingView() {
   const { data: trips = [] } = useTrips(categoryId);
   const hasTrips = trips.length > 0;
   
-  // All products (unfiltered by trip) for trip stats calculation
-  const { data: allProducts = [] } = useProductsForDate(dateStr, categoryId);
-  
+  // Per-trip order stats for trip progression
+  const { data: tripOrderStats = [] } = useQuery({
+    queryKey: ['trip-order-stats', bakeryId, dateStr, categoryId],
+    queryFn: async () => {
+      if (!bakeryId || !categoryId) return [];
+      const { data, error } = await supabase
+        .from('orders')
+        .select('id, trip_id, packing_status(status)')
+        .eq('bakery_id', bakeryId)
+        .eq('delivery_date', dateStr)
+        .eq('category_id', categoryId);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!bakeryId && !!categoryId && hasTrips,
+  });
+
   const getTripStats = useCallback((tripId: string) => {
-    // We need to calculate stats from allProducts filtered by tripId
-    // Since products query doesn't have tripId info per-order, we use a separate approach
-    // For now, we rely on the filtered products query per active trip
-    const total = allProducts.reduce((s, p) => s + p.totalOrders, 0);
-    const packed = allProducts.reduce((s, p) => s + p.packedOrders, 0);
-    return { totalOrders: total, packedOrders: packed, deviations: 0 };
-  }, [allProducts]);
+    const tripOrders = tripOrderStats.filter(o => o.trip_id === tripId);
+    const total = tripOrders.length;
+    const packed = tripOrders.filter(o => 
+      o.packing_status?.status === 'packed' || o.packing_status?.status === 'deviation'
+    ).length;
+    const deviations = tripOrders.filter(o => o.packing_status?.status === 'deviation').length;
+    return { totalOrders: total, packedOrders: packed, deviations };
+  }, [tripOrderStats]);
   
   const tripProgression = useTripProgression({ trips, getTripStats });
   const activeTripId = hasTrips ? tripProgression.activeTripId : null;
