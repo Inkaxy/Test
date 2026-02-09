@@ -13,7 +13,7 @@ import { format } from 'date-fns';
 import { nb } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { useCategories } from '@/hooks/useCategories';
-import { useDeleteOrdersBeforeDate, useDeleteImportBatch, useDeleteOrphanedOrders } from '@/hooks/useDeleteOrders';
+import { useDeleteOrdersBeforeDate, useDeleteImportBatch, useDeleteOrphanedOrders, useDeleteOrdersForDate } from '@/hooks/useDeleteOrders';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuthStore } from '@/stores/authStore';
