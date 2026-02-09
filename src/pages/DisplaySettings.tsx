@@ -3311,7 +3311,7 @@ export default function DisplaySettingsPage() {
                             >
                               <p className="text-xs opacity-70" style={{ color: settings.text_color, fontSize: `calc(${settings.stats_label_font_size || '0.75rem'} * 0.8)` }}>Total</p>
                               <p className="font-bold" style={{ color: settings.text_color, fontSize: `calc(${settings.stats_value_font_size || '1.25rem'} * 0.7)` }}>50%</p>
-                              {settings.stats_progress_bar_style !== 'none' && (
+                              {settings.stats_show_progress_bar && settings.stats_progress_bar_style !== 'none' && (
                                 <div
                                   className="h-1.5 rounded-full mt-1"
                                   style={{ backgroundColor: `${settings.pending_color}40`, height: `calc(${settings.stats_progress_bar_height} * 0.7)` }}
