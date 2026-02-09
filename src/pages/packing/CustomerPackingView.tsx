@@ -89,12 +89,14 @@ export default function CustomerPackingView() {
   const { data: trips = [] } = useTrips(categoryId);
   const hasTrips = trips.length > 0;
   
-  const getTripStats = useCallback((tripId: string) => {
-    // Stats are computed from the current customers data
-    const total = customers.reduce((s, c) => s + c.totalOrders, 0);
-    const packed = customers.reduce((s, c) => s + c.packedOrders, 0);
+  // Fetch all customers (no trip filter) for computing trip stats
+  const { data: allCustomers = [] } = useCustomersForDate(dateStr, categoryId, sortOptions);
+  
+  const getTripStats = useCallback((_tripId: string) => {
+    const total = allCustomers.reduce((s, c) => s + c.totalOrders, 0);
+    const packed = allCustomers.reduce((s, c) => s + c.packedOrders, 0);
     return { totalOrders: total, packedOrders: packed, deviations: 0 };
-  }, [customers]);
+  }, [allCustomers]);
   
   const tripProgression = useTripProgression({ trips, getTripStats });
   const activeTripId = hasTrips ? tripProgression.activeTripId : null;
