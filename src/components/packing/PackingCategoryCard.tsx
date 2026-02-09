@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/popover';
 import { Category, useUpdateCategory, useDeleteCategory } from '@/hooks/useCategories';
 import { useOneDriveConfigForCategory } from '@/hooks/useOneDriveConfig';
+import { useTrips } from '@/hooks/useTrips';
 import { useImport } from '@/hooks/useImport';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
