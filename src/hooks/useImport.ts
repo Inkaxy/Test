@@ -11,6 +11,7 @@ import {
   readFileAsText,
   extractDateFromFilename 
 } from '@/lib/fileParser';
+import { removeLeadingZeros } from '@/lib/idUtils';
 
 function toLocalDateString(date: Date): string {
   // Avoid timezone drift from toISOString() when we treat dates as date-only.
