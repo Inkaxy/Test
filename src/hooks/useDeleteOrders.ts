@@ -102,6 +102,8 @@ export function useDeleteOrdersBeforeDate() {
       queryClient.invalidateQueries({ queryKey: ['orders'] });
       queryClient.invalidateQueries({ queryKey: ['import-batches'] });
       queryClient.invalidateQueries({ queryKey: ['packing-status'] });
+      queryClient.invalidateQueries({ queryKey: ['month-order-summary'] });
+      queryClient.invalidateQueries({ queryKey: ['date-trip-stats'] });
     },
   });
 }
@@ -130,6 +132,8 @@ export function useDeleteSingleOrder() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['orders'] });
       queryClient.invalidateQueries({ queryKey: ['packing-status'] });
+      queryClient.invalidateQueries({ queryKey: ['month-order-summary'] });
+      queryClient.invalidateQueries({ queryKey: ['date-trip-stats'] });
     },
   });
 }
@@ -177,6 +181,8 @@ export function useDeleteImportBatch() {
       queryClient.invalidateQueries({ queryKey: ['orders'] });
       queryClient.invalidateQueries({ queryKey: ['import-batches'] });
       queryClient.invalidateQueries({ queryKey: ['packing-status'] });
+      queryClient.invalidateQueries({ queryKey: ['month-order-summary'] });
+      queryClient.invalidateQueries({ queryKey: ['date-trip-stats'] });
     },
   });
 }
@@ -217,6 +223,8 @@ export function useDeleteOrphanedOrders() {
       queryClient.invalidateQueries({ queryKey: ['orders'] });
       queryClient.invalidateQueries({ queryKey: ['orphaned-orders'] });
       queryClient.invalidateQueries({ queryKey: ['packing-status'] });
+      queryClient.invalidateQueries({ queryKey: ['month-order-summary'] });
+      queryClient.invalidateQueries({ queryKey: ['date-trip-stats'] });
     },
   });
 }
