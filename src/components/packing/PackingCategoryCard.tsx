@@ -257,6 +257,21 @@ export function PackingCategoryCard({
               : t('categories.customerBased').toLowerCase()})
           </p>
           
+          {/* Trip count badge */}
+          {tripCount > 0 && (
+            <Badge 
+              className={cn(
+                "mt-2 gap-1 text-xs",
+                "bg-white/20 hover:bg-white/30 border-white/30",
+                colorConfig.textClass
+              )}
+              variant="outline"
+            >
+              <Route className="h-3 w-3" />
+              {tripCount} {tripCount === 1 ? 'tur' : 'turer'}
+            </Badge>
+          )}
+          
           {/* Start packing hint on hover - only show when not in edit mode */}
           {!isEditMode && (
             <div className="absolute bottom-4 left-0 right-0 flex justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
