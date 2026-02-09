@@ -106,7 +106,7 @@ export function OneDriveConfigDialog({ category, tripId, tripName, open, onOpenC
     if (!category) return;
     
     try {
-      await deleteConfig.mutateAsync(category.id);
+      await deleteConfig.mutateAsync({ categoryId: category.id, tripId: tripId ?? null });
       setFolderUrl('');
       setSyncEnabled(false);
       setSyncTime('05:00');
