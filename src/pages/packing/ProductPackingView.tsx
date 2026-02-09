@@ -205,7 +205,7 @@ export default function ProductPackingView() {
         },
         () => {
           queryClient.invalidateQueries({ 
-            queryKey: ['products-for-date', bakeryId, dateStr, categoryId] 
+            queryKey: ['products-for-date', bakeryId, dateStr] 
           });
         }
       )
