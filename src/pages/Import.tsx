@@ -44,10 +44,14 @@ export default function Import() {
   const [parseErrors, setParseErrors] = useState<string[]>([]);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | undefined>();
+  const [selectedTripId, setSelectedTripId] = useState<string | undefined>();
   
   const activeCategories = categories.filter(c => c.is_active);
   const selectedCategory = categories.find(c => c.id === selectedCategoryId);
   const categoryOneDriveConfig = oneDriveConfigs.find(c => c.category_id === selectedCategoryId);
+  const { data: trips = [] } = useTrips(selectedCategoryId);
+  const hasTrips = trips.length > 0;
+  const selectedTrip = trips.find(t => t.id === selectedTripId);
 
   const getFileType = (filename: string): FileWithPreview['type'] => {
     const ext = filename.split('.').pop()?.toLowerCase();
