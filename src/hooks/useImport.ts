@@ -335,15 +335,23 @@ export function useImport() {
         );
       }
       
-      // Add remaining products/customers to maps
+      // Add remaining products/customers to maps (with normalized keys)
       existingProducts?.forEach(p => {
         if (!productMap.has(p.product_number)) {
           productMap.set(p.product_number, p.id);
+        }
+        const normalizedPn = removeLeadingZeros(p.product_number);
+        if (!productMap.has(normalizedPn)) {
+          productMap.set(normalizedPn, p.id);
         }
       });
       existingCustomers?.forEach(c => {
         if (!customerMap.has(c.customer_number)) {
           customerMap.set(c.customer_number, c.id);
+        }
+        const normalizedCn = removeLeadingZeros(c.customer_number);
+        if (!customerMap.has(normalizedCn)) {
+          customerMap.set(normalizedCn, c.id);
         }
       });
       
