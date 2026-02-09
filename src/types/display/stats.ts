@@ -3,8 +3,10 @@
  * Controls visibility and styling of progress bars and counters.
  */
 export interface StatsSettings {
-  /** Show total progress percentage */
+  /** Show total progress percentage card */
   stats_show_total_progress: boolean;
+  /** Show progress bar */
+  stats_show_progress_bar: boolean;
   /** Show packed count */
   stats_show_packed_count: boolean;
   /** Show remaining count */
@@ -21,6 +23,7 @@ export interface StatsSettings {
 
 export const defaultStatsSettings: StatsSettings = {
   stats_show_total_progress: true,
+  stats_show_progress_bar: true,
   stats_show_packed_count: true,
   stats_show_remaining_count: true,
   stats_progress_bar_style: 'bar',

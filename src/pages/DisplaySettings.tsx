@@ -604,12 +604,23 @@ export default function DisplaySettingsPage() {
                 <AccordionContent className="space-y-4 pt-2">
                   <div className="flex items-center justify-between">
                     <div>
-                      <Label>Vis total fremdrift</Label>
-                      <p className="text-xs text-muted-foreground">Overordnet prosent ferdig</p>
+                      <Label>Vis fremdriftskort</Label>
+                      <p className="text-xs text-muted-foreground">Kort med overordnet prosent ferdig</p>
                     </div>
                     <Switch
                       checked={settings.stats_show_total_progress}
                       onCheckedChange={(v) => updateSetting('stats_show_total_progress', v)}
+                    />
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label>Vis fremdriftsbar</Label>
+                      <p className="text-xs text-muted-foreground">Progresjonslinjen i fremdriftskortet</p>
+                    </div>
+                    <Switch
+                      checked={settings.stats_show_progress_bar}
+                      onCheckedChange={(v) => updateSetting('stats_show_progress_bar', v)}
                     />
                   </div>
                   
@@ -2881,7 +2892,7 @@ export default function DisplaySettingsPage() {
                   </div>
                   
                   {/* Progress bar */}
-                  {settings.stats_show_total_progress && (
+                  {settings.stats_show_progress_bar && settings.stats_show_total_progress && (
                     <div className="bg-card border rounded-xl p-4">
                       <div className="relative mb-2">
                         <div 
@@ -2961,7 +2972,7 @@ export default function DisplaySettingsPage() {
                           {settings.stats_show_packed_count && '8 / 15'} (53%)
                         </span>
                       </div>
-                      {settings.stats_progress_bar_style !== 'none' && (
+                      {settings.stats_show_progress_bar && settings.stats_progress_bar_style !== 'none' && (
                         <div
                           className="rounded-full"
                           style={{ 
@@ -3300,7 +3311,7 @@ export default function DisplaySettingsPage() {
                             >
                               <p className="text-xs opacity-70" style={{ color: settings.text_color, fontSize: `calc(${settings.stats_label_font_size || '0.75rem'} * 0.8)` }}>Total</p>
                               <p className="font-bold" style={{ color: settings.text_color, fontSize: `calc(${settings.stats_value_font_size || '1.25rem'} * 0.7)` }}>50%</p>
-                              {settings.stats_progress_bar_style !== 'none' && (
+                              {settings.stats_show_progress_bar && settings.stats_progress_bar_style !== 'none' && (
                                 <div
                                   className="h-1.5 rounded-full mt-1"
                                   style={{ backgroundColor: `${settings.pending_color}40`, height: `calc(${settings.stats_progress_bar_height} * 0.7)` }}

@@ -353,7 +353,7 @@ export default function CustomerDisplay() {
               >
                 {displayProgress}%
               </p>
-              {displaySettings.stats_progress_bar_style !== 'none' && (
+              {displaySettings.stats_show_progress_bar && displaySettings.stats_progress_bar_style !== 'none' && (
                 <Progress
                   value={displayProgress}
                   className="mt-2"
