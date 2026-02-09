@@ -161,7 +161,16 @@
     "pendingSync": "operasjoner venter på synkronisering",
     "syncNow": "Synk nå",
     "queuedForSync": "Operasjon lagret og synkroniseres når du er online igjen",
-    "offlineMode": "Frakoblet modus - endringer lagres lokalt"
+    "offlineMode": "Frakoblet modus - endringer lagres lokalt",
+    "tripComplete": "{{name}} ferdig!",
+    "tripPackedCount": "{{count}} ordrer pakket",
+    "tripDeviationCount": "{{count}} avvik",
+    "startNextTrip": "Start pakking av {{name}}",
+    "backToOverview": "Tilbake til oversikt",
+    "backToCalendar": "Tilbake til kalender",
+    "allTripsComplete": "Alt ferdig for i dag!",
+    "totalPackedSummary": "{{count}} ordrer pakket totalt",
+    "tripOf": "Tur {{current}} av {{total}}"
   },
   "products": {
     "title": "Produkter",
