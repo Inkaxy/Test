@@ -298,6 +298,33 @@ export default function CustomerPackingView() {
   const alternateRowsEnabled = bakerySettings?.packing_row_style?.alternateRowsEnabled || false;
   const alternateRowColor = bakerySettings?.packing_row_style?.alternateRowColor || 'amber';
   
+  // Trip complete screens
+  if (hasTrips && tripProgression.allComplete) {
+    return (
+      <AllTripsCompleteScreen
+        tripStats={tripProgression.allTripStats}
+        onBackToCalendar={() => navigate('/packing')}
+        backgroundColor={settings.background_color}
+        textColor={settings.text_color}
+      />
+    );
+  }
+
+  if (hasTrips && tripProgression.isComplete && tripProgression.nextTrip) {
+    return (
+      <TripCompleteScreen
+        currentTrip={tripProgression.activeTrip!}
+        nextTrip={tripProgression.nextTrip}
+        packedOrders={tripProgression.stats.packedOrders}
+        deviations={tripProgression.stats.deviations}
+        onStartNext={tripProgression.startNextTrip}
+        onBackToOverview={() => navigate('/packing')}
+        backgroundColor={settings.background_color}
+        textColor={settings.text_color}
+      />
+    );
+  }
+
   // Loading state
   if (customersLoading) {
     return (
