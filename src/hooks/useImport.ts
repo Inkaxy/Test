@@ -261,6 +261,7 @@ export function useImport() {
         
         newProducts?.forEach(p => {
           productMap.set(p.product_number, p.id);
+          productMap.set(removeLeadingZeros(p.product_number), p.id);
           productsCreated++;
         });
       }
