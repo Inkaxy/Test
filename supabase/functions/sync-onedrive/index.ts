@@ -931,6 +931,7 @@ Deno.serve(async (req) => {
             serviceSupabase,
             config.bakery_id,
             categoryId,
+            config.trip_id || null,
             allProducts,
             allCustomers,
             orders,
