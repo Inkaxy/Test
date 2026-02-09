@@ -39,14 +39,17 @@ export function OrderManagementCard() {
   
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('all');
   const [beforeDate, setBeforeDate] = useState<Date>();
+  const [forDate, setForDate] = useState<Date>();
   const [orphanDate, setOrphanDate] = useState<Date>();
   const [deleteBeforeDateOpen, setDeleteBeforeDateOpen] = useState(false);
+  const [deleteForDateOpen, setDeleteForDateOpen] = useState(false);
   const [deleteBatchOpen, setDeleteBatchOpen] = useState(false);
   const [deleteOrphanedOpen, setDeleteOrphanedOpen] = useState(false);
   const [selectedBatch, setSelectedBatch] = useState<ImportBatch | null>(null);
   
   const { data: categories = [] } = useCategories();
   const deleteOrdersBeforeDate = useDeleteOrdersBeforeDate();
+  const deleteOrdersForDate = useDeleteOrdersForDate();
   const deleteImportBatch = useDeleteImportBatch();
   const deleteOrphanedOrders = useDeleteOrphanedOrders();
   
