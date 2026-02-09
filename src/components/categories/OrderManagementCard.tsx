@@ -340,10 +340,11 @@ export function OrderManagementCard() {
               <p className="text-sm text-muted-foreground py-4">Ingen importerte ordrer funnet.</p>
             ) : (
               <Table>
-                <TableHeader>
+                 <TableHeader>
                   <TableRow>
                     <TableHead>Leveringsdato</TableHead>
                     <TableHead>Kategori</TableHead>
+                    <TableHead>Tur</TableHead>
                     <TableHead className="text-right">Ordrer</TableHead>
                     <TableHead className="text-right">Importert</TableHead>
                     <TableHead className="text-right">Handling</TableHead>
@@ -360,6 +361,13 @@ export function OrderManagementCard() {
                           <Badge variant="outline">{batch.category.name}</Badge>
                         ) : (
                           <span className="text-muted-foreground">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {batch.trip?.name ? (
+                          <Badge variant="secondary" className="text-xs">{batch.trip.name}</Badge>
+                        ) : (
+                          <span className="text-muted-foreground text-xs">–</span>
                         )}
                       </TableCell>
                       <TableCell className="text-right">{batch.orders_count || 0}</TableCell>
