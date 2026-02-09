@@ -39,6 +39,7 @@ export function OrderManagementCard() {
   const { getActiveBakeryId } = useAuthStore();
   
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('all');
+  const [selectedTripId, setSelectedTripId] = useState<string>('all');
   const [beforeDate, setBeforeDate] = useState<Date>();
   const [forDate, setForDate] = useState<Date>();
   const [orphanDate, setOrphanDate] = useState<Date>();
