@@ -886,7 +886,7 @@ export default function KioskPackingView() {
               >
                 {overallProgress}%
               </p>
-              {settings.stats_progress_bar_style !== 'none' && (
+              {settings.stats_show_progress_bar && settings.stats_progress_bar_style !== 'none' && (
                 <Progress
                   value={overallProgress}
                   className="mt-2"
