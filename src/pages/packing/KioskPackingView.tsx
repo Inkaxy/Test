@@ -245,10 +245,28 @@ export default function KioskPackingView() {
   
   const { data: bakery, isLoading: bakeryLoading } = useBakeryByShortId(bakeryShortId || null);
   const { data: category } = useCategoryById(categoryId || null);
+  
+  // Trips support
+  const { data: trips = [] } = useTripsForBakery(bakery?.id || null, categoryId);
+  const hasTrips = trips.length > 0;
+  
+  // All customers (no trip filter) for trip stats
+  const { data: allCustomersData = [] } = useKioskCustomersForDate(bakery?.id || null, dateStr, categoryId);
+  
+  const getTripStats = useCallback((_tripId: string) => {
+    const total = allCustomersData.reduce((s, c) => s + c.totalOrders, 0);
+    const packed = allCustomersData.reduce((s, c) => s + c.packedOrders, 0);
+    return { totalOrders: total, packedOrders: packed, deviations: 0 };
+  }, [allCustomersData]);
+  
+  const tripProgression = useTripProgression({ trips, getTripStats });
+  const activeTripId = hasTrips ? tripProgression.activeTripId : null;
+  
   const { data: customersData = [], isLoading: customersLoading } = useKioskCustomersForDate(
     bakery?.id || null, 
     dateStr, 
-    categoryId
+    categoryId,
+    activeTripId
   );
   const { data: displaySettings } = useDisplaySettings(bakery?.id || null, categoryId, 'packing');
   const settings: DisplaySettings = displaySettings || getDefaultDisplaySettings();
