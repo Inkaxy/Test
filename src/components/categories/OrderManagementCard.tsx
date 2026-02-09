@@ -27,7 +27,9 @@ interface ImportBatch {
   customers_count: number | null;
   created_at: string | null;
   category_id: string | null;
+  trip_id: string | null;
   category?: { name: string } | null;
+  trip?: { name: string } | null;
 }
 
 export function OrderManagementCard() {
@@ -102,7 +104,9 @@ export function OrderManagementCard() {
           customers_count,
           created_at,
           category_id,
-          category:categories(name)
+          trip_id,
+          category:categories(name),
+          trip:category_trips(name)
         `)
         .eq('bakery_id', bakeryId)
         .order('delivery_date', { ascending: false });
@@ -336,10 +340,11 @@ export function OrderManagementCard() {
               <p className="text-sm text-muted-foreground py-4">Ingen importerte ordrer funnet.</p>
             ) : (
               <Table>
-                <TableHeader>
+                 <TableHeader>
                   <TableRow>
                     <TableHead>Leveringsdato</TableHead>
                     <TableHead>Kategori</TableHead>
+                    <TableHead>Tur</TableHead>
                     <TableHead className="text-right">Ordrer</TableHead>
                     <TableHead className="text-right">Importert</TableHead>
                     <TableHead className="text-right">Handling</TableHead>
@@ -356,6 +361,13 @@ export function OrderManagementCard() {
                           <Badge variant="outline">{batch.category.name}</Badge>
                         ) : (
                           <span className="text-muted-foreground">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {batch.trip?.name ? (
+                          <Badge variant="secondary" className="text-xs">{batch.trip.name}</Badge>
+                        ) : (
+                          <span className="text-muted-foreground text-xs">–</span>
                         )}
                       </TableCell>
                       <TableCell className="text-right">{batch.orders_count || 0}</TableCell>
@@ -412,7 +424,7 @@ export function OrderManagementCard() {
             Du er i ferd med å slette importen for{' '}
             <strong>{selectedBatch ? format(new Date(selectedBatch.delivery_date), 'dd.MM.yyyy', { locale: nb }) : ''}</strong>
             {selectedBatch?.category?.name && (
-              <> ({selectedBatch.category.name})</>
+              <> ({selectedBatch.category.name}{selectedBatch?.trip?.name ? ` – ${selectedBatch.trip.name}` : ''})</>
             )}
             . Dette vil slette <strong>{selectedBatch?.orders_count || 0} ordre(r)</strong>.
             Denne handlingen kan ikke angres.
