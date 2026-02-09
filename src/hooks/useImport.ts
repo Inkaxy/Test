@@ -145,8 +145,11 @@ export function useImport() {
       let ordersCreated = 0;
       let orderProductsCreated = 0;
       let skippedOrders = 0;
+      let skippedMissingCustomer = 0;
+      let skippedMissingProduct = 0;
+      let skippedDuplicate = 0;
       
-      // Map to store product_number -> product_id
+      // Map to store product_number -> product_id (normalized keys)
       const productMap = new Map<string, string>();
       const customerMap = new Map<string, string>();
       
