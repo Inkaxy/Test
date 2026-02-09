@@ -479,6 +479,25 @@ export function OrderManagementCard() {
         isLoading={deleteOrdersBeforeDate.isPending}
       />
       
+      {/* Delete for date confirmation */}
+      <TypeConfirmDialog
+        open={deleteForDateOpen}
+        onOpenChange={setDeleteForDateOpen}
+        title="Slett ordrer for dato"
+        description={
+          <span>
+            Du er i ferd med å slette <strong>alle ordrer</strong> for{' '}
+            <strong>{forDate ? format(forDate, 'dd.MM.yyyy', { locale: nb }) : ''}</strong>
+            {selectedCategoryId !== 'all' && (
+              <> i kategorien <strong>{categories.find(c => c.id === selectedCategoryId)?.name}</strong></>
+            )}
+            . Denne handlingen kan ikke angres.
+          </span>
+        }
+        onConfirm={handleDeleteForDate}
+        isLoading={deleteOrdersForDate.isPending}
+      />
+      
       {/* Delete batch confirmation */}
       <TypeConfirmDialog
         open={deleteBatchOpen}
