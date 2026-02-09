@@ -139,6 +139,7 @@ export function OrderManagementCard() {
       const count = await deleteOrdersBeforeDate.mutateAsync({
         beforeDate,
         categoryId: selectedCategoryId !== 'all' ? selectedCategoryId : undefined,
+        tripId: selectedTripId !== 'all' ? selectedTripId : undefined,
       });
       
       toast({
