@@ -92,6 +92,7 @@ export function PackingCategoryCard({
   // Get color classes
   const colorConfig = CARD_COLORS.find(c => c.id === (category.card_color || 'primary')) || CARD_COLORS[0];
   const tripCount = trips.length;
+  const hasTrips = tripCount > 0;
   
   const handleCardClick = () => {
     // Navigate to calendar view for this category
