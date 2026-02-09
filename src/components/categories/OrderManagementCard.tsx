@@ -100,7 +100,7 @@ export function OrderManagementCard() {
   
   // Fetch import batches
   const { data: importBatches = [], isLoading: batchesLoading } = useQuery({
-    queryKey: ['import-batches', getActiveBakeryId(), selectedCategoryId],
+    queryKey: ['import-batches', getActiveBakeryId(), selectedCategoryId, selectedTripId],
     queryFn: async () => {
       const bakeryId = getActiveBakeryId();
       if (!bakeryId) return [];
@@ -124,6 +124,9 @@ export function OrderManagementCard() {
       
       if (selectedCategoryId !== 'all') {
         query = query.eq('category_id', selectedCategoryId);
+      }
+      if (selectedTripId !== 'all') {
+        query = query.eq('trip_id', selectedTripId);
       }
       
       const { data, error } = await query;
