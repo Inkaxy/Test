@@ -186,7 +186,11 @@ export function OneDriveConfigDialog({ category, tripId, tripName, open, onOpenC
             OneDrive-konfigurasjon
           </DialogTitle>
           <DialogDescription>
-            Koble <strong>{category.name}</strong> til en OneDrive-mappe for automatisk import
+            Koble {tripName ? (
+              <><strong>{tripName}</strong> ({category.name})</>
+            ) : (
+              <strong>{category.name}</strong>
+            )} til en OneDrive-mappe for automatisk import
           </DialogDescription>
         </DialogHeader>
         
