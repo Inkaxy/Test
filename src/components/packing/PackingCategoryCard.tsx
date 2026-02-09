@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/popover';
 import { Category, useUpdateCategory, useDeleteCategory } from '@/hooks/useCategories';
 import { useOneDriveConfigForCategory } from '@/hooks/useOneDriveConfig';
+import { useTrips } from '@/hooks/useTrips';
 import { useImport } from '@/hooks/useImport';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -84,10 +85,12 @@ export function PackingCategoryCard({
   const updateCategory = useUpdateCategory();
   const deleteCategory = useDeleteCategory();
   const { data: oneDriveConfig } = useOneDriveConfigForCategory(category.id);
+  const { data: trips = [] } = useTrips(category.id);
   const { parseFiles, importData, isImporting } = useImport();
   
   // Get color classes
   const colorConfig = CARD_COLORS.find(c => c.id === (category.card_color || 'primary')) || CARD_COLORS[0];
+  const tripCount = trips.length;
   
   const handleCardClick = () => {
     // Navigate to calendar view for this category
@@ -254,6 +257,21 @@ export function PackingCategoryCard({
               : t('categories.customerBased').toLowerCase()})
           </p>
           
+          {/* Trip count badge */}
+          {tripCount > 0 && (
+            <Badge 
+              className={cn(
+                "mt-2 gap-1 text-xs",
+                "bg-white/20 hover:bg-white/30 border-white/30",
+                colorConfig.textClass
+              )}
+              variant="outline"
+            >
+              <Route className="h-3 w-3" />
+              {tripCount} {tripCount === 1 ? 'tur' : 'turer'}
+            </Badge>
+          )}
+          
           {/* Start packing hint on hover - only show when not in edit mode */}
           {!isEditMode && (
             <div className="absolute bottom-4 left-0 right-0 flex justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
@@ -332,7 +350,7 @@ export function PackingCategoryCard({
                   onClick={() => handleMenuAction('trips')}
                 >
                   <Route className="h-4 w-4" />
-                  Turer
+                  <span>Administrer turer{tripCount > 0 && <span className="text-muted-foreground ml-1">({tripCount})</span>}</span>
                 </Button>
                 <Button
                   variant="ghost"
