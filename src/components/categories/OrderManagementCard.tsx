@@ -27,7 +27,9 @@ interface ImportBatch {
   customers_count: number | null;
   created_at: string | null;
   category_id: string | null;
+  trip_id: string | null;
   category?: { name: string } | null;
+  trip?: { name: string } | null;
 }
 
 export function OrderManagementCard() {
