@@ -138,22 +138,29 @@ export function useCustomerDisplayData(
   };
 }
 
-// Fetch customer by display token (for customer-specific displays)
+// Fetch customer by display token or short_display_id (for customer-specific displays)
 export function useCustomerByToken(displayToken: string | null) {
   return useQuery({
     queryKey: ['customer-by-token', displayToken],
     queryFn: async () => {
       if (!displayToken) return null;
 
-      const { data, error } = await supabase
-        .from('customers')
-        .select('id, name, customer_number, bakery_id, has_dedicated_display')
-        .eq('display_token', displayToken)
-        .eq('has_dedicated_display', true)
-        .maybeSingle();
+      // Use the validate_display_token RPC which supports both display_token and short_display_id
+      const { data, error } = await supabase.rpc('validate_display_token', {
+        _token: displayToken,
+      });
 
       if (error) throw error;
-      return data;
+      if (!data || data.length === 0) return null;
+
+      const result = data[0];
+      return {
+        id: result.customer_id,
+        name: result.customer_name,
+        bakery_id: result.bakery_id,
+        customer_number: '', // Not returned by RPC, but we can fetch separately if needed
+        has_dedicated_display: true,
+      };
     },
     enabled: !!displayToken,
   });

@@ -81,10 +81,10 @@ export default function CustomerDisplay() {
     }
   }, [lastUpdate, queryClient, displaySettings.realtime_flash_on_update, displaySettings.animation_highlight_duration]);
 
-  // Filter orders to only show products that are selected for packing
+  // Filter orders to only show selected products, or show all if no selection is active
   const orders = selection?.productIds?.length
     ? allOrders.filter((order) => selection.productIds.includes(order.product.id))
-    : [];
+    : allOrders;
 
   // Update clock every second (if enabled)
   useEffect(() => {
