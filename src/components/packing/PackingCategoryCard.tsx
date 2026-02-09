@@ -53,6 +53,7 @@ export const CARD_COLORS = [
 interface PackingCategoryCardProps {
   category: Category;
   onOneDriveConfig: () => void;
+  onManageTrips?: () => void;
   isEditMode?: boolean;
   bakeryShortId?: string;
 }
