@@ -11,6 +11,7 @@ export interface Customer {
   is_active: boolean;
   has_dedicated_display: boolean | null;
   display_token: string | null;
+  short_display_id: string | null;
   priority: number | null;
 }
 
