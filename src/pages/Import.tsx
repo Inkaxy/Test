@@ -223,7 +223,7 @@ export default function Import() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <Select value={selectedCategoryId} onValueChange={setSelectedCategoryId}>
+          <Select value={selectedCategoryId} onValueChange={(val) => { setSelectedCategoryId(val); setSelectedTripId(undefined); }}>
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Velg kategori..." />
             </SelectTrigger>
