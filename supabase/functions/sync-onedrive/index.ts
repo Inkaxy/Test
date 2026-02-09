@@ -9,6 +9,7 @@ interface OneDriveConfig {
   id: string
   bakery_id: string
   category_id: string
+  trip_id: string | null
   onedrive_folder_url: string | null
   onedrive_folder_id: string | null
   sync_enabled: boolean
@@ -515,6 +516,7 @@ async function importData(
   supabase: ReturnType<typeof createClient>,
   bakeryId: string,
   categoryId: string,
+  tripId: string | null,
   products: ParsedProduct[],
   customers: ParsedCustomer[],
   orders: ParsedOrder[],
@@ -598,6 +600,7 @@ async function importData(
     const orderInserts: Array<{
       bakery_id: string
       category_id: string
+      trip_id: string | null
       customer_id: string
       product_id: string
       delivery_date: string
@@ -621,6 +624,7 @@ async function importData(
         orderInserts.push({
           bakery_id: bakeryId,
           category_id: categoryId,
+          trip_id: tripId,
           customer_id: customerId,
           product_id: productId,
           delivery_date: order.deliveryDate,
@@ -665,6 +669,7 @@ async function importData(
     .insert({
       bakery_id: bakeryId,
       category_id: categoryId,
+      trip_id: tripId,
       delivery_date: deliveryDate,
       products_count: products.length,
       customers_count: customers.length,
@@ -697,7 +702,7 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!
     
-    const { categoryId, cronTriggered } = await req.json()
+    const { categoryId, tripId, cronTriggered } = await req.json()
 
     // Check if cron-triggered
     const cronSecret = req.headers.get('X-Cron-Secret')
@@ -745,12 +750,19 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Get OneDrive config
-    const { data: config, error: configError } = await supabase
+    // Get OneDrive config - filter by tripId if provided
+    let configQuery = supabase
       .from('category_onedrive_config')
       .select('*')
       .eq('category_id', categoryId)
-      .single()
+
+    if (tripId) {
+      configQuery = configQuery.eq('trip_id', tripId)
+    } else {
+      configQuery = configQuery.is('trip_id', null)
+    }
+
+    const { data: config, error: configError } = await configQuery.single()
 
     if (configError || !config) {
       return new Response(
@@ -796,13 +808,20 @@ Deno.serve(async (req) => {
     cutoffDate.setDate(cutoffDate.getDate() - autoDeleteDays)
     const cutoffDateStr = cutoffDate.toISOString().split('T')[0]
 
-    // Get already imported dates
-    const { data: importBatches } = await supabase
+    // Get already imported dates - scoped to trip if applicable
+    let importQuery = supabase
       .from('import_batches')
       .select('delivery_date')
       .eq('bakery_id', config.bakery_id)
       .eq('category_id', categoryId)
-    
+
+    if (config.trip_id) {
+      importQuery = importQuery.eq('trip_id', config.trip_id)
+    } else {
+      importQuery = importQuery.is('trip_id', null)
+    }
+
+    const { data: importBatches } = await importQuery
     const importedDates = new Set((importBatches || []).map(b => b.delivery_date))
 
     console.log(`Sync for category ${categoryId}, cutoff: ${cutoffDateStr}, imported dates: ${importedDates.size}`)
@@ -912,6 +931,7 @@ Deno.serve(async (req) => {
             serviceSupabase,
             config.bakery_id,
             categoryId,
+            config.trip_id || null,
             allProducts,
             allCustomers,
             orders,
