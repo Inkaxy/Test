@@ -79,6 +79,7 @@ export function OneDriveConfigDialog({ category, tripId, tripName, open, onOpenC
     try {
       await upsertConfig.mutateAsync({
         categoryId: category.id,
+        tripId: tripId ?? null,
         onedriveFolderUrl: folderUrl,
         syncEnabled,
         syncTime,
