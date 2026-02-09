@@ -19,6 +19,31 @@ interface DeleteOrphanedOrdersParams {
   forDate?: Date;
 }
 
+// Batch size for .in() queries to avoid URL length limits
+const BATCH_SIZE = 100;
+
+async function batchDeleteByOrderIds(orderIds: string[]): Promise<void> {
+  for (let i = 0; i < orderIds.length; i += BATCH_SIZE) {
+    const batch = orderIds.slice(i, i + BATCH_SIZE);
+    
+    // Delete packing_status first
+    const { error: packingError } = await supabase
+      .from('packing_status')
+      .delete()
+      .in('order_id', batch);
+    
+    if (packingError) throw packingError;
+    
+    // Delete orders
+    const { error: ordersError } = await supabase
+      .from('orders')
+      .delete()
+      .in('id', batch);
+    
+    if (ordersError) throw ordersError;
+  }
+}
+
 export function useDeleteOrdersBeforeDate() {
   const queryClient = useQueryClient();
   const { getActiveBakeryId } = useAuthStore();
@@ -30,41 +55,37 @@ export function useDeleteOrdersBeforeDate() {
       
       const beforeDateStr = beforeDate.toISOString().split('T')[0];
       
-      // First, get the order IDs to delete
-      let query = supabase
-        .from('orders')
-        .select('id')
-        .eq('bakery_id', bakeryId)
-        .lt('delivery_date', beforeDateStr);
+      // Fetch all order IDs (handle >1000 rows)
+      let allOrderIds: string[] = [];
+      let from = 0;
+      const pageSize = 1000;
       
-      if (categoryId) {
-        query = query.eq('category_id', categoryId);
+      while (true) {
+        let query = supabase
+          .from('orders')
+          .select('id')
+          .eq('bakery_id', bakeryId)
+          .lt('delivery_date', beforeDateStr)
+          .range(from, from + pageSize - 1);
+        
+        if (categoryId) {
+          query = query.eq('category_id', categoryId);
+        }
+        
+        const { data, error } = await query;
+        if (error) throw error;
+        if (!data || data.length === 0) break;
+        
+        allOrderIds = allOrderIds.concat(data.map(o => o.id));
+        if (data.length < pageSize) break;
+        from += pageSize;
       }
       
-      const { data: ordersToDelete, error: fetchError } = await query;
+      if (allOrderIds.length === 0) return 0;
       
-      if (fetchError) throw fetchError;
-      if (!ordersToDelete || ordersToDelete.length === 0) return 0;
+      await batchDeleteByOrderIds(allOrderIds);
       
-      const orderIds = ordersToDelete.map(o => o.id);
-      
-      // Delete packing_status entries first (foreign key constraint)
-      const { error: packingError } = await supabase
-        .from('packing_status')
-        .delete()
-        .in('order_id', orderIds);
-      
-      if (packingError) throw packingError;
-      
-      // Delete the orders
-      const { error: ordersError } = await supabase
-        .from('orders')
-        .delete()
-        .in('id', orderIds);
-      
-      if (ordersError) throw ordersError;
-      
-      // Clean up empty import batches
+      // Clean up import batches
       const { error: batchCleanupError } = await supabase
         .from('import_batches')
         .delete()
@@ -75,7 +96,7 @@ export function useDeleteOrdersBeforeDate() {
         console.warn('Could not clean up import batches:', batchCleanupError);
       }
       
-      return orderIds.length;
+      return allOrderIds.length;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['orders'] });
