@@ -329,6 +329,15 @@ export function PackingCategoryCard({
                   variant="ghost"
                   size="sm"
                   className="justify-start gap-2 w-full"
+                  onClick={() => handleMenuAction('trips')}
+                >
+                  <Route className="h-4 w-4" />
+                  Turer
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="justify-start gap-2 w-full"
                   onClick={() => handleMenuAction('kiosklink')}
                 >
                   <Link className="h-4 w-4" />
