@@ -111,6 +111,10 @@ function useKioskProductsForDate(bakeryId: string | null, date: string, category
         query = query.eq('product.category_id', categoryId);
       }
       
+      if (tripId) {
+        query = query.eq('trip_id', tripId);
+      }
+      
       const { data, error } = await query.order('product(name)');
       
       if (error) throw error;
