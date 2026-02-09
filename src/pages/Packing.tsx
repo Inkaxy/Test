@@ -251,8 +251,16 @@ export default function Packing() {
       {/* OneDrive config dialog */}
       <OneDriveConfigDialog
         category={oneDriveCategory}
+        tripId={oneDriveTripId}
+        tripName={oneDriveTripName}
         open={!!oneDriveCategory}
-        onOpenChange={(open) => !open && setOneDriveCategory(null)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setOneDriveCategory(null);
+            setOneDriveTripId(null);
+            setOneDriveTripName(null);
+          }
+        }}
       />
 
       {/* Trips management dialog */}
@@ -260,6 +268,13 @@ export default function Packing() {
         category={tripsCategory}
         open={!!tripsCategory}
         onOpenChange={(open) => !open && setTripsCategory(null)}
+        onOpenOneDriveForTrip={(tripId, tripName) => {
+          if (tripsCategory) {
+            setOneDriveCategory(tripsCategory);
+            setOneDriveTripId(tripId);
+            setOneDriveTripName(tripName);
+          }
+        }}
       />
     </div>
   );
