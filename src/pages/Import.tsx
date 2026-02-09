@@ -257,6 +257,31 @@ export default function Import() {
             </div>
           )}
           
+          {/* Trip selector - shown when category has trips */}
+          {hasTrips && (
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <Route className="h-4 w-4" />
+                Velg tur
+              </Label>
+              <Select value={selectedTripId} onValueChange={setSelectedTripId}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Velg tur..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {trips.map((trip) => (
+                    <SelectItem key={trip.id} value={trip.id}>
+                      {trip.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Denne kategorien har {trips.length} turer. Velg hvilken tur ordrene tilhører.
+              </p>
+            </div>
+          )}
+          
           <p className="text-xs text-muted-foreground">
             Produkter og kunder deles på tvers av kategorier. Ordrer (.OD0) knyttes til valgt kategori.
           </p>
