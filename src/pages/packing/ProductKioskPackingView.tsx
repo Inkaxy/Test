@@ -193,10 +193,27 @@ export default function ProductKioskPackingView() {
   
   const { data: bakery, isLoading: bakeryLoading } = useBakeryByShortId(bakeryShortId || null);
   const { data: category } = useCategoryById(categoryId || null);
+  
+  // Trips support
+  const { data: trips = [] } = useTripsForBakery(bakery?.id || null, categoryId);
+  const hasTrips = trips.length > 0;
+  
+  const { data: allProducts = [] } = useKioskProductsForDate(bakery?.id || null, dateStr, categoryId);
+  
+  const getTripStats = useCallback((_tripId: string) => {
+    const total = allProducts.reduce((s, p) => s + p.totalOrders, 0);
+    const packed = allProducts.reduce((s, p) => s + p.packedOrders, 0);
+    return { totalOrders: total, packedOrders: packed, deviations: 0 };
+  }, [allProducts]);
+  
+  const tripProgression = useTripProgression({ trips, getTripStats });
+  const activeTripId = hasTrips ? tripProgression.activeTripId : null;
+  
   const { data: products = [], isLoading: productsLoading } = useKioskProductsForDate(
     bakery?.id || null, 
     dateStr, 
-    categoryId
+    categoryId,
+    activeTripId
   );
   
   // Use unified packing mutations hook in kiosk mode
