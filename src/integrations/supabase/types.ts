@@ -712,19 +712,15 @@ export type Database = {
         Args: { _bakery_name: string; _display_name?: string; _user_id: string }
         Returns: string
       }
-      validate_display_token:
-        | {
-            Args: { _token: string }
-            Returns: {
-              error: true
-            } & "Could not choose the best candidate function between: public.validate_display_token(_token => text), public.validate_display_token(_token => uuid). Try renaming the parameters or the function itself in the database so function overloading can be resolved"[]
-          }
-        | {
-            Args: { _token: string }
-            Returns: {
-              error: true
-            } & "Could not choose the best candidate function between: public.validate_display_token(_token => text), public.validate_display_token(_token => uuid). Try renaming the parameters or the function itself in the database so function overloading can be resolved"[]
-          }
+      validate_display_token: {
+        Args: { _token: string }
+        Returns: {
+          bakery_id: string
+          bakery_name: string
+          customer_id: string
+          customer_name: string
+        }[]
+      }
     }
     Enums: {
       app_role: "super_admin" | "bakery_admin" | "bakery_user"
