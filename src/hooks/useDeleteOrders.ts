@@ -5,6 +5,7 @@ import { useAuthStore } from '@/stores/authStore';
 interface DeleteOrdersBeforeDateParams {
   beforeDate: Date;
   categoryId?: string;
+  tripId?: string;
 }
 
 interface DeleteOrdersForDateParams {
@@ -55,7 +56,7 @@ export function useDeleteOrdersBeforeDate() {
   const { getActiveBakeryId } = useAuthStore();
   
   return useMutation({
-    mutationFn: async ({ beforeDate, categoryId }: DeleteOrdersBeforeDateParams): Promise<number> => {
+    mutationFn: async ({ beforeDate, categoryId, tripId }: DeleteOrdersBeforeDateParams): Promise<number> => {
       const bakeryId = getActiveBakeryId();
       if (!bakeryId) throw new Error('Ingen bakeri valgt');
       
@@ -76,6 +77,9 @@ export function useDeleteOrdersBeforeDate() {
         
         if (categoryId) {
           query = query.eq('category_id', categoryId);
+        }
+        if (tripId) {
+          query = query.eq('trip_id', tripId);
         }
         
         const { data, error } = await query;

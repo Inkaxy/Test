@@ -13,6 +13,7 @@ import { format } from 'date-fns';
 import { nb } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { useCategories } from '@/hooks/useCategories';
+import { useTrips } from '@/hooks/useTrips';
 import { useDeleteOrdersBeforeDate, useDeleteImportBatch, useDeleteOrphanedOrders, useDeleteOrdersForDate } from '@/hooks/useDeleteOrders';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -38,6 +39,7 @@ export function OrderManagementCard() {
   const { getActiveBakeryId } = useAuthStore();
   
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('all');
+  const [selectedTripId, setSelectedTripId] = useState<string>('all');
   const [beforeDate, setBeforeDate] = useState<Date>();
   const [forDate, setForDate] = useState<Date>();
   const [orphanDate, setOrphanDate] = useState<Date>();
@@ -48,10 +50,16 @@ export function OrderManagementCard() {
   const [selectedBatch, setSelectedBatch] = useState<ImportBatch | null>(null);
   
   const { data: categories = [] } = useCategories();
+  const { data: trips = [] } = useTrips(selectedCategoryId !== 'all' ? selectedCategoryId : undefined);
   const deleteOrdersBeforeDate = useDeleteOrdersBeforeDate();
   const deleteOrdersForDate = useDeleteOrdersForDate();
   const deleteImportBatch = useDeleteImportBatch();
   const deleteOrphanedOrders = useDeleteOrphanedOrders();
+  
+  const handleCategoryChange = (value: string) => {
+    setSelectedCategoryId(value);
+    setSelectedTripId('all');
+  };
   
   // Fetch orphaned orders count
   const { data: orphanedOrdersData, isLoading: orphanedLoading } = useQuery({
@@ -92,7 +100,7 @@ export function OrderManagementCard() {
   
   // Fetch import batches
   const { data: importBatches = [], isLoading: batchesLoading } = useQuery({
-    queryKey: ['import-batches', getActiveBakeryId(), selectedCategoryId],
+    queryKey: ['import-batches', getActiveBakeryId(), selectedCategoryId, selectedTripId],
     queryFn: async () => {
       const bakeryId = getActiveBakeryId();
       if (!bakeryId) return [];
@@ -117,6 +125,9 @@ export function OrderManagementCard() {
       if (selectedCategoryId !== 'all') {
         query = query.eq('category_id', selectedCategoryId);
       }
+      if (selectedTripId !== 'all') {
+        query = query.eq('trip_id', selectedTripId);
+      }
       
       const { data, error } = await query;
       if (error) throw error;
@@ -131,6 +142,7 @@ export function OrderManagementCard() {
       const count = await deleteOrdersBeforeDate.mutateAsync({
         beforeDate,
         categoryId: selectedCategoryId !== 'all' ? selectedCategoryId : undefined,
+        tripId: selectedTripId !== 'all' ? selectedTripId : undefined,
       });
       
       toast({
@@ -156,6 +168,7 @@ export function OrderManagementCard() {
       const count = await deleteOrdersForDate.mutateAsync({
         date: forDate,
         categoryId: selectedCategoryId !== 'all' ? selectedCategoryId : undefined,
+        tripId: selectedTripId !== 'all' ? selectedTripId : undefined,
       });
       
       toast({
@@ -231,10 +244,10 @@ export function OrderManagementCard() {
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Filter by category */}
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end flex-wrap">
             <div className="space-y-2">
               <label className="text-sm font-medium">Filtrer på kategori</label>
-              <Select value={selectedCategoryId} onValueChange={setSelectedCategoryId}>
+              <Select value={selectedCategoryId} onValueChange={handleCategoryChange}>
                 <SelectTrigger className="w-[200px]">
                   <SelectValue placeholder="Velg kategori" />
                 </SelectTrigger>
@@ -248,6 +261,26 @@ export function OrderManagementCard() {
                 </SelectContent>
               </Select>
             </div>
+            
+            {/* Trip filter - only show when a category is selected and has trips */}
+            {selectedCategoryId !== 'all' && trips.length > 0 && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Filtrer på tur</label>
+                <Select value={selectedTripId} onValueChange={setSelectedTripId}>
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue placeholder="Velg tur" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Alle turer</SelectItem>
+                    {trips.map((trip) => (
+                      <SelectItem key={trip.id} value={trip.id}>
+                        {trip.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             
             {/* Delete before date */}
             <div className="flex items-end gap-2">
@@ -472,6 +505,9 @@ export function OrderManagementCard() {
             {selectedCategoryId !== 'all' && (
               <> i kategorien <strong>{categories.find(c => c.id === selectedCategoryId)?.name}</strong></>
             )}
+            {selectedTripId !== 'all' && (
+              <> for turen <strong>{trips.find(t => t.id === selectedTripId)?.name}</strong></>
+            )}
             . Denne handlingen kan ikke angres.
           </span>
         }
@@ -490,6 +526,9 @@ export function OrderManagementCard() {
             <strong>{forDate ? format(forDate, 'dd.MM.yyyy', { locale: nb }) : ''}</strong>
             {selectedCategoryId !== 'all' && (
               <> i kategorien <strong>{categories.find(c => c.id === selectedCategoryId)?.name}</strong></>
+            )}
+            {selectedTripId !== 'all' && (
+              <> for turen <strong>{trips.find(t => t.id === selectedTripId)?.name}</strong></>
             )}
             . Denne handlingen kan ikke angres.
           </span>
