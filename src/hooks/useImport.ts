@@ -107,17 +107,24 @@ export function useImport() {
       
       const deliveryDateStr = toLocalDateString(data.deliveryDate);
       
-      // Check for duplicate import (same bakery + date + category)
-      const { data: existingBatch } = await supabase
+      // Check for duplicate import (same bakery + date + category + trip)
+      let duplicateQuery = supabase
         .from('import_batches')
         .select('id')
         .eq('bakery_id', bakeryId)
         .eq('delivery_date', deliveryDateStr)
-        .eq('category_id', data.categoryId)
-        .maybeSingle();
+        .eq('category_id', data.categoryId);
+      
+      if (data.tripId) {
+        duplicateQuery = duplicateQuery.eq('trip_id', data.tripId);
+      } else {
+        duplicateQuery = duplicateQuery.is('trip_id', null);
+      }
+      
+      const { data: existingBatch } = await duplicateQuery.maybeSingle();
       
       if (existingBatch) {
-        throw new Error(`Data for ${deliveryDateStr} er allerede importert til denne kategorien. Slett eksisterende import først.`);
+        throw new Error(`Data for ${deliveryDateStr} er allerede importert til denne kategorien${data.tripId ? ' og turen' : ''}. Slett eksisterende import først.`);
       }
       
       let productsCreated = 0;
