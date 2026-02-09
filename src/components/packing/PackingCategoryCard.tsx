@@ -509,6 +509,31 @@ export function PackingCategoryCard({
           </DialogHeader>
           
           <div className="space-y-4 py-4">
+            {/* Trip selector */}
+            {hasTrips && (
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <Route className="h-4 w-4" />
+                  Velg tur
+                </Label>
+                <Select value={selectedTripId} onValueChange={setSelectedTripId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Velg tur..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {trips.map((trip) => (
+                      <SelectItem key={trip.id} value={trip.id}>
+                        {trip.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Hver tur har sitt eget OD0-dataområde. Ordrer isoleres per tur.
+                </p>
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label>Velg filer (.CUS, .PRD, .OD0)</Label>
               <div 
