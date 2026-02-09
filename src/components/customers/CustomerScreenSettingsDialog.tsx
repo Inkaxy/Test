@@ -65,9 +65,10 @@ export function CustomerScreenSettingsDialog({
 
   if (!customer) return null;
 
-  // Short URL format: /d/{token}
-  const localDedicatedDisplayUrl = localDisplayToken
-    ? `${window.location.origin}/d/${localDisplayToken}`
+  // Use short_display_id for shorter URLs, fallback to display_token
+  const displayId = localShortDisplayId || localDisplayToken;
+  const localDedicatedDisplayUrl = displayId
+    ? `${window.location.origin}/d/${displayId}`
     : '';
 
   // Short URL format for shared: /display/{shortId}
