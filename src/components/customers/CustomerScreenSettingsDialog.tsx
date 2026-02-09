@@ -33,6 +33,7 @@ export function CustomerScreenSettingsDialog({
   const [showSharedQrCode, setShowSharedQrCode] = useState(false);
   const [localHasDedicatedDisplay, setLocalHasDedicatedDisplay] = useState(false);
   const [localDisplayToken, setLocalDisplayToken] = useState<string | null>(null);
+  const [localShortDisplayId, setLocalShortDisplayId] = useState<string | null>(null);
 
   const bakeryId = getActiveBakeryId();
 
@@ -57,15 +58,17 @@ export function CustomerScreenSettingsDialog({
     if (!open || !customer) return;
     setLocalHasDedicatedDisplay(customer.has_dedicated_display ?? false);
     setLocalDisplayToken(customer.display_token ?? null);
+    setLocalShortDisplayId(customer.short_display_id ?? null);
     setShowQrCode(false);
     setShowSharedQrCode(false);
-  }, [open, customer?.id, customer?.has_dedicated_display, customer?.display_token]);
+  }, [open, customer?.id, customer?.has_dedicated_display, customer?.display_token, customer?.short_display_id]);
 
   if (!customer) return null;
 
-  // Short URL format: /d/{token}
-  const localDedicatedDisplayUrl = localDisplayToken
-    ? `${window.location.origin}/d/${localDisplayToken}`
+  // Use short_display_id for shorter URLs, fallback to display_token
+  const displayId = localShortDisplayId || localDisplayToken;
+  const localDedicatedDisplayUrl = displayId
+    ? `${window.location.origin}/d/${displayId}`
     : '';
 
   // Short URL format for shared: /display/{shortId}
@@ -95,9 +98,10 @@ export function CustomerScreenSettingsDialog({
 
       const updated = await updateCustomer.mutateAsync(updateData);
 
-      // Ensure UI reflects server truth (and keeps working even if parent keeps a stale customer object)
+      // Ensure UI reflects server truth
       setLocalHasDedicatedDisplay(updated.has_dedicated_display ?? enabled);
       setLocalDisplayToken(updated.display_token ?? (updateData.display_token ?? prevToken) ?? null);
+      setLocalShortDisplayId(updated.short_display_id ?? null);
 
       toast({
         title: t('common.success'),

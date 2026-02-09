@@ -78,6 +78,7 @@ export default function Customers() {
           ...formData,
           has_dedicated_display: false,
           display_token: null,
+          short_display_id: null,
         });
         toast({ title: t('common.success'), description: 'Kunde opprettet' });
       }
