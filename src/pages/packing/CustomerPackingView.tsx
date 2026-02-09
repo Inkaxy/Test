@@ -89,14 +89,32 @@ export default function CustomerPackingView() {
   const { data: trips = [] } = useTrips(categoryId);
   const hasTrips = trips.length > 0;
   
-  // Fetch all customers (no trip filter) for computing trip stats
-  const { data: allCustomers = [] } = useCustomersForDate(dateStr, categoryId, sortOptions);
-  
-  const getTripStats = useCallback((_tripId: string) => {
-    const total = allCustomers.reduce((s, c) => s + c.totalOrders, 0);
-    const packed = allCustomers.reduce((s, c) => s + c.packedOrders, 0);
-    return { totalOrders: total, packedOrders: packed, deviations: 0 };
-  }, [allCustomers]);
+  // Per-trip order stats for trip progression
+  const { data: tripOrderStats = [] } = useQuery({
+    queryKey: ['trip-order-stats', bakeryId, dateStr, categoryId],
+    queryFn: async () => {
+      if (!bakeryId || !categoryId) return [];
+      const { data, error } = await supabase
+        .from('orders')
+        .select('id, trip_id, packing_status(status)')
+        .eq('bakery_id', bakeryId)
+        .eq('delivery_date', dateStr)
+        .eq('category_id', categoryId);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!bakeryId && !!categoryId && hasTrips,
+  });
+
+  const getTripStats = useCallback((tripId: string) => {
+    const tripOrders = tripOrderStats.filter(o => o.trip_id === tripId);
+    const total = tripOrders.length;
+    const packed = tripOrders.filter(o => 
+      o.packing_status?.status === 'packed' || o.packing_status?.status === 'deviation'
+    ).length;
+    const deviations = tripOrders.filter(o => o.packing_status?.status === 'deviation').length;
+    return { totalOrders: total, packedOrders: packed, deviations };
+  }, [tripOrderStats]);
   
   const tripProgression = useTripProgression({ trips, getTripStats });
   const activeTripId = hasTrips ? tripProgression.activeTripId : null;
