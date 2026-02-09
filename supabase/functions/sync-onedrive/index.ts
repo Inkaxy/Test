@@ -669,6 +669,7 @@ async function importData(
     .insert({
       bakery_id: bakeryId,
       category_id: categoryId,
+      trip_id: tripId,
       delivery_date: deliveryDate,
       products_count: products.length,
       customers_count: customers.length,
