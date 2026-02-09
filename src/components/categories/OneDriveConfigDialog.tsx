@@ -134,7 +134,7 @@ export function OneDriveConfigDialog({ category, tripId, tripName, open, onOpenC
       const { data: { session } } = await supabase.auth.getSession();
       
       const { data, error } = await supabase.functions.invoke('sync-onedrive', {
-        body: { categoryId: category.id },
+        body: { categoryId: category.id, tripId: tripId ?? undefined },
         headers: session?.access_token ? {
           Authorization: `Bearer ${session.access_token}`
         } : undefined
