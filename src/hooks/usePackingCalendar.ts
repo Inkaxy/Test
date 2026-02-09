@@ -98,6 +98,88 @@ export function useMonthOrderSummary(year: number, month: number, categoryId?: s
   });
 }
 
+export interface TripDateStats {
+  tripId: string;
+  tripName: string;
+  totalOrders: number;
+  packedOrders: number;
+  deviationOrders: number;
+  status: DateStatus['status'];
+}
+
+export function useDateTripStats(date: string, categoryId?: string) {
+  const { getActiveBakeryId } = useAuthStore();
+
+  return useQuery({
+    queryKey: ['date-trip-stats', getActiveBakeryId(), date, categoryId],
+    queryFn: async (): Promise<TripDateStats[]> => {
+      const bakeryId = getActiveBakeryId();
+      if (!bakeryId || !categoryId) return [];
+
+      const { data: orders, error } = await supabase
+        .from('orders')
+        .select(`
+          id,
+          trip_id,
+          packing_status(status)
+        `)
+        .eq('bakery_id', bakeryId)
+        .eq('delivery_date', date)
+        .eq('category_id', categoryId)
+        .not('trip_id', 'is', null);
+
+      if (error) throw error;
+      if (!orders || orders.length === 0) return [];
+
+      // Get trip names
+      const tripIds = [...new Set(orders.map(o => o.trip_id).filter(Boolean))] as string[];
+      if (tripIds.length === 0) return [];
+
+      const { data: trips } = await supabase
+        .from('category_trips')
+        .select('id, name, sort_order')
+        .in('id', tripIds)
+        .order('sort_order');
+
+      const tripMap = new Map((trips || []).map(t => [t.id, t]));
+
+      // Aggregate per trip
+      const statsMap = new Map<string, TripDateStats>();
+      for (const order of orders) {
+        if (!order.trip_id) continue;
+        const trip = tripMap.get(order.trip_id);
+        const existing = statsMap.get(order.trip_id) || {
+          tripId: order.trip_id,
+          tripName: trip?.name || 'Ukjent tur',
+          totalOrders: 0,
+          packedOrders: 0,
+          deviationOrders: 0,
+          status: 'no_orders' as const,
+        };
+        existing.totalOrders++;
+        const status = order.packing_status?.status;
+        if (status === 'packed') existing.packedOrders++;
+        else if (status === 'deviation') {
+          existing.deviationOrders++;
+          existing.packedOrders++;
+        }
+        existing.status = getStatus(existing.totalOrders, existing.packedOrders);
+        statsMap.set(order.trip_id, existing);
+      }
+
+      // Sort by trip sort_order
+      return Array.from(statsMap.values()).sort((a, b) => {
+        const ta = tripMap.get(a.tripId);
+        const tb = tripMap.get(b.tripId);
+        return (ta?.sort_order ?? 0) - (tb?.sort_order ?? 0);
+      });
+    },
+    enabled: !!date && !!categoryId,
+    staleTime: 30000,
+    placeholderData: (prev) => prev,
+  });
+}
+
 export function useDateOrderStats(date: string, categoryId?: string) {
   const { getActiveBakeryId } = useAuthStore();
   
