@@ -27,6 +27,7 @@ interface GraphDriveItem {
   file?: { mimeType: string }
   folder?: { childCount: number }
   '@microsoft.graph.downloadUrl'?: string
+  size?: number
 }
 
 interface ParsedProduct {
@@ -121,7 +122,7 @@ function extractShareIdFromUrl(url: string): string {
 async function getFilesInFolder(accessToken: string, shareUrl: string): Promise<GraphDriveItem[]> {
   const shareId = extractShareIdFromUrl(shareUrl)
   
-  // First get the shared folder
+  // First get the shared folder to verify access
   const shareResponse = await fetch(
     `https://graph.microsoft.com/v1.0/shares/${shareId}/driveItem`,
     {
@@ -135,9 +136,9 @@ async function getFilesInFolder(accessToken: string, shareUrl: string): Promise<
     throw new Error(`Kunne ikke få tilgang til OneDrive-mappen. Sjekk at delingslenken er gyldig og at appen har tilgang. Status: ${shareResponse.status}`)
   }
 
-  // Get children (files) in the folder
+  // Get children with select to ensure we get download URLs
   const childrenResponse = await fetch(
-    `https://graph.microsoft.com/v1.0/shares/${shareId}/driveItem/children`,
+    `https://graph.microsoft.com/v1.0/shares/${shareId}/driveItem/children?$select=id,name,file,folder,size,@microsoft.graph.downloadUrl`,
     {
       headers: { Authorization: `Bearer ${accessToken}` }
     }
@@ -153,33 +154,22 @@ async function getFilesInFolder(accessToken: string, shareUrl: string): Promise<
   return data.value || []
 }
 
-async function downloadFileContent(accessToken: string, shareUrl: string, itemId: string): Promise<string> {
-  const shareId = extractShareIdFromUrl(shareUrl)
+async function downloadFileContent(accessToken: string, file: GraphDriveItem): Promise<string> {
+  // Use the download URL directly from the file item
+  const downloadUrl = file['@microsoft.graph.downloadUrl']
   
-  // Get download URL for the specific file
-  const itemResponse = await fetch(
-    `https://graph.microsoft.com/v1.0/shares/${shareId}/driveItem/children/${itemId}`,
-    {
-      headers: { Authorization: `Bearer ${accessToken}` }
-    }
-  )
-
-  if (!itemResponse.ok) {
-    throw new Error(`Kunne ikke hente fil-metadata: ${itemResponse.status}`)
-  }
-
-  const item = await itemResponse.json()
-  const downloadUrl = item['@microsoft.graph.downloadUrl']
-
   if (!downloadUrl) {
-    throw new Error('Ingen nedlastings-URL funnet for filen')
+    console.error(`No download URL available for file: ${file.name}`)
+    throw new Error(`Ingen nedlastings-URL funnet for filen: ${file.name}`)
   }
+
+  console.log(`Downloading file: ${file.name} (${file.size || 'unknown'} bytes)`)
 
   // Download the actual file content
   const contentResponse = await fetch(downloadUrl)
   
   if (!contentResponse.ok) {
-    throw new Error(`Kunne ikke laste ned fil: ${contentResponse.status}`)
+    throw new Error(`Kunne ikke laste ned fil ${file.name}: ${contentResponse.status}`)
   }
 
   // Try to detect encoding - first try UTF-8, then fallback to Windows-1252
@@ -830,7 +820,7 @@ Deno.serve(async (req) => {
 
       for (const file of prdFiles) {
         console.log(`Processing product file: ${file.name}`)
-        const content = await downloadFileContent(accessToken, config.onedrive_folder_url, file.id)
+        const content = await downloadFileContent(accessToken, file)
         const { products, errors } = parsePrdFile(content)
         allProducts = [...allProducts, ...products]
         allErrors.push(...errors.map(e => `${file.name}: ${e}`))
@@ -838,7 +828,7 @@ Deno.serve(async (req) => {
 
       for (const file of cusFiles) {
         console.log(`Processing customer file: ${file.name}`)
-        const content = await downloadFileContent(accessToken, config.onedrive_folder_url, file.id)
+        const content = await downloadFileContent(accessToken, file)
         const { customers, errors } = parseCusFile(content)
         allCustomers = [...allCustomers, ...customers]
         allErrors.push(...errors.map(e => `${file.name}: ${e}`))
@@ -873,7 +863,7 @@ Deno.serve(async (req) => {
           continue
         }
 
-        const content = await downloadFileContent(accessToken, config.onedrive_folder_url, file.id)
+        const content = await downloadFileContent(accessToken, file)
         const { orders, errors } = parseOd0File(content)
         allErrors.push(...errors.map(e => `${file.name}: ${e}`))
 
