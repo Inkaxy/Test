@@ -170,7 +170,7 @@ function useKioskProductsForDate(bakeryId: string | null, date: string, category
       
       return Array.from(productMap.values()).sort((a, b) => a.name.localeCompare(b.name, 'nb'));
     },
-    enabled: !!bakeryId,
+    enabled: !!bakeryId && !tripsLoading,
   });
 }
 
