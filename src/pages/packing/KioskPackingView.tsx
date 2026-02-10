@@ -185,7 +185,7 @@ function useKioskCustomersForDate(bakeryId: string | null, date: string, categor
       
       return Array.from(customerMap.values()).sort((a, b) => a.name.localeCompare(b.name, 'nb'));
     },
-    enabled: !!bakeryId,
+    enabled: !!bakeryId && !tripsLoading,
     refetchInterval: 30000, // Backup polling every 30 seconds
   });
 }
