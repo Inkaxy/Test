@@ -148,6 +148,9 @@ export default function Settings() {
         onAlternateRowColorChange={handleAlternateRowColorChange}
       />
       
+      {/* Kiosk PIN settings */}
+      <KioskPinSettingsCard />
+      
       {/* Auto-delete settings */}
       <Card>
         <CardHeader>

@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.send-packing-report]
 verify_jwt = false
+
+[functions.validate-kiosk-pin]
+verify_jwt = false

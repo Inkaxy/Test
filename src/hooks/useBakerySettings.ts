@@ -40,6 +40,7 @@ export interface BakerySettings {
   deviation_config?: DeviationConfig;
   packing_row_style?: PackingRowStyleSettings;
   email_report_config?: EmailReportConfig;
+  kiosk_pin?: string | null;
 }
 
 export function useBakerySettings() {
