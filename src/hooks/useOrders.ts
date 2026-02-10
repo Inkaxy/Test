@@ -60,7 +60,7 @@ export function useOrders(deliveryDate: string) {
       // Flatten packing_status array to single object
       return (data || []).map(order => ({
         ...order,
-        packing_status: order.packing_status?.[0] || null
+        packing_status: getFirstPackingStatus(order.packing_status),
       })) as Order[];
     },
     enabled: !!deliveryDate,
