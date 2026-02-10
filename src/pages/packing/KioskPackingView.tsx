@@ -102,7 +102,7 @@ function KioskPackingViewInner() {
   const dateParam = searchParams.get('date');
   const dateStr = dateParam || format(new Date(), 'yyyy-MM-dd');
   
-  const [selectedCustomer, setSelectedCustomer] = useState<CustomerWithOrders | null>(null);
+  const [selectedCustomer, setSelectedCustomer] = useState<KioskCustomerWithOrders | null>(null);
   const [deviationOrder, setDeviationOrder] = useState<DeviationOrderInfo | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isConnected, setIsConnected] = useState(true);
