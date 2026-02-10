@@ -1803,6 +1803,8 @@ export default function DisplaySettingsPage() {
                     />
                   </div>
                   
+                  {selectedDisplayType !== 'shared' && (
+                  <>
                   <div className="space-y-2">
                     <Label>Auto-oppdatering: hvert {settings.realtime_auto_refresh_interval}s</Label>
                     <Slider
@@ -1858,6 +1860,8 @@ export default function DisplaySettingsPage() {
                       </Select>
                     </div>
                   </div>
+                  </>
+                  )}
                 </AccordionContent>
               </AccordionItem>
               
