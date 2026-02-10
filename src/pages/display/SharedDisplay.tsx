@@ -2,7 +2,6 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import { useEffect, useState, useRef } from 'react';
 import { format } from 'date-fns';
 import { nb } from 'date-fns/locale';
-import { motion, AnimatePresence } from 'framer-motion';
 import { Wifi, WifiOff, Clock, Maximize, RefreshCw } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
@@ -405,36 +404,37 @@ export default function SharedDisplay() {
           gap: displaySettings.gap_size || '1rem',
         }}
       >
-        <AnimatePresence>
-          {sortedCustomers.map((customerData) => (
-            <motion.div
+        {sortedCustomers.map((customerData) => {
+          const selectedIds = getSelectedProductIds(customerData.customer.id);
+          const filteredOrders = selectedIds
+            ? customerData.orders.filter(o => selectedIds.includes(o.product.id))
+            : customerData.orders;
+          const total = filteredOrders.length;
+          const packed = filteredOrders.filter(o => o.packing_status?.status === 'packed' || o.packing_status?.status === 'deviation').length;
+          const progress = total > 0 ? Math.round((packed / total) * 100) : 0;
+
+          const formatQuantity = (order: typeof customerData.orders[0]) => {
+            if (displaySettings.card_show_quantity_as_trays && order.product.pieces_per_tray && order.product.pieces_per_tray > 0) {
+              const trays = Math.floor(order.quantity / order.product.pieces_per_tray);
+              const remainder = order.quantity % order.product.pieces_per_tray;
+              if (trays > 0 && remainder > 0) return `${trays} kv + ${remainder} stk`;
+              if (trays > 0) return `${trays} kv`;
+            }
+            return `${order.quantity} stk`;
+          };
+
+          return (
+            <div
               key={customerData.customer.id}
-              initial={displaySettings.animation_enabled ? { opacity: 0, scale: 0.95 } : false}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={displaySettings.animation_enabled ? { opacity: 0, scale: 0.95 } : undefined}
-              transition={{ 
-                duration: displaySettings.animation_speed === 'fast' ? 0.15 : 
-                          displaySettings.animation_speed === 'slow' ? 0.5 : 0.3 
-              }}
-              className={cn(
-                'rounded-xl p-4 transition-all',
-                displaySettings.card_compact_mode && 'p-3'
-              )}
+              className="rounded-xl overflow-hidden transition-colors"
               style={{
                 backgroundColor: displaySettings.card_background_color,
                 borderRadius: displaySettings.border_radius,
-                borderLeft: `${displaySettings.card_border_width || '4px'} solid ${getStatusColor((() => {
-                  const selectedIds = getSelectedProductIds(customerData.customer.id);
-                  if (!selectedIds) return customerData.progress;
-                  const filtered = customerData.orders.filter(o => selectedIds.includes(o.product.id));
-                  if (filtered.length === 0) return 0;
-                  const packed = filtered.filter(o => o.packing_status?.status === 'packed' || o.packing_status?.status === 'deviation').length;
-                  return Math.round((packed / filtered.length) * 100);
-                })())}`,
+                border: `1px solid ${displaySettings.text_color}15`,
               }}
             >
-              {/* Customer header */}
-              <div className="flex items-center justify-between mb-2">
+              {/* Centered customer name header */}
+              <div className="text-center py-3 px-4" style={{ borderBottom: `1px solid ${displaySettings.text_color}15` }}>
                 <h2
                   className="font-bold"
                   style={{ fontSize: displaySettings.card_customer_name_font_size || displaySettings.customer_name_font_size }}
@@ -442,77 +442,32 @@ export default function SharedDisplay() {
                   {customerData.customer.name}
                 </h2>
                 {displaySettings.card_show_customer_number && (
-                  <span className="text-sm opacity-60 ml-2">
-                    #{customerData.customer.customer_number}
-                  </span>
+                  <span className="text-sm opacity-60">#{customerData.customer.customer_number}</span>
                 )}
               </div>
 
-              {/* Progress bar - filtered by selected products */}
-              {displaySettings.card_show_individual_progress && (() => {
-                const selectedIds = getSelectedProductIds(customerData.customer.id);
-                const filteredOrders = selectedIds
-                  ? customerData.orders.filter(o => selectedIds.includes(o.product.id))
-                  : customerData.orders;
-                const total = filteredOrders.length;
-                const packed = filteredOrders.filter(o => o.packing_status?.status === 'packed' || o.packing_status?.status === 'deviation').length;
-                const progress = total > 0 ? Math.round((packed / total) * 100) : 0;
-
-                return (
-                  <div className="mb-3">
-                    <Progress
-                      value={progress}
-                      className="h-2"
-                      style={{
-                        backgroundColor: `${displaySettings.pending_color}40`,
-                      }}
-                    />
-                    <p 
-                      className="text-sm mt-1 opacity-70"
-                      style={{ fontSize: displaySettings.card_progress_font_size }}
-                    >
-                      {packed} / {total} produkter
-                    </p>
+              {/* Product table */}
+              <div className="px-3 py-2">
+                {displaySettings.card_show_product_list && (!selectedIds || filteredOrders.length === 0) && (
+                  <div className="flex items-center justify-center py-4 opacity-40">
+                    <Clock className="h-4 w-4 mr-2" />
+                    <span style={{ fontSize: displaySettings.card_product_font_size || displaySettings.product_font_size }}>
+                      Venter på valg...
+                    </span>
                   </div>
-                );
-              })()}
+                )}
 
-              {/* Products list - filtered by selected products */}
-              {displaySettings.card_show_product_list && (() => {
-                const selectedIds = getSelectedProductIds(customerData.customer.id);
-                const filteredOrders = selectedIds
-                  ? customerData.orders.filter(o => selectedIds.includes(o.product.id))
-                  : [];
-
-                // No products selected yet - show waiting state
-                if (!selectedIds || filteredOrders.length === 0) {
-                  return (
-                    <div className="flex items-center justify-center py-4 opacity-40">
-                      <Clock className="h-4 w-4 mr-2" />
-                      <span style={{ fontSize: displaySettings.card_product_font_size || displaySettings.product_font_size }}>
-                        Venter på valg...
-                      </span>
-                    </div>
-                  );
-                }
-
-                return (
+                {displaySettings.card_show_product_list && selectedIds && filteredOrders.length > 0 && (
                   <table className="w-full border-collapse">
                     <tbody>
                       {filteredOrders.map((order) => {
-                        const isPacked =
-                          order.packing_status?.status === 'packed' ||
-                          order.packing_status?.status === 'deviation';
-
+                        const isPacked = order.packing_status?.status === 'packed' || order.packing_status?.status === 'deviation';
                         return (
                           <tr
                             key={order.id}
                             className="border-b last:border-b-0"
-                            style={{
-                              borderColor: `${displaySettings.text_color}15`,
-                            }}
+                            style={{ borderColor: `${displaySettings.text_color}15` }}
                           >
-                            {/* Product name - wraps naturally */}
                             <td
                               className={cn("py-2 pr-3", isPacked && "line-through opacity-60")}
                               style={{ fontSize: displaySettings.card_product_font_size || displaySettings.product_font_size }}
@@ -522,19 +477,14 @@ export default function SharedDisplay() {
                               )}
                               {order.product.name}
                             </td>
-
-                            {/* Quantity */}
                             <td className="py-2 px-2 text-right whitespace-nowrap">
-                              <span 
+                              <span
                                 className="font-bold"
                                 style={{ fontSize: displaySettings.card_quantity_font_size || '1.25rem' }}
                               >
-                                {order.quantity}
+                                {formatQuantity(order)}
                               </span>
-                              <span className="text-xs opacity-60 ml-0.5">stk</span>
                             </td>
-
-                            {/* Status circle */}
                             <td className="py-2 pl-2 w-8">
                               <span
                                 className="block w-4 h-4 rounded-full shrink-0"
@@ -548,23 +498,37 @@ export default function SharedDisplay() {
                       })}
                     </tbody>
                   </table>
-                );
-              })()}
+                )}
 
-              {/* Compact mode - just show count */}
-              {displaySettings.card_compact_mode && !displaySettings.card_show_product_list && (
-                <div className="text-center py-4">
-                  <p 
-                    className="font-bold"
-                    style={{ fontSize: displaySettings.stats_value_font_size }}
-                  >
-                    {customerData.packedCount}/{customerData.totalCount}
-                  </p>
+                {displaySettings.card_compact_mode && !displaySettings.card_show_product_list && (
+                  <div className="text-center py-4">
+                    <p className="font-bold" style={{ fontSize: displaySettings.stats_value_font_size }}>
+                      {customerData.packedCount}/{customerData.totalCount}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Bottom progress bar */}
+              {(displaySettings.card_show_bottom_progress_bar ?? true) && (
+                <div
+                  className="h-2 w-full transition-all"
+                  style={{
+                    backgroundColor: `${displaySettings.pending_color}30`,
+                  }}
+                >
+                  <div
+                    className="h-full transition-all duration-500"
+                    style={{
+                      width: `${progress}%`,
+                      backgroundColor: getStatusColor(progress),
+                    }}
+                  />
                 </div>
               )}
-            </motion.div>
-          ))}
-        </AnimatePresence>
+            </div>
+          );
+        })}
       </div>
 
       {customers.length === 0 && (

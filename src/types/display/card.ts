@@ -23,6 +23,8 @@ export interface CardSettings {
   card_quantity_font_size: string;
   /** Progress font size */
   card_progress_font_size: string;
+  /** Show bottom progress bar on cards */
+  card_show_bottom_progress_bar: boolean;
 }
 
 export const defaultCardSettings: CardSettings = {
@@ -36,4 +38,5 @@ export const defaultCardSettings: CardSettings = {
   card_product_font_size: '1rem',
   card_quantity_font_size: '1rem',
   card_progress_font_size: '0.875rem',
+  card_show_bottom_progress_bar: true,
 };
