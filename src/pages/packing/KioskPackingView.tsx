@@ -111,7 +111,7 @@ function useCategoryById(categoryId: string | null) {
 }
 
 // Hook to get customers with orders for a date
-function useKioskCustomersForDate(bakeryId: string | null, date: string, categoryId?: string, tripId?: string | null) {
+function useKioskCustomersForDate(bakeryId: string | null, date: string, categoryId?: string, tripId?: string | null, tripsLoading?: boolean) {
   return useQuery({
     queryKey: ['kiosk-customers-for-date', bakeryId, date, categoryId, tripId],
     queryFn: async () => {
