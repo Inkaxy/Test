@@ -1,57 +1,68 @@
 
 
-# Fix: Tur-progresjon pa tvers av alle pakkevisninger (Web + Kiosk)
+# Enkel pinkode for kioskvisning
 
-## Problemet
-Alle fire pakkevisninger har en race condition: Nar `useTrips` laster asynkront, er `trips = []` midlertidig, sa `hasTrips = false` og `activeTripId = null`. Datasporrringene kjorer umiddelbart UTEN tur-filter og henter ordrer fra ALLE turer samtidig. I tillegg invalideres ikke `trip-order-stats` ved pakkehandlinger, sa tur-progresjonen oppdateres aldri.
+## Oversikt
+Legge til en valgfri 4-sifret pinkode som beskytter kioskvisningene. Pinkoden settes per bakeri i admin-innstillingene, og brukeren ma taste den inn for a fa tilgang til kiosk-pakkevisningen.
 
-## Endringer
+## Brukeropplevelse
 
-### 1. Blokker datalasting til turer er klare
+1. **Admin setter pinkode**: I Innstillinger-siden kan bakeri-admin aktivere kiosk-pinkode og skrive inn en 4-sifret kode
+2. **Kiosk-bruker**: Nar de apner kiosk-URLen, vises en fullskjermside med et pinkode-felt. Riktig kode gir tilgang, og koden huskes i enheten (localStorage) slik at man ikke trenger a taste den inn pa nytt ved hver sidelasting
+3. **Uten pinkode**: Hvis admin ikke har satt en kode, fungerer kiosken som i dag uten noen sperring
 
-**ProductPackingView.tsx** (linje 157):
-- Endre `const { data: trips = [] } = useTrips(categoryId)` til `const { data: trips = [], isLoading: tripsLoading } = useTrips(categoryId)`
-- Oppdater `useProductsForDate` (inline hook, linje 52) til a ta imot `tripsLoading` parameter og legge til `enabled: !!bakeryId && !tripsLoading` i query-konfigurasjonen
-- Sende `tripsLoading` ved kall pa linje 190
+## Tekniske endringer
 
-**CustomerPackingView.tsx** (linje 89):
-- Endre `const { data: trips = [] } = useTrips(categoryId)` til `const { data: trips = [], isLoading: tripsLoading } = useTrips(categoryId)`
-- Sende `tripsLoading` som ny parameter til `useCustomersForDate` pa linje 122
-- Oppdater `useCustomersForDate` hook (egen fil) til a ta imot valgfri `tripsLoading` parameter og legge til `enabled: !!deliveryDate && !tripsLoading`
+### 1. Database: Utvid bakeries.settings (ingen migrering nodvendig)
+Pinkoden lagres i det eksisterende `settings`-JSONB-feltet pa `bakeries`-tabellen:
+```
+settings.kiosk_pin = "1234" | null
+```
+Ingen ny tabell eller kolonne trengs.
 
-**KioskPackingView.tsx** (linje 250):
-- Endre `const { data: trips = [] } = useTripsForBakery(...)` til `const { data: trips = [], isLoading: tripsLoading } = useTripsForBakery(...)`
-- Oppdater inline `useKioskCustomersForDate` (linje 114) til a ta imot `tripsLoading` og legge til `enabled: !!bakeryId && !tripsLoading`
-- Sende `tripsLoading` ved kall pa linje 283
+### 2. Backend-funksjon: Valider pinkode (ny edge function)
+En edge function `validate-kiosk-pin` som tar imot `bakery_short_id` og `pin`, og returnerer `{ valid: true/false }`. Dette forhindrer at pinkoden eksponeres til klienten.
 
-**ProductKioskPackingView.tsx** (linje 198):
-- Endre `const { data: trips = [] } = useTripsForBakery(...)` til `const { data: trips = [], isLoading: tripsLoading } = useTripsForBakery(...)`
-- Oppdater inline `useKioskProductsForDate` (linje 92) til a ta imot `tripsLoading` og legge til `enabled: !!bakeryId && !tripsLoading`
-- Sende `tripsLoading` ved kall pa linje 231
+- Bruker service role key for a lese `bakeries.settings`
+- Returnerer bare om koden er korrekt, aldri selve koden
+- Hvis ingen pinkode er satt, returnerer `{ valid: true, no_pin: true }`
 
-### 2. Oppdater useCustomersForDate (delt hook)
+### 3. Ny komponent: KioskPinGate
+En wrapper-komponent som vises for kiosk-pinkodeinngang:
+- Fullskjermsvisning med bakerilogo/navn
+- 4-sifret nummerfelt (touch-optimalisert med store knapper for nettbrett)
+- Validerer mot backend-funksjonen
+- Ved riktig kode: lagrer i localStorage (`kiosk-pin-{bakeryShortId}`) og viser innholdet
+- Ved feil kode: viser feilmelding med risting-animasjon
+- Automatisk sjekk av lagret kode ved sidelasting
 
-**src/hooks/useCustomersForDate.ts** (linje 36):
-- Legg til `tripsLoading?: boolean` som siste parameter (default `false`)
-- Endre `enabled: !!deliveryDate` til `enabled: !!deliveryDate && !tripsLoading`
+### 4. Oppdater KioskPackingView og ProductKioskPackingView
+Begge kiosk-visninger wrappes med `KioskPinGate`:
+- Sjekker om bakeri har pinkode (via edge function)
+- Hvis ja: vis pin-skjerm for brukeren har tastet riktig kode
+- Hvis nei: vis pakkevisningen direkte
 
-### 3. Invalider trip-order-stats ved pakkehandlinger
+### 5. Admin-innstilling: Pinkode-konfigurasjon
+Ny seksjon i Settings-siden:
+- Bryter for a aktivere/deaktivere kiosk-pinkode
+- Input-felt for 4-sifret kode (kun synlig nar aktivert)
+- Lagres via eksisterende `useUpdateBakerySettings`
 
-**src/hooks/usePackingMutations.ts** - Legg til i folgende steder:
+### 6. Oppdater BakerySettings type
+Legg til `kiosk_pin?: string | null` i `BakerySettings`-interfacet i `useBakerySettings.ts`.
 
-- `markAsPacked.onSettled` (linje 321-334): Legg til `queryClient.invalidateQueries({ queryKey: ['trip-order-stats'] })`
-- `batchMarkAsPacked.onSuccess` (linje 402-410): Legg til `queryClient.invalidateQueries({ queryKey: ['trip-order-stats'] })`
-- `reportDeviation.onSettled` (linje 471-477): Legg til `queryClient.invalidateQueries({ queryKey: ['trip-order-stats'] })`
-- `undoPacking.onSettled` (linje 548-562): Legg til `queryClient.invalidateQueries({ queryKey: ['trip-order-stats'] })`
-
-## Filendringer oppsummert
+## Filendringer
 
 | Fil | Endring |
 |-----|---------|
-| `src/pages/packing/ProductPackingView.tsx` | Hent `tripsLoading`, send til `useProductsForDate`, legg til `enabled`-sjekk |
-| `src/pages/packing/CustomerPackingView.tsx` | Hent `tripsLoading`, send til `useCustomersForDate` |
-| `src/pages/packing/KioskPackingView.tsx` | Hent `tripsLoading`, send til `useKioskCustomersForDate`, legg til `enabled`-sjekk |
-| `src/pages/packing/ProductKioskPackingView.tsx` | Hent `tripsLoading`, send til `useKioskProductsForDate`, legg til `enabled`-sjekk |
-| `src/hooks/useCustomersForDate.ts` | Legg til `tripsLoading`-parameter og `enabled`-sjekk |
-| `src/hooks/usePackingMutations.ts` | Invalider `trip-order-stats` i alle 4 mutasjoners `onSettled`/`onSuccess` |
+| `supabase/functions/validate-kiosk-pin/index.ts` | Ny edge function for PIN-validering |
+| `src/components/packing/KioskPinGate.tsx` | Ny komponent: fullskjerms pinkode-inngang |
+| `src/pages/packing/KioskPackingView.tsx` | Wrap med KioskPinGate |
+| `src/pages/packing/ProductKioskPackingView.tsx` | Wrap med KioskPinGate |
+| `src/hooks/useBakerySettings.ts` | Legg til `kiosk_pin` i BakerySettings type |
+| `src/pages/Settings.tsx` | Ny seksjon for kiosk-pinkode-innstilling |
 
+## Sikkerhet
+- Pinkoden eksponeres aldri til klienten - validering skjer via backend-funksjon
+- localStorage brukes kun for a huske at koden er bekreftet, ikke selve koden
+- Edge function bruker service role for a lese innstillinger
