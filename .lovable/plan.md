@@ -1,68 +1,97 @@
 
 
-# Enkel pinkode for kioskvisning
+# Fiks produktbasert pakking -- sanntid og arkitekturproblemer
 
-## Oversikt
-Legge til en valgfri 4-sifret pinkode som beskytter kioskvisningene. Pinkoden settes per bakeri i admin-innstillingene, og brukeren ma taste den inn for a fa tilgang til kiosk-pakkevisningen.
+## Oppsummering av funn
 
-## Brukeropplevelse
+Etter grundig gjennomgang av kodebasen og det vedlagte dokumentet har jeg identifisert flere konkrete problemer som forhindrer produktbasert pakking fra a fungere korrekt:
 
-1. **Admin setter pinkode**: I Innstillinger-siden kan bakeri-admin aktivere kiosk-pinkode og skrive inn en 4-sifret kode
-2. **Kiosk-bruker**: Nar de apner kiosk-URLen, vises en fullskjermside med et pinkode-felt. Riktig kode gir tilgang, og koden huskes i enheten (localStorage) slik at man ikke trenger a taste den inn pa nytt ved hver sidelasting
-3. **Uten pinkode**: Hvis admin ikke har satt en kode, fungerer kiosken som i dag uten noen sperring
+## Problem 1: Kiosk sender aldri broadcast til displays
 
-## Tekniske endringer
-
-### 1. Database: Utvid bakeries.settings (ingen migrering nodvendig)
-Pinkoden lagres i det eksisterende `settings`-JSONB-feltet pa `bakeries`-tabellen:
+I `usePackingMutations.ts` (linje 252) er det en eksplisitt sjekk:
 ```
-settings.kiosk_pin = "1234" | null
+if (bakeryId && deliveryDate && !isKiosk) { broadcastPackingUpdate(...) }
 ```
-Ingen ny tabell eller kolonne trengs.
 
-### 2. Backend-funksjon: Valider pinkode (ny edge function)
-En edge function `validate-kiosk-pin` som tar imot `bakery_short_id` og `pin`, og returnerer `{ valid: true/false }`. Dette forhindrer at pinkoden eksponeres til klienten.
+Nar en pakker bruker kiosk-visningen (som bruker `isKiosk: true`), sendes **ingen broadcast**. Displays (SharedDisplay, CustomerDisplay) lytter pa broadcast-kanalen for raske oppdateringer (~30ms), men far aldri meldingen. De ma vente pa enten `postgres_changes` eller 60-sekunders polling.
 
-- Bruker service role key for a lese `bakeries.settings`
-- Returnerer bare om koden er korrekt, aldri selve koden
-- Hvis ingen pinkode er satt, returnerer `{ valid: true, no_pin: true }`
+**Losning:** Fjern `!isKiosk`-sjekken slik at broadcast sendes uansett modus. Kiosk kjenner `bakeryId` (fra URL) og `deliveryDate`, sa all nodvendig data er tilgjengelig.
 
-### 3. Ny komponent: KioskPinGate
-En wrapper-komponent som vises for kiosk-pinkodeinngang:
-- Fullskjermsvisning med bakerilogo/navn
-- 4-sifret nummerfelt (touch-optimalisert med store knapper for nettbrett)
-- Validerer mot backend-funksjonen
-- Ved riktig kode: lagrer i localStorage (`kiosk-pin-{bakeryShortId}`) og viser innholdet
-- Ved feil kode: viser feilmelding med risting-animasjon
-- Automatisk sjekk av lagret kode ved sidelasting
+## Problem 2: Kiosk-modus invaliderer feil query keys for produktbasert pakking
 
-### 4. Oppdater KioskPackingView og ProductKioskPackingView
-Begge kiosk-visninger wrappes med `KioskPinGate`:
-- Sjekker om bakeri har pinkode (via edge function)
-- Hvis ja: vis pin-skjerm for brukeren har tastet riktig kode
-- Hvis nei: vis pakkevisningen direkte
+Nar kiosk-modus markerer en vare som pakket, bruker `onMutate` og `onSettled` query key `kiosk-customers-for-date` -- men produktbasert kiosk bruker `kiosk-products-for-date`. Dette betyr:
+- Optimistisk oppdatering treffer feil cache (ingen visuell endring)
+- Refetch etter mutasjon oppdaterer kundebasert cache, ikke produktbasert
 
-### 5. Admin-innstilling: Pinkode-konfigurasjon
-Ny seksjon i Settings-siden:
-- Bryter for a aktivere/deaktivere kiosk-pinkode
-- Input-felt for 4-sifret kode (kun synlig nar aktivert)
-- Lagres via eksisterende `useUpdateBakerySettings`
+**Losning:** Legge til stotte for produktbasert cache-oppdatering i `usePackingMutations`, enten via en ny parameter (`mode: 'product' | 'customer'`) eller ved a alltid invalidere begge query keys.
 
-### 6. Oppdater BakerySettings type
-Legg til `kiosk_pin?: string | null` i `BakerySettings`-interfacet i `useBakerySettings.ts`.
+## Problem 3: Feil display settings type i ProductPackingView
 
-## Filendringer
+`ProductPackingView` (linje 196) bruker:
+```
+useDisplaySettings(bakeryId, categoryId, 'shared')
+```
+
+Men produktbasert pakking har egne innstillinger under `'product_packing'`. Dette betyr at visuelle tilpasninger gjort i admin for produktpakking ikke tas i bruk.
+
+**Losning:** Endre til `'product_packing'` i bade `ProductPackingView` og `ProductKioskPackingView`.
+
+## Problem 4: Sanntidslytting i produktvisninger invaliderer med ufullstendig query key
+
+I `ProductPackingView` (linje 225-227):
+```
+queryClient.invalidateQueries({ 
+  queryKey: ['products-for-date', bakeryId, dateStr] 
+});
+```
+
+Men selve queryen bruker key `['products-for-date', bakeryId, dateStr, categoryId, tripId]`. Invalidering uten `categoryId` og `tripId` kan fungere (partial match), men det er unodvendig upresist.
+
+I `ProductKioskPackingView` (linje 265):
+```
+queryClient.invalidateQueries({ queryKey: ['kiosk-products-for-date'] });
+```
+
+Denne treffer alle produkt-queries uansett bakeri/dato, noe som er for bredt.
+
+**Losning:** Gjore invaliderings-keys mer presise i begge visningene.
+
+## Plan for implementering
+
+### Steg 1: Aktiver broadcast fra kiosk-modus
+**Fil:** `src/hooks/usePackingMutations.ts`
+- Fjern `!isKiosk` fra broadcast-betingelsen i `markAsPacked`, `batchMarkAsPacked`, `reportDeviation` og `undoPacking`
+- Kiosk bruker `effectiveBakeryId` som allerede settes korrekt fra `options.bakeryId`
+
+### Steg 2: Fiks cache-oppdatering for produktbasert modus
+**Fil:** `src/hooks/usePackingMutations.ts`
+- I `onSettled` for alle mutasjoner: legg til invalidering av `kiosk-products-for-date` og `products-for-date`
+- I `onMutate` for kiosk-modus: forsok oppdatering av bade `kiosk-customers-for-date` og `kiosk-products-for-date` cacher
+
+### Steg 3: Bruk riktig display settings type
+**Filer:** `src/pages/packing/ProductPackingView.tsx`, `src/pages/packing/ProductKioskPackingView.tsx`
+- Endre `'shared'` til `'product_packing'` i `useDisplaySettings`-kallet i ProductPackingView
+- Legg til `useDisplaySettings` i ProductKioskPackingView (bruker i dag standard-styling)
+
+### Steg 4: Presiser invaliderings-keys
+**Filer:** `src/pages/packing/ProductPackingView.tsx`, `src/pages/packing/ProductKioskPackingView.tsx`
+- Oppdater sanntids-handlerne til a bruke fulle query keys med bakeryId, dateStr, categoryId
+
+### Steg 5: Legg til broadcast-lytting i ProductKioskPackingView
+**Fil:** `src/pages/packing/ProductKioskPackingView.tsx`
+- Legg til lytting pa broadcast-kanalen (lik `useRealtimeDisplay`) for a fa oppdateringer fra andre enheter raskt
+
+### Oppsummering av filendringer
 
 | Fil | Endring |
 |-----|---------|
-| `supabase/functions/validate-kiosk-pin/index.ts` | Ny edge function for PIN-validering |
-| `src/components/packing/KioskPinGate.tsx` | Ny komponent: fullskjerms pinkode-inngang |
-| `src/pages/packing/KioskPackingView.tsx` | Wrap med KioskPinGate |
-| `src/pages/packing/ProductKioskPackingView.tsx` | Wrap med KioskPinGate |
-| `src/hooks/useBakerySettings.ts` | Legg til `kiosk_pin` i BakerySettings type |
-| `src/pages/Settings.tsx` | Ny seksjon for kiosk-pinkode-innstilling |
+| `src/hooks/usePackingMutations.ts` | Fjern !isKiosk fra broadcast, legg til produkt-cache invalidering |
+| `src/pages/packing/ProductPackingView.tsx` | Bruk 'product_packing' display type, presiser invalidering |
+| `src/pages/packing/ProductKioskPackingView.tsx` | Legg til broadcast-lytting, presiser invalidering, bruk display settings |
 
-## Sikkerhet
-- Pinkoden eksponeres aldri til klienten - validering skjer via backend-funksjon
-- localStorage brukes kun for a huske at koden er bekreftet, ikke selve koden
-- Edge function bruker service role for a lese innstillinger
+Disse endringene sikrer at:
+- Alle pakkehandlinger (bade web og kiosk) broadcaster til displays i sanntid
+- Produktbasert cache oppdateres korrekt ved pakking
+- Display-innstillinger for produktpakking respekteres
+- Sanntidsoppdateringer er presise og effektive
+
