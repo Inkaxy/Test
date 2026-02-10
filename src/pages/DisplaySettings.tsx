@@ -74,7 +74,7 @@ export default function DisplaySettingsPage() {
 
   // Display types som vises i innstillingspanelet (ekskluder customer_packing fra shared/customer)
   const visibleDisplayTypes = (Object.entries(DISPLAY_TYPES) as [DisplayType, typeof DISPLAY_TYPES[DisplayType]][])
-    .filter(([type]) => type !== 'customer_packing');
+    .filter(([type]) => type !== 'customer_packing' && type !== 'product_packing');
 
   // Fetch bakery info for short_id
   const { data: bakery } = useQuery({
