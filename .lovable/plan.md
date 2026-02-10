@@ -1,46 +1,52 @@
 
-# Fiks: Vis kun valgte produkter pa felles display
 
-## Problem
+# Forenkle innstillinger for Felles Display
 
-Felles displayet viser alle produkter for alle kunder, uavhengig av om de er valgt for pakking i pakkevisningen. Dedikert kundedisplay har allerede denne filtreringen (via `useReceivePackingSelection`), men felles displayet mangler den.
+## Bakgrunn
 
-## Krav
+Felles Display er kun ment for TV- og Fully Kiosk-visning. Innstillingspanelet har i dag mange detaljerte innstillinger som er unodvendige for dette brukstilfellet og skaper unodvendig kompleksitet.
 
-1. **Kunder skal alltid vises** pa felles displayet dersom de har ordrer for pakkedagen
-2. **Produkter skal kun vises** dersom de er valgt for pakking (via broadcast fra pakkevisningen)
-3. Nar ingen produkter er valgt for en kunde, vises kunden fortsatt men uten produktliste (venter-tilstand)
+## Hva fjernes fra innstillingspanelet for "Felles Display"
 
-## Losning
+Folgende innstillinger skjules nar `selectedDisplayType === 'shared'`:
 
-Bruk den eksisterende broadcast-mekanismen (`useReceivePackingSelection`) i SharedDisplay. Siden felles displayet viser flere kunder samtidig, trengs en ny variant av hooket som samler opp valg per kunde.
+### Topptekst-seksjonen
+- **Fjernes:** Alle fontstorrelser (bakerinavn, kategorinavn, klokke, dato) -- disse hardkodes til fornuftige standardverdier for TV
+- **Beholdes:** Vis/skjul toggles for bakerinavn, kategorinavn, klokke, dato og klokkeformat
 
-## Tekniske endringer
+### Statistikk-kort-seksjonen
+- **Fjernes helt** -- for en ren TV-tabell-visning er separate statistikk-kort unodvendige. Fremdrift vises direkte i tabellen per kunde.
 
-### 1. Ny hook: `useReceiveAllPackingSelections` (i `src/hooks/usePackingSelection.ts`)
+### Kundekort-seksjonen
+- **Fjernes:** Kompakt modus, individuell fremdrift (bar), font-storrelser for kundenavn/produktnavn/antall/fremdrift
+- **Beholdes:** Vis kundenummer, vis produktliste, vis produktnumre, vis antall som brett
 
-Legg til en ny hook som lytter pa samme broadcast-kanal men samler opp valg i en Map per kunde-ID:
+### Utseende-seksjonen
+- **Beholdes:** Temavelger og statusfarger (disse er viktige for TV-lesbarhet)
+- **Fjernes:** Hjorneavrunding, kantlinje-bredde (hardkodes for tabell-layout)
 
-- Lytter pa `packing_selection` og `clear_selection` events
-- Lagrer en `Map<string, string[]>` med `customerId -> productIds[]`
-- Ved `clear_selection` fjernes den aktuelle kunden fra mappet
-- Eksponerer en hjelpefunksjon `getSelectedProductIds(customerId)` som returnerer valgte produkt-IDer for en gitt kunde
+### Layout & Scroll-seksjonen
+- **Fjernes:** Fontstorrelser for kundenavn og produktnavn (duplikater av kundekort), mellomrom mellom kort
+- **Fjernes:** Oppdateringsknapp-innstillinger (storrelse, stil, farger, tekst) -- knappen er irrelevant pa TV/kiosk
+- **Fjernes:** Fullskjerm-knapp (irrelevant for Fully Kiosk)
+- **Beholdes:** Antall kolonner, auto-scroll, sortering av kunder, wake lock
 
-### 2. Oppdater `src/pages/display/SharedDisplay.tsx`
+### Animasjoner-seksjonen
+- **Forenkles:** Behold kun "aktiver animasjoner" og "hastighet". Fjern statusendring-animasjon, marker nylig oppdatert, og fremhevingsvarighet.
 
-- Importer og bruk `useReceiveAllPackingSelections` med bakeryId og deliveryDate
-- For hver kundes produktliste, filtrer ordrer basert pa valgte produkter
-- Dersom ingen produkter er valgt for en kunde, vis en "venter pa valg"-indikator i stedet for produktlisten
-- Oppdater fremdriftsberegning (`packedCount`/`totalCount`) til a reflektere filtrerte produkter
-- Behold kunden synlig uansett -- kun produktene inne i kortet filtreres
+### Sanntid & Status-seksjonen
+- **Forenkles:** Behold tilkoblingsstatus og siste oppdatering. Fjern fontstorrelse for statusmelding og auto-oppdateringsintervall (hardkodes til 60s).
 
-### 3. Oppdater `src/hooks/useDisplayOrders.ts`
-
-- I `useCustomerDisplayData`: Eksporter radata (`orders`) slik at SharedDisplay kan filtrere selv, eller behold eksisterende logikk og la filtreringen skje i renderingen
-
-## Filendringer
+## Teknisk endring
 
 | Fil | Endring |
 |-----|---------|
-| `src/hooks/usePackingSelection.ts` | Ny hook `useReceiveAllPackingSelections` som samler valg per kunde |
-| `src/pages/display/SharedDisplay.tsx` | Bruk ny hook, filtrer produkter per kundekort basert pa valgte produkter |
+| `src/pages/DisplaySettings.tsx` | Legg til `selectedDisplayType !== 'shared'` betingelser rundt de identifiserte innstillingene for a skjule dem nar Felles Display er valgt |
+
+## Fordeler
+
+- Drastisk forenklet innstillingspanel for TV-bruk
+- Mindre forvirrende for brukere som kun skal sette opp en TV-skjerm
+- Ingen endring i selve display-visningen -- bare innstillingspanelet forenkles
+- Innstillingene finnes fortsatt i datamodellen og kan brukes av andre display-typer
+
