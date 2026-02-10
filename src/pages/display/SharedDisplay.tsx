@@ -436,7 +436,7 @@ export default function SharedDisplay() {
               {/* Customer header */}
               <div className="flex items-center justify-between mb-2">
                 <h2
-                  className="font-bold truncate"
+                  className="font-bold"
                   style={{ fontSize: displaySettings.card_customer_name_font_size || displaySettings.customer_name_font_size }}
                 >
                   {customerData.customer.name}
