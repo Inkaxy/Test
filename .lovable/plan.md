@@ -1,92 +1,57 @@
 
 
-# Manuell tur-progresjon med "Start pakking"-knapp
+# Fix: Tur-progresjon pa tvers av alle pakkevisninger (Web + Kiosk)
 
-## Oversikt
+## Problemet
+Alle fire pakkevisninger har en race condition: Nar `useTrips` laster asynkront, er `trips = []` midlertidig, sa `hasTrips = false` og `activeTripId = null`. Datasporrringene kjorer umiddelbart UTEN tur-filter og henter ordrer fra ALLE turer samtidig. I tillegg invalideres ikke `trip-order-stats` ved pakkehandlinger, sa tur-progresjonen oppdateres aldri.
 
-Nar alle ordrer i en tur er pakket (100%), skal visningen **ikke** automatisk bytte til neste tur. I stedet vises en tydelig skjerm med en knapp for a manuelt starte neste tur. Dette gir pakkerne kontroll over nar de er klare for neste tur.
+## Endringer
 
-## Flyt
+### 1. Blokker datalasting til turer er klare
 
-```text
-Tur 1 (pakking pagar) --> Tur 1 (100%) --> "Tur 1 ferdig!" + knapp: "Start pakking av Tur 2" --> [klikk] --> Tur 2 (pakking pagar) --> ... --> "Alt ferdig!"
-```
+**ProductPackingView.tsx** (linje 157):
+- Endre `const { data: trips = [] } = useTrips(categoryId)` til `const { data: trips = [], isLoading: tripsLoading } = useTrips(categoryId)`
+- Oppdater `useProductsForDate` (inline hook, linje 52) til a ta imot `tripsLoading` parameter og legge til `enabled: !!bakeryId && !tripsLoading` i query-konfigurasjonen
+- Sende `tripsLoading` ved kall pa linje 190
 
-## Hva som skjer ved 100% ferdig
+**CustomerPackingView.tsx** (linje 89):
+- Endre `const { data: trips = [] } = useTrips(categoryId)` til `const { data: trips = [], isLoading: tripsLoading } = useTrips(categoryId)`
+- Sende `tripsLoading` som ny parameter til `useCustomersForDate` pa linje 122
+- Oppdater `useCustomersForDate` hook (egen fil) til a ta imot valgfri `tripsLoading` parameter og legge til `enabled: !!deliveryDate && !tripsLoading`
 
-Nar en tur nar 100%, erstattes pakkevisningen med en mellomskjerm:
+**KioskPackingView.tsx** (linje 250):
+- Endre `const { data: trips = [] } = useTripsForBakery(...)` til `const { data: trips = [], isLoading: tripsLoading } = useTripsForBakery(...)`
+- Oppdater inline `useKioskCustomersForDate` (linje 114) til a ta imot `tripsLoading` og legge til `enabled: !!bakeryId && !tripsLoading`
+- Sende `tripsLoading` ved kall pa linje 283
 
-1. **Animasjon**: Stor hake med tekst "Tur 1 ferdig!" (fade-in)
-2. **Statistikk**: Antall pakkede ordrer, avvik, tidsbruk
-3. **Knapp**: "Start pakking av Tur 2" (primaerknapp, stor og tydelig)
-4. **Nar siste tur er ferdig**: Vis "Alt ferdig for i dag!"-oppsummering med tilbake-knapp
+**ProductKioskPackingView.tsx** (linje 198):
+- Endre `const { data: trips = [] } = useTripsForBakery(...)` til `const { data: trips = [], isLoading: tripsLoading } = useTripsForBakery(...)`
+- Oppdater inline `useKioskProductsForDate` (linje 92) til a ta imot `tripsLoading` og legge til `enabled: !!bakeryId && !tripsLoading`
+- Sende `tripsLoading` ved kall pa linje 231
 
-## Komponenter
+### 2. Oppdater useCustomersForDate (delt hook)
 
-### `TripCompleteScreen`
-Vises nar en tur er 100% pakket og det finnes flere turer.
+**src/hooks/useCustomersForDate.ts** (linje 36):
+- Legg til `tripsLoading?: boolean` som siste parameter (default `false`)
+- Endre `enabled: !!deliveryDate` til `enabled: !!deliveryDate && !tripsLoading`
 
-- Stor hake-ikon med animasjon
-- Tekst: "[Turnavn] ferdig!"
-- Oppsummering: "X ordrer pakket"
-- Knapp: **"Start pakking av [neste turnavn]"**
-- Sekundaerknapp: "Tilbake til oversikt"
+### 3. Invalider trip-order-stats ved pakkehandlinger
 
-### `AllTripsCompleteScreen`
-Vises nar siste tur er ferdig.
+**src/hooks/usePackingMutations.ts** - Legg til i folgende steder:
 
-- Stor feiring-ikon
-- Tekst: "Alt ferdig for i dag!"
-- Total oppsummering pa tvers av alle turer
-- Knapp: "Tilbake til kalender"
+- `markAsPacked.onSettled` (linje 321-334): Legg til `queryClient.invalidateQueries({ queryKey: ['trip-order-stats'] })`
+- `batchMarkAsPacked.onSuccess` (linje 402-410): Legg til `queryClient.invalidateQueries({ queryKey: ['trip-order-stats'] })`
+- `reportDeviation.onSettled` (linje 471-477): Legg til `queryClient.invalidateQueries({ queryKey: ['trip-order-stats'] })`
+- `undoPacking.onSettled` (linje 548-562): Legg til `queryClient.invalidateQueries({ queryKey: ['trip-order-stats'] })`
 
-### `TripIndicator`
-Header-element som viser aktiv tur.
+## Filendringer oppsummert
 
-- Turnavn (f.eks. "Tur 1 - Morgen")
-- Framdrift: "Tur 1 av 3"
-- Mulighet for manuell navigasjon mellom turer (dropdown/piler)
-
-## Teknisk implementering
-
-### `useTripProgression` hook
-
-```text
-Input:  categoryId, date, trips[]
-Output: 
-  - activeTripId, activeTrip, nextTrip
-  - isComplete (true nar aktiv tur er 100%)
-  - allComplete (true nar alle turer er ferdige)
-  - progress (prosent for aktiv tur)
-  - startNextTrip()   // Manuell - kalles nar bruker klikker knappen
-  - goToTrip(id)      // Manuell navigasjon
-```
-
-Forskjell fra automatisk versjon: **Ingen timer**. `startNextTrip()` kalles kun nar brukeren klikker knappen.
-
-### Logikk i pakkevisninger
-
-```text
-if (allComplete) --> vis AllTripsCompleteScreen
-else if (isComplete && nextTrip) --> vis TripCompleteScreen med "Start pakking av [nextTrip.name]"
-else --> vis normal pakkevisning filtrert pa activeTripId
-```
-
-### Ordrefiltrering
-
-Eksisterende sporringer utvides med valgfri `tripId`-parameter for a kun hente ordrer tilhorende aktiv tur.
-
-## Filer
-
-- **Ny:** `src/hooks/useTripProgression.ts`
-- **Ny:** `src/components/packing/TripCompleteScreen.tsx`
-- **Ny:** `src/components/packing/AllTripsCompleteScreen.tsx`
-- **Ny:** `src/components/packing/TripIndicator.tsx`
-- **Endres:** `src/pages/packing/ProductPackingView.tsx`
-- **Endres:** `src/pages/packing/CustomerPackingView.tsx`
-- **Endres:** `src/pages/packing/KioskPackingView.tsx`
-- **Endres:** `src/pages/packing/ProductKioskPackingView.tsx`
-- **Endres:** Ordresporringer (tripId-filter)
-
-Dette implementeres sammen med resten av tur-funksjonaliteten (database, CRUD, OneDrive-kobling).
+| Fil | Endring |
+|-----|---------|
+| `src/pages/packing/ProductPackingView.tsx` | Hent `tripsLoading`, send til `useProductsForDate`, legg til `enabled`-sjekk |
+| `src/pages/packing/CustomerPackingView.tsx` | Hent `tripsLoading`, send til `useCustomersForDate` |
+| `src/pages/packing/KioskPackingView.tsx` | Hent `tripsLoading`, send til `useKioskCustomersForDate`, legg til `enabled`-sjekk |
+| `src/pages/packing/ProductKioskPackingView.tsx` | Hent `tripsLoading`, send til `useKioskProductsForDate`, legg til `enabled`-sjekk |
+| `src/hooks/useCustomersForDate.ts` | Legg til `tripsLoading`-parameter og `enabled`-sjekk |
+| `src/hooks/usePackingMutations.ts` | Invalider `trip-order-stats` i alle 4 mutasjoners `onSettled`/`onSuccess` |
 
