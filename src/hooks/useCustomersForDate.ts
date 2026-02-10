@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuthStore } from '@/stores/authStore';
+import { getFirstPackingStatus } from '@/lib/utils';
 
 export interface CustomerWithOrders {
   id: string;
