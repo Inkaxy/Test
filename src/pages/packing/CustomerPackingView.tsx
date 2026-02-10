@@ -160,7 +160,7 @@ export default function CustomerPackingView() {
     if (!bakeryId) return;
     
     const channel = supabase
-      .channel('customer-packing-status')
+      .channel(`customer-packing-status:${bakeryId}:${dateStr}`)
       .on(
         'postgres_changes',
         {
