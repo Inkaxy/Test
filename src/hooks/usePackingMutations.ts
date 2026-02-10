@@ -560,6 +560,7 @@ export function usePackingMutations(options: PackingMutationsOptions = {}) {
       
       if (isKiosk) {
         queryClient.refetchQueries({ queryKey: ['kiosk-customers-for-date', bakeryId, deliveryDate, categoryId] });
+        queryClient.refetchQueries({ queryKey: ['kiosk-products-for-date', bakeryId, deliveryDate, categoryId] });
       } else {
         if (deliveryDate) {
           queryClient.refetchQueries({ queryKey: ['customers-for-date', deliveryDate, bakeryId, categoryId] });
@@ -567,6 +568,7 @@ export function usePackingMutations(options: PackingMutationsOptions = {}) {
         queryClient.invalidateQueries({ queryKey: ['orders'] });
         queryClient.invalidateQueries({ queryKey: ['orders-by-product'] });
         queryClient.invalidateQueries({ queryKey: ['display-orders'] });
+        queryClient.invalidateQueries({ queryKey: ['products-for-date', bakeryId, deliveryDate, categoryId] });
       }
     },
   });

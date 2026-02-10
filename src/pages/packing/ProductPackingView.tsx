@@ -234,7 +234,7 @@ export default function ProductPackingView() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [bakeryId, dateStr, categoryId, queryClient]);
+  }, [bakeryId, dateStr, categoryId, activeTripId, queryClient]);
   
   // Use unified packing mutations hook
   const { markAsPacked, batchMarkAsPacked, reportDeviation, undoPacking } = usePackingMutations({
