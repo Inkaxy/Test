@@ -1,52 +1,16 @@
 
+# Fjern "Produktbasert Pakking"-fanen fra Display-innstillinger
 
-# Forenkle innstillinger for Felles Display
+## Endring
 
-## Bakgrunn
+Fanen "Produktbasert Pakking" fjernes fra innstillingspanelet. Den brukes i dag kun av `ProductPackingView` for a hente display-innstillinger, men trenger ikke en egen konfigurasjonsfane -- produktbasert pakking kan bruke standardinnstillingene eller arve fra en annen type.
 
-Felles Display er kun ment for TV- og Fully Kiosk-visning. Innstillingspanelet har i dag mange detaljerte innstillinger som er unodvendige for dette brukstilfellet og skaper unodvendig kompleksitet.
-
-## Hva fjernes fra innstillingspanelet for "Felles Display"
-
-Folgende innstillinger skjules nar `selectedDisplayType === 'shared'`:
-
-### Topptekst-seksjonen
-- **Fjernes:** Alle fontstorrelser (bakerinavn, kategorinavn, klokke, dato) -- disse hardkodes til fornuftige standardverdier for TV
-- **Beholdes:** Vis/skjul toggles for bakerinavn, kategorinavn, klokke, dato og klokkeformat
-
-### Statistikk-kort-seksjonen
-- **Fjernes helt** -- for en ren TV-tabell-visning er separate statistikk-kort unodvendige. Fremdrift vises direkte i tabellen per kunde.
-
-### Kundekort-seksjonen
-- **Fjernes:** Kompakt modus, individuell fremdrift (bar), font-storrelser for kundenavn/produktnavn/antall/fremdrift
-- **Beholdes:** Vis kundenummer, vis produktliste, vis produktnumre, vis antall som brett
-
-### Utseende-seksjonen
-- **Beholdes:** Temavelger og statusfarger (disse er viktige for TV-lesbarhet)
-- **Fjernes:** Hjorneavrunding, kantlinje-bredde (hardkodes for tabell-layout)
-
-### Layout & Scroll-seksjonen
-- **Fjernes:** Fontstorrelser for kundenavn og produktnavn (duplikater av kundekort), mellomrom mellom kort
-- **Fjernes:** Oppdateringsknapp-innstillinger (storrelse, stil, farger, tekst) -- knappen er irrelevant pa TV/kiosk
-- **Fjernes:** Fullskjerm-knapp (irrelevant for Fully Kiosk)
-- **Beholdes:** Antall kolonner, auto-scroll, sortering av kunder, wake lock
-
-### Animasjoner-seksjonen
-- **Forenkles:** Behold kun "aktiver animasjoner" og "hastighet". Fjern statusendring-animasjon, marker nylig oppdatert, og fremhevingsvarighet.
-
-### Sanntid & Status-seksjonen
-- **Forenkles:** Behold tilkoblingsstatus og siste oppdatering. Fjern fontstorrelse for statusmelding og auto-oppdateringsintervall (hardkodes til 60s).
-
-## Teknisk endring
+## Teknisk
 
 | Fil | Endring |
 |-----|---------|
-| `src/pages/DisplaySettings.tsx` | Legg til `selectedDisplayType !== 'shared'` betingelser rundt de identifiserte innstillingene for a skjule dem nar Felles Display er valgt |
+| `src/pages/DisplaySettings.tsx` | Oppdater `visibleDisplayTypes`-filteret til ogsa ekskludere `product_packing` (i tillegg til `customer_packing`). Oppdater `grid-cols-4` til `grid-cols-3` pa `TabsList` siden det na kun er 3 faner. |
 
-## Fordeler
+Resultatet blir at innstillingspanelet viser kun tre faner: **Felles Display**, **Kunde Display** og **Pakkedisplay**.
 
-- Drastisk forenklet innstillingspanel for TV-bruk
-- Mindre forvirrende for brukere som kun skal sette opp en TV-skjerm
-- Ingen endring i selve display-visningen -- bare innstillingspanelet forenkles
-- Innstillingene finnes fortsatt i datamodellen og kan brukes av andre display-typer
-
+`ProductPackingView` fortsetter a bruke `product_packing`-typen internt for a hente innstillinger fra databasen -- ingen endring der.
