@@ -99,11 +99,15 @@ export function usePackingBroadcast(bakeryId: string | null, deliveryDate: strin
         : `packing:${bakeryId}:${deliveryDate}`;
 
       const channel = supabase.channel(channelName);
-
-      await channel.send({
-        type: 'broadcast',
-        event: 'packing_update',
-        payload: update,
+      channel.subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          channel.send({
+            type: 'broadcast',
+            event: 'packing_update',
+            payload: update,
+          });
+          setTimeout(() => supabase.removeChannel(channel), 500);
+        }
       });
     },
     [bakeryId, deliveryDate]

@@ -93,7 +93,7 @@ export function useOrdersByProduct(deliveryDate: string, productIds: string[]) {
       
       return (data || []).map(order => ({
         ...order,
-        packing_status: order.packing_status?.[0] || null
+        packing_status: getFirstPackingStatus(order.packing_status),
       })) as Order[];
     },
     enabled: !!deliveryDate && productIds.length > 0,

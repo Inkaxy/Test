@@ -102,9 +102,7 @@ export function useCustomersForDate(deliveryDate: string, categoryId?: string, s
         }
         
         const customer = customerMap.get(customerId)!;
-        const packingStatus = Array.isArray(order.packing_status) 
-          ? order.packing_status[0] || null 
-          : order.packing_status;
+        const packingStatus = getFirstPackingStatus(order.packing_status);
         
         customer.orders.push({
           id: order.id,

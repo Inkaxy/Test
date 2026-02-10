@@ -88,7 +88,6 @@ function AppRoutes() {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/packing" element={<Packing />} />
         <Route path="/packing/calendar/:categoryId" element={<CategoryCalendarView />} />
-        <Route path="/packing/customer" element={<CustomerPacking />} />
         <Route path="/packing/customer/:categoryId/:date" element={<CustomerPackingView />} />
         <Route path="/packing/product/:categoryId/:date" element={<ProductPackingView />} />
         <Route path="/settings" element={<Settings />} />

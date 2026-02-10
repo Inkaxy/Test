@@ -179,7 +179,7 @@ export default function CustomerPackingView() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [bakeryId, queryClient]);
+  }, [bakeryId, dateStr, queryClient]);
   
   const getLock = (customerId: string): CustomerLock | undefined => {
     return locks.find(l => l.customer_id === customerId);
