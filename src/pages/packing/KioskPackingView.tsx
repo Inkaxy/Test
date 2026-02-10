@@ -284,7 +284,7 @@ function KioskPackingViewInner() {
     }
   };
   
-  const handleSelectCustomer = async (customer: CustomerWithOrders) => {
+  const handleSelectCustomer = async (customer: KioskCustomerWithOrders) => {
     // Guard against double-taps / repeated clicks (common on tablets)
     if (selectCustomerInProgressRef.current) return;
     if (selectedCustomer?.id === customer.id) return;
