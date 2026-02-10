@@ -1729,6 +1729,8 @@ export default function DisplaySettingsPage() {
                         </Select>
                       </div>
                       
+                      {selectedDisplayType !== 'shared' && (
+                      <>
                       <div className="flex items-center justify-between">
                         <div>
                           <Label>Animasjon ved statusendring</Label>
@@ -1762,6 +1764,8 @@ export default function DisplaySettingsPage() {
                             step={1000}
                           />
                         </div>
+                      )}
+                      </>
                       )}
                     </>
                   )}
