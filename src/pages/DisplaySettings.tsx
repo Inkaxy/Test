@@ -775,6 +775,8 @@ export default function DisplaySettingsPage() {
                     />
                   </div>
                   
+                  {selectedDisplayType !== 'shared' && (
+                  <>
                   <div className="flex items-center justify-between">
                     <div>
                       <Label>Vis individuell fremdrift</Label>
@@ -872,6 +874,8 @@ export default function DisplaySettingsPage() {
                       </Select>
                     </div>
                   </div>
+                  </>
+                  )}
                 </AccordionContent>
               </AccordionItem>
               
