@@ -49,7 +49,7 @@ interface ProductOrder {
   } | null;
 }
 
-function useProductsForDate(date: string, categoryId?: string, tripId?: string | null) {
+function useProductsForDate(date: string, categoryId?: string, tripId?: string | null, tripsLoading?: boolean) {
   const { getActiveBakeryId } = useAuthStore();
   
   return useQuery({
