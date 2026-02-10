@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { KioskPinGate } from '@/components/packing/KioskPinGate';
 import { useTranslation } from 'react-i18next';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
