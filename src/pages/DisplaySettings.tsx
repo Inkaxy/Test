@@ -886,6 +886,148 @@ export default function DisplaySettingsPage() {
                 </AccordionContent>
               </AccordionItem>
               
+              {/* Ferdig pakket-visning - kun for shared display */}
+              {selectedDisplayType === 'shared' && (
+              <AccordionItem value="completed-state" className="border rounded-lg px-4">
+                <AccordionTrigger className="hover:no-underline">
+                  <div className="flex items-center gap-3">
+                    <Check className="h-5 w-5 text-muted-foreground" />
+                    <span className="font-medium">Ferdig pakket-visning</span>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="space-y-4 pt-2">
+                  <p className="text-sm text-muted-foreground">
+                    Hvordan kundekort vises når kunden er 100% ferdig pakket.
+                  </p>
+                  
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label>Vis ferdig-tilstand</Label>
+                      <p className="text-xs text-muted-foreground">Erstatt produktlisten med ferdig-tekst</p>
+                    </div>
+                    <Switch
+                      checked={settings.card_show_completed_text ?? true}
+                      onCheckedChange={(v) => updateSetting('card_show_completed_text', v)}
+                    />
+                  </div>
+                  
+                  {(settings.card_show_completed_text ?? true) && (
+                    <>
+                      <div className="space-y-2">
+                        <Label>Tekst</Label>
+                        <Input
+                          value={settings.card_completed_text || 'FERDIG PAKKET'}
+                          onChange={(e) => updateSetting('card_completed_text', e.target.value)}
+                          placeholder="FERDIG PAKKET"
+                        />
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label>Tekststørrelse</Label>
+                        <Select
+                          value={settings.card_completed_text_font_size || '1.5rem'}
+                          onValueChange={(v) => updateSetting('card_completed_text_font_size', v)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="1rem">Liten</SelectItem>
+                            <SelectItem value="1.25rem">Normal</SelectItem>
+                            <SelectItem value="1.5rem">Stor</SelectItem>
+                            <SelectItem value="2rem">Ekstra stor</SelectItem>
+                            <SelectItem value="2.5rem">Veldig stor</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-3">
+                        <ColorInput
+                          label="Bakgrunnsfarge"
+                          value={settings.card_completed_bg_color || '#22c55e'}
+                          onChange={(v) => updateSetting('card_completed_bg_color', v)}
+                        />
+                        <ColorInput
+                          label="Tekstfarge"
+                          value={settings.card_completed_text_color || '#ffffff'}
+                          onChange={(v) => updateSetting('card_completed_text_color', v)}
+                        />
+                      </div>
+                      
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <Label>Vis logo som watermark</Label>
+                          <p className="text-xs text-muted-foreground">Loaf and Load-logo i bakgrunnen</p>
+                        </div>
+                        <Switch
+                          checked={settings.card_completed_show_logo ?? true}
+                          onCheckedChange={(v) => updateSetting('card_completed_show_logo', v)}
+                        />
+                      </div>
+                      
+                      {(settings.card_completed_show_logo ?? true) && (
+                        <div className="space-y-2">
+                          <Label>Logo-gjennomsiktighet: {Math.round((settings.card_completed_logo_opacity ?? 0.15) * 100)}%</Label>
+                          <Slider
+                            value={[settings.card_completed_logo_opacity ?? 0.15]}
+                            onValueChange={([v]) => updateSetting('card_completed_logo_opacity', v)}
+                            min={0.05}
+                            max={0.4}
+                            step={0.05}
+                          />
+                        </div>
+                      )}
+                      
+                      {/* Preview */}
+                      <div className="border-t pt-4">
+                        <h4 className="text-sm font-medium mb-2">Forhåndsvisning</h4>
+                        <div
+                          className="rounded-xl overflow-hidden border"
+                          style={{
+                            backgroundColor: settings.card_completed_bg_color || '#22c55e',
+                          }}
+                        >
+                          <div
+                            className="text-center py-3 px-4 border-b"
+                            style={{
+                              color: settings.card_completed_text_color || '#ffffff',
+                              borderColor: (settings.card_completed_text_color || '#ffffff') + '30',
+                            }}
+                          >
+                            <h3 className="font-bold" style={{ fontSize: settings.card_customer_name_font_size || '1.5rem' }}>
+                              Eksempel Kunde
+                            </h3>
+                          </div>
+                          <div
+                            className="relative flex flex-col items-center justify-center py-8 overflow-hidden"
+                            style={{ color: settings.card_completed_text_color || '#ffffff' }}
+                          >
+                            {(settings.card_completed_show_logo ?? true) && (
+                              <div
+                                className="absolute inset-0 flex items-center justify-center"
+                                style={{ opacity: settings.card_completed_logo_opacity ?? 0.15 }}
+                              >
+                                <div className="w-16 h-16 rounded-full bg-current" />
+                              </div>
+                            )}
+                            <span
+                              className="relative font-bold tracking-wider z-10"
+                              style={{ fontSize: settings.card_completed_text_font_size || '1.5rem' }}
+                            >
+                              {settings.card_completed_text || 'FERDIG PAKKET'}
+                            </span>
+                          </div>
+                          <div className="h-2 w-full" style={{ backgroundColor: (settings.card_completed_text_color || '#ffffff') + '30' }}>
+                            <div className="h-full w-full" style={{ backgroundColor: settings.completed_color }} />
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </AccordionContent>
+              </AccordionItem>
+              )}
+              
               {/* Utseende */}
               <AccordionItem value="appearance" className="border rounded-lg px-4">
                 <AccordionTrigger className="hover:no-underline">

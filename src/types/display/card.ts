@@ -25,6 +25,20 @@ export interface CardSettings {
   card_progress_font_size: string;
   /** Show bottom progress bar on cards */
   card_show_bottom_progress_bar: boolean;
+  /** Show completed text when customer is 100% packed */
+  card_show_completed_text: boolean;
+  /** Text to display when customer is 100% packed */
+  card_completed_text: string;
+  /** Font size for completed text */
+  card_completed_text_font_size: string;
+  /** Background color for completed card */
+  card_completed_bg_color: string;
+  /** Text color for completed state */
+  card_completed_text_color: string;
+  /** Show logo watermark on completed card */
+  card_completed_show_logo: boolean;
+  /** Opacity of the logo watermark (0.05-0.4) */
+  card_completed_logo_opacity: number;
 }
 
 export const defaultCardSettings: CardSettings = {
@@ -39,4 +53,11 @@ export const defaultCardSettings: CardSettings = {
   card_quantity_font_size: '1rem',
   card_progress_font_size: '0.875rem',
   card_show_bottom_progress_bar: true,
+  card_show_completed_text: true,
+  card_completed_text: 'FERDIG PAKKET',
+  card_completed_text_font_size: '1.5rem',
+  card_completed_bg_color: '#22c55e',
+  card_completed_text_color: '#ffffff',
+  card_completed_show_logo: true,
+  card_completed_logo_opacity: 0.15,
 };
