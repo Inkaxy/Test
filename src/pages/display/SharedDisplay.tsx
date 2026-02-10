@@ -18,6 +18,7 @@ import { useRealtimeDisplay } from '@/hooks/useRealtimeDisplay';
 import { useReceiveAllPackingSelections } from '@/hooks/usePackingSelection';
 import { useQueryClient } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
+import logoIcon from '@/assets/logo-icon.png';
 
 export default function SharedDisplay() {
   const { bakeryShortId, categoryId } = useParams();
