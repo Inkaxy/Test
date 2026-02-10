@@ -86,7 +86,7 @@ export default function CustomerPackingView() {
   };
   
   // Trips support
-  const { data: trips = [] } = useTrips(categoryId);
+  const { data: trips = [], isLoading: tripsLoading } = useTrips(categoryId);
   const hasTrips = trips.length > 0;
   
   // Per-trip order stats for trip progression
@@ -119,7 +119,7 @@ export default function CustomerPackingView() {
   const tripProgression = useTripProgression({ trips, getTripStats });
   const activeTripId = hasTrips ? tripProgression.activeTripId : null;
   
-  const { data: customers = [], isLoading: customersLoading } = useCustomersForDate(dateStr, categoryId, sortOptions, activeTripId);
+  const { data: customers = [], isLoading: customersLoading } = useCustomersForDate(dateStr, categoryId, sortOptions, activeTripId, tripsLoading);
   const { data: locks = [] } = useCustomerLocks(dateStr, bakeryId);
   const { data: bakerySettings } = useBakerySettings();
   useRealtimeCustomerLocks(dateStr, bakeryId);

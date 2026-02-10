@@ -89,7 +89,7 @@ function useCategoryById(categoryId: string | null) {
 }
 
 // Hook to get products with orders for a date (product-based view)
-function useKioskProductsForDate(bakeryId: string | null, date: string, categoryId?: string, tripId?: string | null) {
+function useKioskProductsForDate(bakeryId: string | null, date: string, categoryId?: string, tripId?: string | null, tripsLoading?: boolean) {
   return useQuery({
     queryKey: ['kiosk-products-for-date', bakeryId, date, categoryId, tripId],
     queryFn: async () => {
@@ -170,7 +170,7 @@ function useKioskProductsForDate(bakeryId: string | null, date: string, category
       
       return Array.from(productMap.values()).sort((a, b) => a.name.localeCompare(b.name, 'nb'));
     },
-    enabled: !!bakeryId,
+    enabled: !!bakeryId && !tripsLoading,
   });
 }
 
@@ -195,7 +195,7 @@ export default function ProductKioskPackingView() {
   const { data: category } = useCategoryById(categoryId || null);
   
   // Trips support
-  const { data: trips = [] } = useTripsForBakery(bakery?.id || null, categoryId);
+  const { data: trips = [], isLoading: tripsLoading } = useTripsForBakery(bakery?.id || null, categoryId);
   const hasTrips = trips.length > 0;
   
   // Per-trip order stats
@@ -232,7 +232,8 @@ export default function ProductKioskPackingView() {
     bakery?.id || null, 
     dateStr, 
     categoryId,
-    activeTripId
+    activeTripId,
+    tripsLoading
   );
   
   // Use unified packing mutations hook in kiosk mode

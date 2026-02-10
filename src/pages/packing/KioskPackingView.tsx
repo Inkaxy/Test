@@ -111,7 +111,7 @@ function useCategoryById(categoryId: string | null) {
 }
 
 // Hook to get customers with orders for a date
-function useKioskCustomersForDate(bakeryId: string | null, date: string, categoryId?: string, tripId?: string | null) {
+function useKioskCustomersForDate(bakeryId: string | null, date: string, categoryId?: string, tripId?: string | null, tripsLoading?: boolean) {
   return useQuery({
     queryKey: ['kiosk-customers-for-date', bakeryId, date, categoryId, tripId],
     queryFn: async () => {
@@ -185,7 +185,7 @@ function useKioskCustomersForDate(bakeryId: string | null, date: string, categor
       
       return Array.from(customerMap.values()).sort((a, b) => a.name.localeCompare(b.name, 'nb'));
     },
-    enabled: !!bakeryId,
+    enabled: !!bakeryId && !tripsLoading,
     refetchInterval: 30000, // Backup polling every 30 seconds
   });
 }
@@ -247,7 +247,7 @@ export default function KioskPackingView() {
   const { data: category } = useCategoryById(categoryId || null);
   
   // Trips support
-  const { data: trips = [] } = useTripsForBakery(bakery?.id || null, categoryId);
+  const { data: trips = [], isLoading: tripsLoading } = useTripsForBakery(bakery?.id || null, categoryId);
   const hasTrips = trips.length > 0;
   
   // Per-trip order stats
@@ -284,7 +284,8 @@ export default function KioskPackingView() {
     bakery?.id || null, 
     dateStr, 
     categoryId,
-    activeTripId
+    activeTripId,
+    tripsLoading
   );
   const { data: displaySettings } = useDisplaySettings(bakery?.id || null, categoryId, 'packing');
   const settings: DisplaySettings = displaySettings || getDefaultDisplaySettings();

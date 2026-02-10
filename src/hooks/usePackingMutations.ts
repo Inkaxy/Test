@@ -323,6 +323,8 @@ export function usePackingMutations(options: PackingMutationsOptions = {}) {
       const deliveryDate = params.deliveryDate || options.deliveryDate;
       const categoryId = params.categoryId || options.categoryId;
       
+      queryClient.invalidateQueries({ queryKey: ['trip-order-stats'] });
+      
       if (isKiosk) {
         queryClient.refetchQueries({ queryKey: ['kiosk-customers-for-date', bakeryId, deliveryDate, categoryId] });
       } else {
@@ -407,6 +409,7 @@ export function usePackingMutations(options: PackingMutationsOptions = {}) {
       queryClient.invalidateQueries({ queryKey: ['products-for-date'] });
       queryClient.invalidateQueries({ queryKey: ['kiosk-customers-for-date'] });
       queryClient.invalidateQueries({ queryKey: ['kiosk-products-for-date'] });
+      queryClient.invalidateQueries({ queryKey: ['trip-order-stats'] });
     },
   });
 
@@ -473,6 +476,7 @@ export function usePackingMutations(options: PackingMutationsOptions = {}) {
       queryClient.invalidateQueries({ queryKey: ['orders-by-product'] });
       queryClient.invalidateQueries({ queryKey: ['kiosk-customers-for-date'] });
       queryClient.invalidateQueries({ queryKey: ['kiosk-products-for-date'] });
+      queryClient.invalidateQueries({ queryKey: ['trip-order-stats'] });
     },
   });
 
@@ -549,6 +553,8 @@ export function usePackingMutations(options: PackingMutationsOptions = {}) {
       const bakeryId = effectiveBakeryId;
       const deliveryDate = params.deliveryDate || options.deliveryDate;
       const categoryId = params.categoryId || options.categoryId;
+      
+      queryClient.invalidateQueries({ queryKey: ['trip-order-stats'] });
       
       if (isKiosk) {
         queryClient.refetchQueries({ queryKey: ['kiosk-customers-for-date', bakeryId, deliveryDate, categoryId] });

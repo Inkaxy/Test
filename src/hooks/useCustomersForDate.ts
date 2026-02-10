@@ -37,7 +37,7 @@ export interface CustomerSortOptions {
   sortDirection?: 'asc' | 'desc';
 }
 
-export function useCustomersForDate(deliveryDate: string, categoryId?: string, sortOptions?: CustomerSortOptions, tripId?: string | null) {
+export function useCustomersForDate(deliveryDate: string, categoryId?: string, sortOptions?: CustomerSortOptions, tripId?: string | null, tripsLoading?: boolean) {
   const { getActiveBakeryId } = useAuthStore();
   
   return useQuery({
@@ -161,6 +161,6 @@ export function useCustomersForDate(deliveryDate: string, categoryId?: string, s
       
       return customers;
     },
-    enabled: !!deliveryDate,
+    enabled: !!deliveryDate && !tripsLoading,
   });
 }
