@@ -1,16 +1,25 @@
 
-# Fjern "Produktbasert Pakking"-fanen fra Display-innstillinger
 
-## Endring
+# Fix: Produktvalg vises ikke pa felles display
 
-Fanen "Produktbasert Pakking" fjernes fra innstillingspanelet. Den brukes i dag kun av `ProductPackingView` for a hente display-innstillinger, men trenger ikke en egen konfigurasjonsfane -- produktbasert pakking kan bruke standardinnstillingene eller arve fra en annen type.
+## Problem
+
+Kanalnavn for Supabase Broadcast stemmer ikke overens:
+
+- **Pakkevisningen sender pa**: `packing-selection-${bakeryId}`
+- **Felles display lytter pa**: `packing-selection-shared-${bakeryId}`
+
+Siden kanalnavnene er forskjellige, mottar felles display aldri produktvalgene fra pakkevisningen.
+
+## Losning
+
+Endre `useReceiveAllPackingSelections` i `src/hooks/usePackingSelection.ts` til a lytte pa samme kanal som pakkevisningen sender pa: `packing-selection-${bakeryId}`.
 
 ## Teknisk
 
 | Fil | Endring |
 |-----|---------|
-| `src/pages/DisplaySettings.tsx` | Oppdater `visibleDisplayTypes`-filteret til ogsa ekskludere `product_packing` (i tillegg til `customer_packing`). Oppdater `grid-cols-4` til `grid-cols-3` pa `TabsList` siden det na kun er 3 faner. |
+| `src/hooks/usePackingSelection.ts` | Linje 149: Endre kanalnavn fra `` `packing-selection-shared-${bakeryId}` `` til `` `packing-selection-${bakeryId}` `` |
 
-Resultatet blir at innstillingspanelet viser kun tre faner: **Felles Display**, **Kunde Display** og **Pakkedisplay**.
+Denne ene endringen sikrer at felles display abonnerer pa samme broadcast-kanal som pakkevisningen bruker, slik at produktvalg umiddelbart reflekteres pa TV-skjermen.
 
-`ProductPackingView` fortsetter a bruke `product_packing`-typen internt for a hente innstillinger fra databasen -- ingen endring der.
