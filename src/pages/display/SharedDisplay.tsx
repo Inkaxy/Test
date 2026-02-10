@@ -423,7 +423,14 @@ export default function SharedDisplay() {
               style={{
                 backgroundColor: displaySettings.card_background_color,
                 borderRadius: displaySettings.border_radius,
-                borderLeft: `${displaySettings.card_border_width || '4px'} solid ${getStatusColor(customerData.progress)}`,
+                borderLeft: `${displaySettings.card_border_width || '4px'} solid ${getStatusColor((() => {
+                  const selectedIds = getSelectedProductIds(customerData.customer.id);
+                  if (!selectedIds) return customerData.progress;
+                  const filtered = customerData.orders.filter(o => selectedIds.includes(o.product.id));
+                  if (filtered.length === 0) return 0;
+                  const packed = filtered.filter(o => o.packing_status?.status === 'packed' || o.packing_status?.status === 'deviation').length;
+                  return Math.round((packed / filtered.length) * 100);
+                })())}`,
               }}
             >
               {/* Customer header */}
@@ -441,99 +448,112 @@ export default function SharedDisplay() {
                 )}
               </div>
 
-              {/* Progress bar */}
-              {displaySettings.card_show_individual_progress && (
-                <div className="mb-3">
-                  <Progress
-                    value={customerData.progress}
-                    className="h-2"
-                    style={{
-                      backgroundColor: `${displaySettings.pending_color}40`,
-                    }}
-                  />
-                  <p 
-                    className="text-sm mt-1 opacity-70"
-                    style={{ fontSize: displaySettings.card_progress_font_size }}
-                  >
-                    {customerData.packedCount} / {customerData.totalCount} produkter
-                  </p>
-                </div>
-              )}
+              {/* Progress bar - filtered by selected products */}
+              {displaySettings.card_show_individual_progress && (() => {
+                const selectedIds = getSelectedProductIds(customerData.customer.id);
+                const filteredOrders = selectedIds
+                  ? customerData.orders.filter(o => selectedIds.includes(o.product.id))
+                  : customerData.orders;
+                const total = filteredOrders.length;
+                const packed = filteredOrders.filter(o => o.packing_status?.status === 'packed' || o.packing_status?.status === 'deviation').length;
+                const progress = total > 0 ? Math.round((packed / total) * 100) : 0;
 
-              {/* Products list */}
-              {displaySettings.card_show_product_list && (
-                <div className="space-y-1">
-                  {customerData.orders.map((order) => {
-                    const isPacked =
-                      order.packing_status?.status === 'packed' ||
-                      order.packing_status?.status === 'deviation';
+                return (
+                  <div className="mb-3">
+                    <Progress
+                      value={progress}
+                      className="h-2"
+                      style={{
+                        backgroundColor: `${displaySettings.pending_color}40`,
+                      }}
+                    />
+                    <p 
+                      className="text-sm mt-1 opacity-70"
+                      style={{ fontSize: displaySettings.card_progress_font_size }}
+                    >
+                      {packed} / {total} produkter
+                    </p>
+                  </div>
+                );
+              })()}
 
-                    // Calculate tray display if enabled
-                    let quantityDisplay = `${order.quantity} stk`;
-                    if (displaySettings.card_show_quantity_as_trays && order.product.pieces_per_tray) {
-                      const trays = Math.floor(order.quantity / order.product.pieces_per_tray);
-                      const pieces = order.quantity % order.product.pieces_per_tray;
-                      if (trays > 0 && pieces > 0) {
-                        quantityDisplay = `${trays}b + ${pieces}stk`;
-                      } else if (trays > 0) {
-                        quantityDisplay = `${trays} brett`;
-                      }
-                    }
+              {/* Products list - filtered by selected products */}
+              {displaySettings.card_show_product_list && (() => {
+                const selectedIds = getSelectedProductIds(customerData.customer.id);
+                const filteredOrders = selectedIds
+                  ? customerData.orders.filter(o => selectedIds.includes(o.product.id))
+                  : [];
 
-                    return (
-                      <div
-                        key={order.id}
-                        className="flex items-center gap-3 py-2 px-3 rounded-lg"
-                        style={{
-                          backgroundColor: isPacked
-                            ? `${displaySettings.completed_color}20`
-                            : `${displaySettings.pending_color}10`,
-                        }}
-                      >
-                        {/* Product name */}
-                        <div className="flex-1 min-w-0">
-                          <span 
-                            className={cn("block truncate", isPacked && "line-through opacity-60")}
-                            style={{ fontSize: displaySettings.card_product_font_size || displaySettings.product_font_size }}
-                          >
-                            {displaySettings.card_show_product_numbers && (
-                              <span className="opacity-60 mr-2">#{order.product.product_number}</span>
-                            )}
-                            {order.product.name}
-                          </span>
-                        </div>
+                // No products selected yet - show waiting state
+                if (!selectedIds || filteredOrders.length === 0) {
+                  return (
+                    <div className="flex items-center justify-center py-4 opacity-40">
+                      <Clock className="h-4 w-4 mr-2" />
+                      <span style={{ fontSize: displaySettings.card_product_font_size || displaySettings.product_font_size }}>
+                        Venter på valg...
+                      </span>
+                    </div>
+                  );
+                }
 
-                        {/* Right section: quantity, progress, badge */}
-                        <div className="flex items-center gap-3 shrink-0">
-                          {/* Quantity display */}
-                          <div className="text-right">
+                return (
+                  <div className="space-y-1">
+                    {filteredOrders.map((order) => {
+                      const isPacked =
+                        order.packing_status?.status === 'packed' ||
+                        order.packing_status?.status === 'deviation';
+
+                      return (
+                        <div
+                          key={order.id}
+                          className="flex items-center gap-3 py-2 px-3 rounded-lg"
+                          style={{
+                            backgroundColor: isPacked
+                              ? `${displaySettings.completed_color}20`
+                              : `${displaySettings.pending_color}10`,
+                          }}
+                        >
+                          <div className="flex-1 min-w-0">
                             <span 
-                              className="font-bold block"
-                              style={{ fontSize: displaySettings.card_quantity_font_size || '1.25rem' }}
+                              className={cn("block truncate", isPacked && "line-through opacity-60")}
+                              style={{ fontSize: displaySettings.card_product_font_size || displaySettings.product_font_size }}
                             >
-                              {order.quantity}
+                              {displaySettings.card_show_product_numbers && (
+                                <span className="opacity-60 mr-2">#{order.product.product_number}</span>
+                              )}
+                              {order.product.name}
                             </span>
-                            <span className="text-xs opacity-60">stk</span>
                           </div>
 
-                          {/* Status badge */}
-                          <Badge
-                            variant={isPacked ? 'default' : 'outline'}
-                            className="min-w-[60px] justify-center"
-                            style={{
-                              backgroundColor: isPacked ? displaySettings.completed_color : 'transparent',
-                              borderColor: isPacked ? displaySettings.completed_color : displaySettings.pending_color,
-                              color: isPacked ? '#fff' : displaySettings.pending_color,
-                            }}
-                          >
-                            {isPacked ? 'Ferdig' : 'Venter'}
-                          </Badge>
+                          <div className="flex items-center gap-3 shrink-0">
+                            <div className="text-right">
+                              <span 
+                                className="font-bold block"
+                                style={{ fontSize: displaySettings.card_quantity_font_size || '1.25rem' }}
+                              >
+                                {order.quantity}
+                              </span>
+                              <span className="text-xs opacity-60">stk</span>
+                            </div>
+
+                            <Badge
+                              variant={isPacked ? 'default' : 'outline'}
+                              className="min-w-[60px] justify-center"
+                              style={{
+                                backgroundColor: isPacked ? displaySettings.completed_color : 'transparent',
+                                borderColor: isPacked ? displaySettings.completed_color : displaySettings.pending_color,
+                                color: isPacked ? '#fff' : displaySettings.pending_color,
+                              }}
+                            >
+                              {isPacked ? 'Ferdig' : 'Venter'}
+                            </Badge>
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+                      );
+                    })}
+                  </div>
+                );
+              })()}
 
               {/* Compact mode - just show count */}
               {displaySettings.card_compact_mode && !displaySettings.card_show_product_list && (
