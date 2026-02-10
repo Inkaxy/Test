@@ -1,89 +1,45 @@
 
-# Refaktorering av kundebasert pakking
 
-Ren refaktorering og bugfiks -- ingen funksjonelle eller UI-endringer.
+# Fiks: Filtrer ut kunder med dedikert skjerm fra felles display
 
-## Oppgave 1: Fjern duplikat updateOrderStatusInCustomersCache fra useOrders.ts
+## Problem
 
-Fjern funksjonen (linje 37-103) og den ubrukte importen av `CustomerWithOrders` (linje 4). Behold `Order`-typen, `useOrders` og `useOrdersByProduct`.
+`useDisplayOrders` i `src/hooks/useDisplayOrders.ts` henter alle ordrer for et bakeri og en dato, uten å sjekke om kunden har `has_dedicated_display = true`. Dette betyr at kunder som har aktivert dedikert skjerm fortsatt vises på fellesskjermen -- de vises altsa pa begge steder.
 
-## Oppgave 7: Opprett getFirstPackingStatus-hjelpefunksjon
+## Losning
 
-Legg til en generisk hjelpefunksjon i `src/lib/utils.ts`:
+Legg til et filter i Supabase-queryen slik at kunder med `has_dedicated_display = true` ekskluderes fra felles-displayet.
 
-```text
-export function getFirstPackingStatus<T>(ps: T | T[] | null | undefined): T | null {
-  if (!ps) return null;
-  return Array.isArray(ps) ? ps[0] || null : ps;
-}
-```
+## Teknisk endring
 
-Bruk den i:
-- `src/hooks/useCustomersForDate.ts` -- erstatt inline array-sjekk (linje ~80)
-- `src/hooks/useOrders.ts` -- erstatt `order.packing_status?.[0] || null` (linje 131, 163)
-- Den nye `useKioskCustomersForDate.ts`-filen (oppgave 5)
+**Fil:** `src/hooks/useDisplayOrders.ts`
 
-## Oppgave 5: Flytt inline-hooks fra KioskPackingView.tsx til egne filer
-
-Opprett to nye filer:
-
-**`src/hooks/useKioskCustomersForDate.ts`** -- flytt `useKioskCustomersForDate` (linje 115-192), `OrderWithProduct` og `CustomerWithOrders` interfaces (linje 52-76). Bruk `getFirstPackingStatus` for konsistent array-handtering av `order.packing_status`.
-
-**`src/hooks/useRealtimePackingStatus.ts`** -- flytt `useRealtimePackingStatus` (linje 195-223).
-
-Oppdater `KioskPackingView.tsx` til a importere fra de nye filene. Fjern de to inline-hooks-definisjonene og interfaces.
-
-## Oppgave 3: Fiks channel-lekkasje i broadcastPackingUpdate
-
-I `src/hooks/usePackingMutations.ts`: legg til cleanup i `broadcastPackingUpdate` (linje 174-205). Etter sending, bruk `setTimeout(() => supabase.removeChannel(channel), 500)` for bade `generalChannel` og `categoryChannel`.
-
-I `src/hooks/useRealtimeDisplay.ts`: fiks `usePackingBroadcast` (linje 92-113) til a subscribe for sending og deretter rydde opp:
+I `useDisplayOrders`-funksjonen (linje 52-68), legg til et filter pa `customer`-relasjonen:
 
 ```text
-const channel = supabase.channel(channelName);
-channel.subscribe((status) => {
-  if (status === 'SUBSCRIBED') {
-    channel.send({ type: 'broadcast', event: 'packing_update', payload: update });
-    setTimeout(() => supabase.removeChannel(channel), 500);
-  }
-});
+// Navaerende (linje 57):
+customer:customers!inner(id, name, customer_number),
+
+// Etter endring - legg til filter etter queryen:
+.eq('customer.has_dedicated_display', false)
 ```
 
-## Oppgave 6: Fiks Realtime-kanalnavn i CustomerPackingView.tsx
+Alternativt (og mer robust) -- bruk `.or()` for a ogsa inkludere kunder der feltet er `null` (for bakoverkompatibilitet):
 
-Endre linje 163 fra:
 ```text
-.channel('customer-packing-status')
-```
-til:
-```text
-.channel(`customer-packing-status:${bakeryId}:${dateStr}`)
+.or('has_dedicated_display.eq.false,has_dedicated_display.is.null', { referencedTable: 'customers' })
 ```
 
-Legg til `dateStr` i useEffect dependency-arrayet (linje 182).
+Dette sikrer at:
+- Kunder med `has_dedicated_display = true` filtreres ut fra felles-displayet
+- Kunder med `has_dedicated_display = false` vises som for
+- Kunder der feltet er `null` (eldre data) vises ogsa pa felles-displayet
 
-## Oppgave 4: Automatisk lost
+Ingen andre filer trenger endring. Dedikert display (`CustomerDisplay`) bruker en helt annen hook (`useCustomerByToken` + `useCustomerDisplayOrders`) som ikke pavirkes.
 
-Loses av oppgave 2 (CustomerPacking.tsx slettes).
-
-## Oppgave 2: Fjern CustomerPacking.tsx
-
-- Fjern `import CustomerPacking` fra `src/App.tsx` (linje 16)
-- Fjern ruten `<Route path="/packing/customer" element={<CustomerPacking />} />` (linje 92)
-- Slett filen `src/pages/CustomerPacking.tsx`
-
-## Filendringer (oppsummert)
+## Filendringer
 
 | Fil | Endring |
 |-----|---------|
-| `src/hooks/useOrders.ts` | Fjern duplikat funksjon og ubrukt import |
-| `src/lib/utils.ts` | Legg til `getFirstPackingStatus` |
-| `src/hooks/useCustomersForDate.ts` | Bruk `getFirstPackingStatus` |
-| `src/hooks/useKioskCustomersForDate.ts` | Ny fil (flyttet fra KioskPackingView) |
-| `src/hooks/useRealtimePackingStatus.ts` | Ny fil (flyttet fra KioskPackingView) |
-| `src/pages/packing/KioskPackingView.tsx` | Fjern inline-hooks, importer fra nye filer |
-| `src/hooks/usePackingMutations.ts` | Legg til channel cleanup |
-| `src/hooks/useRealtimeDisplay.ts` | Fiks usePackingBroadcast med subscribe+cleanup |
-| `src/pages/packing/CustomerPackingView.tsx` | Scoped kanalnavn |
-| `src/App.tsx` | Fjern CustomerPacking-rute og import |
-| `src/pages/CustomerPacking.tsx` | Slett filen |
+| `src/hooks/useDisplayOrders.ts` | Legg til `.or()` filter i `useDisplayOrders` for a ekskludere dedikerte kunder |
+
