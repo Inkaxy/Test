@@ -65,13 +65,16 @@ export default function DisplaySettingsPage() {
       // Pakkedisplay = kun kundebaserte kategorier
       return cat.packing_mode === 'customer_based';
     }
-    if (selectedDisplayType === 'customer') {
-      // Kundedisplay = kun produktbaserte kategorier
+    if (selectedDisplayType === 'shared' || selectedDisplayType === 'customer') {
+      // Felles display og Kundedisplay = kun produktbaserte kategorier
       return cat.packing_mode === 'product_based';
     }
-    // Felles display = alle kategorier
     return true;
   });
+
+  // Display types som vises i innstillingspanelet (ekskluder customer_packing fra shared/customer)
+  const visibleDisplayTypes = (Object.entries(DISPLAY_TYPES) as [DisplayType, typeof DISPLAY_TYPES[DisplayType]][])
+    .filter(([type]) => type !== 'customer_packing');
 
   // Fetch bakery info for short_id
   const { data: bakery } = useQuery({
@@ -334,7 +337,7 @@ export default function DisplaySettingsPage() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Kopier innstillinger fra</DropdownMenuLabel>
-              {(Object.entries(DISPLAY_TYPES) as [DisplayType, typeof DISPLAY_TYPES[DisplayType]][])
+              {visibleDisplayTypes
                 .filter(([type]) => type !== selectedDisplayType)
                 .map(([type, info]) => (
                   <DropdownMenuItem 
@@ -389,8 +392,8 @@ export default function DisplaySettingsPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <Tabs value={selectedDisplayType} onValueChange={(v) => setSelectedDisplayType(v as DisplayType)}>
-            <TabsList className="grid w-full grid-cols-3">
-              {(Object.entries(DISPLAY_TYPES) as [DisplayType, typeof DISPLAY_TYPES[DisplayType]][]).map(([type, info]) => (
+            <TabsList className="grid w-full grid-cols-4">
+              {visibleDisplayTypes.map(([type, info]) => (
                 <TabsTrigger key={type} value={type} className="flex items-center gap-2">
                   {getDisplayTypeIcon(type)}
                   <span className="hidden sm:inline">{info.label}</span>
