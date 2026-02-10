@@ -74,7 +74,7 @@ export default function DisplaySettingsPage() {
 
   // Display types som vises i innstillingspanelet (ekskluder customer_packing fra shared/customer)
   const visibleDisplayTypes = (Object.entries(DISPLAY_TYPES) as [DisplayType, typeof DISPLAY_TYPES[DisplayType]][])
-    .filter(([type]) => type !== 'customer_packing');
+    .filter(([type]) => type !== 'customer_packing' && type !== 'product_packing');
 
   // Fetch bakery info for short_id
   const { data: bakery } = useQuery({
@@ -392,7 +392,7 @@ export default function DisplaySettingsPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <Tabs value={selectedDisplayType} onValueChange={(v) => setSelectedDisplayType(v as DisplayType)}>
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-3">
               {visibleDisplayTypes.map(([type, info]) => (
                 <TabsTrigger key={type} value={type} className="flex items-center gap-2">
                   {getDisplayTypeIcon(type)}
