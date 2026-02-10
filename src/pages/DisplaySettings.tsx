@@ -65,13 +65,16 @@ export default function DisplaySettingsPage() {
       // Pakkedisplay = kun kundebaserte kategorier
       return cat.packing_mode === 'customer_based';
     }
-    if (selectedDisplayType === 'customer') {
-      // Kundedisplay = kun produktbaserte kategorier
+    if (selectedDisplayType === 'shared' || selectedDisplayType === 'customer') {
+      // Felles display og Kundedisplay = kun produktbaserte kategorier
       return cat.packing_mode === 'product_based';
     }
-    // Felles display = alle kategorier
     return true;
   });
+
+  // Display types som vises i innstillingspanelet (ekskluder customer_packing fra shared/customer)
+  const visibleDisplayTypes = (Object.entries(DISPLAY_TYPES) as [DisplayType, typeof DISPLAY_TYPES[DisplayType]][])
+    .filter(([type]) => type !== 'customer_packing');
 
   // Fetch bakery info for short_id
   const { data: bakery } = useQuery({
