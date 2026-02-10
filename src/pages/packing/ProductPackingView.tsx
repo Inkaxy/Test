@@ -129,6 +129,7 @@ function useProductsForDate(date: string, categoryId?: string, tripId?: string |
       
       return Array.from(productMap.values()).sort((a, b) => a.name.localeCompare(b.name, 'nb'));
     },
+    enabled: !!getActiveBakeryId() && !tripsLoading,
   });
 }
 
