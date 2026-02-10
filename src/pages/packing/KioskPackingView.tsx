@@ -16,6 +16,8 @@ import { nb, enUS } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useKioskCustomersForDate, KioskCustomerWithOrders } from '@/hooks/useKioskCustomersForDate';
+import { useRealtimePackingStatus } from '@/hooks/useRealtimePackingStatus';
 import { DeviationDialog } from '@/components/packing/DeviationDialog';
 import { KioskCustomerTable } from '@/components/packing/KioskCustomerTable';
 import { useDisplaySettings, getDefaultDisplaySettings, DisplaySettings } from '@/hooks/useDisplayOrders';
@@ -47,32 +49,6 @@ interface DeviationOrderInfo {
   productName: string;
   customerName: string;
   quantity: number;
-}
-
-interface OrderWithProduct {
-  id: string;
-  quantity: number;
-  product: {
-    id: string;
-    name: string;
-    product_number: string;
-    pieces_per_tray: number | null;
-    category_id: string | null;
-  };
-  packing_status: {
-    id: string;
-    status: string;
-  } | null;
-}
-
-interface CustomerWithOrders {
-  id: string;
-  name: string;
-  customer_number: string;
-  orders: OrderWithProduct[];
-  totalOrders: number;
-  packedOrders: number;
-  progress: number;
 }
 
 // Hook to get bakery by short_id
@@ -111,119 +87,6 @@ function useCategoryById(categoryId: string | null) {
   });
 }
 
-// Hook to get customers with orders for a date
-function useKioskCustomersForDate(bakeryId: string | null, date: string, categoryId?: string, tripId?: string | null, tripsLoading?: boolean) {
-  return useQuery({
-    queryKey: ['kiosk-customers-for-date', bakeryId, date, categoryId, tripId],
-    queryFn: async () => {
-      if (!bakeryId) return [];
-      
-      let query = supabase
-        .from('orders')
-        .select(`
-          id,
-          quantity,
-          customer:customers!inner(id, name, customer_number),
-          product:products!inner(id, name, product_number, pieces_per_tray, category_id),
-          packing_status(id, status)
-        `)
-        .eq('bakery_id', bakeryId)
-        .eq('delivery_date', date);
-      
-       // Filter by order category
-       if (categoryId) {
-         query = query.eq('category_id', categoryId);
-       }
-       
-       if (tripId) {
-         query = query.eq('trip_id', tripId);
-       }
-      
-      const { data, error } = await query.order('customer(name)');
-      
-      if (error) throw error;
-      
-      // Group orders by customer
-      const customerMap = new Map<string, CustomerWithOrders>();
-      
-      for (const order of data || []) {
-        const customerId = order.customer.id;
-        let customer = customerMap.get(customerId);
-        
-        if (!customer) {
-          customer = {
-            id: customerId,
-            name: order.customer.name,
-            customer_number: order.customer.customer_number,
-            orders: [],
-            totalOrders: 0,
-            packedOrders: 0,
-            progress: 0,
-          };
-          customerMap.set(customerId, customer);
-        }
-        
-        customer.orders.push({
-          id: order.id,
-          quantity: order.quantity,
-          product: order.product,
-          packing_status: order.packing_status,
-        });
-        
-        customer.totalOrders++;
-        
-        if (order.packing_status?.status === 'packed' || order.packing_status?.status === 'deviation') {
-          customer.packedOrders++;
-        }
-      }
-      
-      // Calculate progress for each customer
-      for (const customer of customerMap.values()) {
-        customer.progress = customer.totalOrders > 0 
-          ? Math.round((customer.packedOrders / customer.totalOrders) * 100)
-          : 0;
-      }
-      
-      return Array.from(customerMap.values()).sort((a, b) => a.name.localeCompare(b.name, 'nb'));
-    },
-    enabled: !!bakeryId && !tripsLoading,
-    refetchInterval: 30000, // Backup polling every 30 seconds
-  });
-}
-
-// Hook to subscribe to realtime packing_status changes
-function useRealtimePackingStatus(bakeryId: string | null, date: string, categoryId?: string) {
-  const queryClient = useQueryClient();
-  
-  useEffect(() => {
-    if (!bakeryId) return;
-    
-    const channel = supabase
-      .channel(`kiosk-packing-status:${bakeryId}:${date}:${categoryId || 'all'}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'packing_status',
-        },
-        () => {
-          // Invalidate the customers query to refresh data
-          queryClient.invalidateQueries({ 
-            queryKey: ['kiosk-customers-for-date', bakeryId, date, categoryId] 
-          });
-        }
-      )
-      .subscribe();
-    
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [bakeryId, date, categoryId, queryClient]);
-}
-
-// Inline kiosk mutations removed - now using usePackingMutations hook
-
 function KioskPackingViewInner() {
   const { t, i18n } = useTranslation();
   const { toast } = useToast();
@@ -239,7 +102,7 @@ function KioskPackingViewInner() {
   const dateParam = searchParams.get('date');
   const dateStr = dateParam || format(new Date(), 'yyyy-MM-dd');
   
-  const [selectedCustomer, setSelectedCustomer] = useState<CustomerWithOrders | null>(null);
+  const [selectedCustomer, setSelectedCustomer] = useState<KioskCustomerWithOrders | null>(null);
   const [deviationOrder, setDeviationOrder] = useState<DeviationOrderInfo | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isConnected, setIsConnected] = useState(true);
@@ -421,7 +284,7 @@ function KioskPackingViewInner() {
     }
   };
   
-  const handleSelectCustomer = async (customer: CustomerWithOrders) => {
+  const handleSelectCustomer = async (customer: KioskCustomerWithOrders) => {
     // Guard against double-taps / repeated clicks (common on tablets)
     if (selectCustomerInProgressRef.current) return;
     if (selectedCustomer?.id === customer.id) return;

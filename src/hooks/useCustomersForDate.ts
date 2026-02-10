@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuthStore } from '@/stores/authStore';
+import { getFirstPackingStatus } from '@/lib/utils';
 
 export interface CustomerWithOrders {
   id: string;
@@ -101,9 +102,7 @@ export function useCustomersForDate(deliveryDate: string, categoryId?: string, s
         }
         
         const customer = customerMap.get(customerId)!;
-        const packingStatus = Array.isArray(order.packing_status) 
-          ? order.packing_status[0] || null 
-          : order.packing_status;
+        const packingStatus = getFirstPackingStatus(order.packing_status);
         
         customer.orders.push({
           id: order.id,

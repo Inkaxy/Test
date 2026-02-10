@@ -1,7 +1,7 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuthStore } from '@/stores/authStore';
-import type { CustomerWithOrders } from '@/hooks/useCustomersForDate';
+import { getFirstPackingStatus } from '@/lib/utils';
 
 export interface Order {
   id: string;
@@ -34,74 +34,6 @@ export interface Order {
   };
 }
 
-// Helper function to optimistically update order status in customers cache
-export function updateOrderStatusInCustomersCache(
-  customers: CustomerWithOrders[],
-  orderId: string,
-  newStatus: 'packed' | 'pending' | 'deviation',
-  sortOptions?: { completedLast?: boolean; sortMode?: string; sortDirection?: string }
-): CustomerWithOrders[] {
-  const updatedCustomers = customers.map(customer => {
-    const orderIndex = customer.orders.findIndex(o => o.id === orderId);
-    if (orderIndex === -1) return customer;
-    
-    const updatedOrders = [...customer.orders];
-    updatedOrders[orderIndex] = {
-      ...updatedOrders[orderIndex],
-      packing_status: {
-        id: updatedOrders[orderIndex].packing_status?.id || `temp-${orderId}`,
-        status: newStatus,
-        packed_at: newStatus === 'pending' ? null : new Date().toISOString(),
-        deviation_type: null,
-        deviation_note: null,
-      },
-    };
-    
-    const packedCount = updatedOrders.filter(
-      o => o.packing_status?.status === 'packed' || o.packing_status?.status === 'deviation'
-    ).length;
-    
-    return {
-      ...customer,
-      orders: updatedOrders,
-      packedOrders: packedCount,
-      progress: Math.round((packedCount / customer.totalOrders) * 100),
-    };
-  });
-  
-  // Re-sort customers based on sortOptions (default: completed last)
-  const completedLast = sortOptions?.completedLast ?? true;
-  const sortMode = sortOptions?.sortMode || 'priority';
-  const sortDirection = sortOptions?.sortDirection || 'asc';
-  const multiplier = sortDirection === 'desc' ? -1 : 1;
-  
-  return updatedCustomers.sort((a, b) => {
-    // Handle completed customers last if enabled
-    if (completedLast) {
-      if (a.progress === 100 && b.progress !== 100) return 1;
-      if (a.progress !== 100 && b.progress === 100) return -1;
-    }
-    
-    // Then sort by selected mode
-    switch (sortMode) {
-      case 'progress':
-        return (a.progress - b.progress) * multiplier;
-      case 'name':
-        return a.name.localeCompare(b.name, 'nb') * multiplier;
-      case 'customer_number':
-        return a.customer_number.localeCompare(b.customer_number, 'nb', { numeric: true }) * multiplier;
-      case 'priority':
-      default:
-        const priorityA = a.priority ?? 50;
-        const priorityB = b.priority ?? 50;
-        if (priorityA !== priorityB) {
-          return (priorityA - priorityB) * multiplier;
-        }
-        return a.customer_number.localeCompare(b.customer_number, 'nb', { numeric: true }) * multiplier;
-    }
-  });
-}
-
 export function useOrders(deliveryDate: string) {
   const { getActiveBakeryId } = useAuthStore();
   
@@ -128,7 +60,7 @@ export function useOrders(deliveryDate: string) {
       // Flatten packing_status array to single object
       return (data || []).map(order => ({
         ...order,
-        packing_status: order.packing_status?.[0] || null
+        packing_status: getFirstPackingStatus(order.packing_status),
       })) as Order[];
     },
     enabled: !!deliveryDate,
@@ -161,7 +93,7 @@ export function useOrdersByProduct(deliveryDate: string, productIds: string[]) {
       
       return (data || []).map(order => ({
         ...order,
-        packing_status: order.packing_status?.[0] || null
+        packing_status: getFirstPackingStatus(order.packing_status),
       })) as Order[];
     },
     enabled: !!deliveryDate && productIds.length > 0,

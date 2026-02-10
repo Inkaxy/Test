@@ -186,6 +186,7 @@ function broadcastPackingUpdate(
         event: 'packing_update',
         payload,
       });
+      setTimeout(() => supabase.removeChannel(generalChannel), 500);
     }
   });
   
@@ -199,6 +200,7 @@ function broadcastPackingUpdate(
           event: 'packing_update',
           payload,
         });
+        setTimeout(() => supabase.removeChannel(categoryChannel), 500);
       }
     });
   }
