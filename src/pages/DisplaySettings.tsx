@@ -1424,7 +1424,8 @@ export default function DisplaySettingsPage() {
                     </div>
                   )}
                   
-                  {/* Oppdateringsknapp */}
+                  {/* Oppdateringsknapp - skjules for shared display */}
+                  {selectedDisplayType !== 'shared' && (
                   <div className="border-t pt-4 space-y-4">
                     <h4 className="text-sm font-medium">Oppdateringsknapp</h4>
                     
@@ -1527,6 +1528,7 @@ export default function DisplaySettingsPage() {
                       </>
                     )}
                   </div>
+                  )}
                   
                   {/* Kundelåsing - kun for packing display */}
                   {selectedDisplayType === 'packing' && (
