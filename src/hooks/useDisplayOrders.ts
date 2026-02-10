@@ -59,7 +59,8 @@ export function useDisplayOrders(
           packing_status(status, packed_at)
         `)
         .eq('bakery_id', bakeryId)
-        .eq('delivery_date', deliveryDate);
+        .eq('delivery_date', deliveryDate)
+        .or('has_dedicated_display.eq.false,has_dedicated_display.is.null', { referencedTable: 'customers' });
 
       if (categoryId) {
         query = query.eq('product.category_id', categoryId);
