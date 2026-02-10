@@ -595,7 +595,8 @@ export default function DisplaySettingsPage() {
                 </AccordionContent>
               </AccordionItem>
               
-              {/* Statistikk-kort */}
+              {/* Statistikk-kort - skjules for shared display */}
+              {selectedDisplayType !== 'shared' && (
               <AccordionItem value="stats" className="border rounded-lg px-4">
                 <AccordionTrigger className="hover:no-underline">
                   <div className="flex items-center gap-3">
@@ -723,6 +724,7 @@ export default function DisplaySettingsPage() {
                   </div>
                 </AccordionContent>
               </AccordionItem>
+              )}
               
               {/* Kundekort */}
               <AccordionItem value="cards" className="border rounded-lg px-4">
