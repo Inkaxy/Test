@@ -670,3 +670,13 @@ function ProductKioskPackingViewInner() {
     </div>
   );
 }
+
+export default function ProductKioskPackingView() {
+  const { bakeryShortId } = useParams<{ bakeryShortId: string }>();
+  
+  return (
+    <KioskPinGate bakeryShortId={bakeryShortId || ''}>
+      <ProductKioskPackingViewInner />
+    </KioskPinGate>
+  );
+}
