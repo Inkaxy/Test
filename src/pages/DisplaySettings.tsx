@@ -1023,6 +1023,8 @@ export default function DisplaySettingsPage() {
                     </div>
                   )}
                   
+                  {selectedDisplayType !== 'shared' && (
+                  <>
                   <div className="space-y-2">
                     <Label>Kundenavn fontstørrelse</Label>
                     <Select 
@@ -1076,6 +1078,8 @@ export default function DisplaySettingsPage() {
                       </SelectContent>
                     </Select>
                   </div>
+                  </>
+                  )}
                   
                   {/* Auto-scroll - kun for shared display */}
                   {selectedDisplayType === 'shared' && (
