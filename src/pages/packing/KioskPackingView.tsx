@@ -51,9 +51,41 @@ interface DeviationOrderInfo {
   quantity: number;
 }
 
-// Inline hooks and interfaces moved to:
-// - src/hooks/useKioskCustomersForDate.ts
-// - src/hooks/useRealtimePackingStatus.ts
+// Hook to get bakery by short_id
+function useBakeryByShortId(shortId: string | null) {
+  return useQuery({
+    queryKey: ['bakery-short-id', shortId],
+    queryFn: async () => {
+      if (!shortId) return null;
+      const { data, error } = await supabase
+        .from('bakeries')
+        .select('*')
+        .eq('short_id', shortId)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!shortId,
+  });
+}
+
+// Hook to get category by ID
+function useCategoryById(categoryId: string | null) {
+  return useQuery({
+    queryKey: ['category', categoryId],
+    queryFn: async () => {
+      if (!categoryId) return null;
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*')
+        .eq('id', categoryId)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!categoryId,
+  });
+}
 
 function KioskPackingViewInner() {
   const { t, i18n } = useTranslation();
