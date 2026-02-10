@@ -16,6 +16,8 @@ import { nb, enUS } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useKioskCustomersForDate, KioskCustomerWithOrders } from '@/hooks/useKioskCustomersForDate';
+import { useRealtimePackingStatus } from '@/hooks/useRealtimePackingStatus';
 import { DeviationDialog } from '@/components/packing/DeviationDialog';
 import { KioskCustomerTable } from '@/components/packing/KioskCustomerTable';
 import { useDisplaySettings, getDefaultDisplaySettings, DisplaySettings } from '@/hooks/useDisplayOrders';
