@@ -154,7 +154,7 @@ export default function ProductPackingView() {
   const bakeryId = getActiveBakeryId();
   
   // Trips support
-  const { data: trips = [] } = useTrips(categoryId);
+  const { data: trips = [], isLoading: tripsLoading } = useTrips(categoryId);
   const hasTrips = trips.length > 0;
   
   // Per-trip order stats for trip progression
