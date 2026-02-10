@@ -1,25 +1,32 @@
 
+# Optimaliser Felles Display for TV -- fjern blinking og ny layout
 
-# Fix: Produktvalg vises ikke pa felles display
+## Hva endres
 
-## Problem
+Felles Display oppdateres til a matche referansebildet: et rent, tabellbasert kortdesign med kundenavn sentrert i toppen, produktrader i en stram tabell (produktnavn | mengde | statussirkel), og en fargekodet fremdriftslinje i bunnen av hvert kort. Blinkingen fjernes helt.
 
-Kanalnavn for Supabase Broadcast stemmer ikke overens:
+## Visuell struktur per kundekort
 
-- **Pakkevisningen sender pa**: `packing-selection-${bakeryId}`
-- **Felles display lytter pa**: `packing-selection-shared-${bakeryId}`
-
-Siden kanalnavnene er forskjellige, mottar felles display aldri produktvalgene fra pakkevisningen.
-
-## Losning
-
-Endre `useReceiveAllPackingSelections` i `src/hooks/usePackingSelection.ts` til a lytte pa samme kanal som pakkevisningen sender pa: `packing-selection-${bakeryId}`.
+```text
++----------------------------------+
+|           Borgheim               |  <-- sentrert, bold
+|----------------------------------|
+| Kneipp          10stk        (G) |  <-- tabell med rader
+| Hvasser       1 kv + 5 stk  (R) |
+| Fiberbroed m/froe  20 stk   (R) |
+|=================================='
+| ================================ |  <-- fremdriftslinje (farge basert pa %)
++----------------------------------+
+```
 
 ## Teknisk
 
 | Fil | Endring |
 |-----|---------|
-| `src/hooks/usePackingSelection.ts` | Linje 149: Endre kanalnavn fra `` `packing-selection-shared-${bakeryId}` `` til `` `packing-selection-${bakeryId}` `` |
+| `src/pages/display/SharedDisplay.tsx` | **Fjern blinking**: Erstatt `AnimatePresence` + `motion.div` med vanlig `div`. Ingen entre/exit-animasjoner som re-trigges ved data-oppdatering. |
+| `src/pages/display/SharedDisplay.tsx` | **Ny kortlayout**: Sentrert kundenavn-header. Produkttabell med 3 kolonner (navn, mengde, statussirkel). Fremdriftslinje langs bunnen av kortet (full bredde, tynn stripe). |
+| `src/pages/display/SharedDisplay.tsx` | **Mengdeformat**: Vis mengde som "1 kv + 5 stk" nar `card_show_quantity_as_trays` er aktivert og produktet har `pieces_per_tray`, ellers vis "Xstk". |
+| `src/pages/display/SharedDisplay.tsx` | **Kort-stil**: Border rundt hele kortet i stedet for kun venstre kant. Lys bakgrunn fra `card_background_color`. Bunnlinje i `completed_color`/`packing_color`/`pending_color` basert pa fremdrift. |
+| `src/types/display/card.ts` | Legg til `card_show_bottom_progress_bar: boolean` (default `true`) for a styre den nye bunnlinjen. |
 
-Denne ene endringen sikrer at felles display abonnerer pa samme broadcast-kanal som pakkevisningen bruker, slik at produktvalg umiddelbart reflekteres pa TV-skjermen.
-
+Ingen nye avhengigheter. Ingen databaseendringer.
