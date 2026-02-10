@@ -409,6 +409,7 @@ export function usePackingMutations(options: PackingMutationsOptions = {}) {
       queryClient.invalidateQueries({ queryKey: ['products-for-date'] });
       queryClient.invalidateQueries({ queryKey: ['kiosk-customers-for-date'] });
       queryClient.invalidateQueries({ queryKey: ['kiosk-products-for-date'] });
+      queryClient.invalidateQueries({ queryKey: ['trip-order-stats'] });
     },
   });
 
