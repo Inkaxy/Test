@@ -386,7 +386,7 @@ export function usePackingMutations(options: PackingMutationsOptions = {}) {
       const bakeryId = effectiveBakeryId;
       const deliveryDate = params.deliveryDate || options.deliveryDate;
       
-      if (bakeryId && deliveryDate && !isKiosk) {
+      if (bakeryId && deliveryDate) {
         broadcastPackingUpdate(
           bakeryId,
           deliveryDate,
