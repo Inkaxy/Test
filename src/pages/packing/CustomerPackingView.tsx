@@ -121,7 +121,7 @@ export default function CustomerPackingView() {
   const tripProgression = useTripProgression({ trips, getTripStats });
   const activeTripId = hasTrips ? tripProgression.activeTripId : null;
   
-  const { data: customers = [], isLoading: customersLoading } = useCustomersForDate(dateStr, categoryId, sortOptions, activeTripId, tripsLoading);
+  const { data: customers = [], isLoading: customersLoading } = useCustomersForDate(dateStr, categoryId, sortOptions, activeTripId, !tripsReady);
   const { data: locks = [] } = useCustomerLocks(dateStr, bakeryId);
   const { data: bakerySettings } = useBakerySettings();
   useRealtimeCustomerLocks(dateStr, bakeryId);

@@ -190,7 +190,7 @@ export default function ProductPackingView() {
   const tripProgression = useTripProgression({ trips, getTripStats });
   const activeTripId = hasTrips ? tripProgression.activeTripId : null;
   
-  const { data: products = [], isLoading: productsLoading } = useProductsForDate(dateStr, categoryId, activeTripId, tripsLoading);
+  const { data: products = [], isLoading: productsLoading } = useProductsForDate(dateStr, categoryId, activeTripId, !tripsReady);
   
   // Get display settings (use 'shared' type for product-based packing)
   const { data: displaySettings } = useDisplaySettings(bakeryId || null, categoryId, 'shared');

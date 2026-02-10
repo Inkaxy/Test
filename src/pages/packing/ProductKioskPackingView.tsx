@@ -236,7 +236,7 @@ export default function ProductKioskPackingView() {
     dateStr, 
     categoryId,
     activeTripId,
-    tripsLoading
+    !tripsReady
   );
   
   // Use unified packing mutations hook in kiosk mode
