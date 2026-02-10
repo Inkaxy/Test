@@ -89,7 +89,7 @@ function useCategoryById(categoryId: string | null) {
 }
 
 // Hook to get products with orders for a date (product-based view)
-function useKioskProductsForDate(bakeryId: string | null, date: string, categoryId?: string, tripId?: string | null) {
+function useKioskProductsForDate(bakeryId: string | null, date: string, categoryId?: string, tripId?: string | null, tripsLoading?: boolean) {
   return useQuery({
     queryKey: ['kiosk-products-for-date', bakeryId, date, categoryId, tripId],
     queryFn: async () => {
