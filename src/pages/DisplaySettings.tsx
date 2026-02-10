@@ -1663,6 +1663,7 @@ export default function DisplaySettingsPage() {
                   <div className="border-t pt-4 space-y-4">
                     <h4 className="text-sm font-medium">Skjermkontroll</h4>
                     
+                    {selectedDisplayType !== 'shared' && (
                     <div className="flex items-center justify-between">
                       <div>
                         <Label>Vis fullskjerm-knapp</Label>
@@ -1673,6 +1674,7 @@ export default function DisplaySettingsPage() {
                         onCheckedChange={(v) => updateSetting('fullscreen_button_visible', v)}
                       />
                     </div>
+                    )}
                     
                     <div className="flex items-center justify-between">
                       <div>
