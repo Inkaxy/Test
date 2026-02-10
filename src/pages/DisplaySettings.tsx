@@ -392,8 +392,8 @@ export default function DisplaySettingsPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <Tabs value={selectedDisplayType} onValueChange={(v) => setSelectedDisplayType(v as DisplayType)}>
-            <TabsList className="grid w-full grid-cols-3">
-              {(Object.entries(DISPLAY_TYPES) as [DisplayType, typeof DISPLAY_TYPES[DisplayType]][]).map(([type, info]) => (
+            <TabsList className={`grid w-full grid-cols-${visibleDisplayTypes.length}`}>
+              {visibleDisplayTypes.map(([type, info]) => (
                 <TabsTrigger key={type} value={type} className="flex items-center gap-2">
                   {getDisplayTypeIcon(type)}
                   <span className="hidden sm:inline">{info.label}</span>
