@@ -337,7 +337,7 @@ export default function DisplaySettingsPage() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Kopier innstillinger fra</DropdownMenuLabel>
-              {(Object.entries(DISPLAY_TYPES) as [DisplayType, typeof DISPLAY_TYPES[DisplayType]][])
+              {visibleDisplayTypes
                 .filter(([type]) => type !== selectedDisplayType)
                 .map(([type, info]) => (
                   <DropdownMenuItem 
