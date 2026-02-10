@@ -126,3 +126,69 @@ export function useReceivePackingSelection(
 
   return { selection, isSubscribed };
 }
+
+// Hook for receiving ALL packing selections across customers (for shared display)
+export function useReceiveAllPackingSelections(
+  bakeryId: string | null,
+  deliveryDate: string
+) {
+  const [selections, setSelections] = useState<Map<string, string[]>>(new Map());
+
+  const getSelectedProductIds = useCallback(
+    (customerId: string): string[] | null => {
+      return selections.get(customerId) ?? null;
+    },
+    [selections]
+  );
+
+  const hasAnySelections = selections.size > 0;
+
+  useEffect(() => {
+    if (!bakeryId) return;
+
+    const channel = supabase.channel(`packing-selection-shared-${bakeryId}`, {
+      config: {
+        broadcast: {
+          self: false,
+        },
+      },
+    });
+
+    channel
+      .on('broadcast', { event: 'packing_selection' }, ({ payload }) => {
+        if (!payload) return;
+
+        const sel = payload as PackingSelection;
+        if (sel.deliveryDate !== deliveryDate) return;
+
+        setSelections((prev) => {
+          const next = new Map(prev);
+          next.set(sel.customerId, sel.productIds);
+          return next;
+        });
+      })
+      .on('broadcast', { event: 'clear_selection' }, ({ payload }) => {
+        if (!payload) return;
+
+        const { customerId, deliveryDate: clearedDate } = payload as {
+          customerId: string;
+          deliveryDate: string;
+        };
+
+        if (clearedDate !== deliveryDate) return;
+
+        setSelections((prev) => {
+          const next = new Map(prev);
+          next.delete(customerId);
+          return next;
+        });
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [bakeryId, deliveryDate]);
+
+  return { selections, getSelectedProductIds, hasAnySelections };
+}
