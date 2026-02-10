@@ -54,6 +54,12 @@ export default function SharedDisplay() {
     enabled: !!bakery?.id,
   });
 
+  // Listen for packing selections from packing view
+  const { getSelectedProductIds } = useReceiveAllPackingSelections(
+    bakery?.id || null,
+    deliveryDate
+  );
+
   // Refetch data when packing status changes via broadcast
   useEffect(() => {
     if (lastUpdate) {
