@@ -12,6 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { DeviationSettingsCard } from '@/components/settings/DeviationSettingsCard';
 import { EmailReportSettingsCard } from '@/components/settings/EmailReportSettingsCard';
 import { PackingRowStyleSettings as PackingRowStyleSettingsCard } from '@/components/packing/PackingRowStyleSettings';
+import { KioskPinSettingsCard } from '@/components/settings/KioskPinSettingsCard';
 
 export default function Settings() {
   const { t, i18n } = useTranslation();
@@ -146,6 +147,9 @@ export default function Settings() {
         alternateRowColor={alternateRowColor}
         onAlternateRowColorChange={handleAlternateRowColorChange}
       />
+      
+      {/* Kiosk PIN settings */}
+      <KioskPinSettingsCard />
       
       {/* Auto-delete settings */}
       <Card>

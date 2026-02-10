@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { KioskPinGate } from '@/components/packing/KioskPinGate';
 import { useTranslation } from 'react-i18next';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -223,7 +224,7 @@ function useRealtimePackingStatus(bakeryId: string | null, date: string, categor
 
 // Inline kiosk mutations removed - now using usePackingMutations hook
 
-export default function KioskPackingView() {
+function KioskPackingViewInner() {
   const { t, i18n } = useTranslation();
   const { toast } = useToast();
   const { bakeryShortId, categoryId } = useParams<{ bakeryShortId: string; categoryId?: string }>();
@@ -1190,5 +1191,15 @@ export default function KioskPackingView() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function KioskPackingView() {
+  const { bakeryShortId } = useParams<{ bakeryShortId: string }>();
+  
+  return (
+    <KioskPinGate bakeryShortId={bakeryShortId || ''}>
+      <KioskPackingViewInner />
+    </KioskPinGate>
   );
 }
