@@ -1,32 +1,51 @@
 
-# Optimaliser Felles Display for TV -- fjern blinking og ny layout
+
+# "Ferdig pakket"-visning med grønn bakgrunn og logo-watermark
 
 ## Hva endres
 
-Felles Display oppdateres til a matche referansebildet: et rent, tabellbasert kortdesign med kundenavn sentrert i toppen, produktrader i en stram tabell (produktnavn | mengde | statussirkel), og en fargekodet fremdriftslinje i bunnen av hvert kort. Blinkingen fjernes helt.
+Når en kunde på felles display er 100% ferdig pakket, erstattes produktlisten med en visuelt tydelig "ferdig"-tilstand:
+- Kortets bakgrunn skifter til grønn (konfigurerbar farge)
+- Loaf and Load-logoen vises svakt som watermark i bakgrunnen
+- Teksten "FERDIG PAKKET" (eller egendefinert tekst) vises sentrert over logoen
+- Alt dette kan slås av/på og tilpasses i Display Settings under felles display
 
-## Visuell struktur per kundekort
+## Visuell oppførsel
 
 ```text
-+----------------------------------+
-|           Borgheim               |  <-- sentrert, bold
-|----------------------------------|
-| Kneipp          10stk        (G) |  <-- tabell med rader
-| Hvasser       1 kv + 5 stk  (R) |
-| Fiberbroed m/froe  20 stk   (R) |
-|=================================='
-| ================================ |  <-- fremdriftslinje (farge basert pa %)
-+----------------------------------+
+Kunde under pakking:              Kunde 100% ferdig:
++---------------------------+     +---------------------------+
+|        Borgheim           |     |        Borgheim           |
+|---------------------------|     |---------------------------|
+| Kneipp       10stk   (R) |     |                           |
+| Hvasser    1 kv+5stk (R) |     |    [svak logo-ikon]       |
+|==========================='     |    FERDIG PAKKET          |
+| [====          ]          |     |                           |
++---------------------------+     |==========================='
+                                  | [====================]    |
+                                  +---------------------------+
+                                  (hele kortet har grønn bakgrunn)
 ```
+
+## Nye innstillinger (kun synlig for felles display)
+
+| Innstilling | Type | Default | Beskrivelse |
+|---|---|---|---|
+| `card_show_completed_text` | boolean | `true` | Vis ferdig-tilstand når kunde er 100% |
+| `card_completed_text` | string | `"FERDIG PAKKET"` | Teksten som vises |
+| `card_completed_text_font_size` | string | `"1.5rem"` | Fontstørrelse på teksten |
+| `card_completed_bg_color` | string | `"#22c55e"` | Bakgrunnsfarge på kortet ved 100% |
+| `card_completed_text_color` | string | `"#ffffff"` | Tekstfarge ved 100% |
+| `card_completed_show_logo` | boolean | `true` | Vis logo som watermark |
+| `card_completed_logo_opacity` | number | `0.15` | Opacity på logoen (0.05-0.4) |
 
 ## Teknisk
 
 | Fil | Endring |
 |-----|---------|
-| `src/pages/display/SharedDisplay.tsx` | **Fjern blinking**: Erstatt `AnimatePresence` + `motion.div` med vanlig `div`. Ingen entre/exit-animasjoner som re-trigges ved data-oppdatering. |
-| `src/pages/display/SharedDisplay.tsx` | **Ny kortlayout**: Sentrert kundenavn-header. Produkttabell med 3 kolonner (navn, mengde, statussirkel). Fremdriftslinje langs bunnen av kortet (full bredde, tynn stripe). |
-| `src/pages/display/SharedDisplay.tsx` | **Mengdeformat**: Vis mengde som "1 kv + 5 stk" nar `card_show_quantity_as_trays` er aktivert og produktet har `pieces_per_tray`, ellers vis "Xstk". |
-| `src/pages/display/SharedDisplay.tsx` | **Kort-stil**: Border rundt hele kortet i stedet for kun venstre kant. Lys bakgrunn fra `card_background_color`. Bunnlinje i `completed_color`/`packing_color`/`pending_color` basert pa fremdrift. |
-| `src/types/display/card.ts` | Legg til `card_show_bottom_progress_bar: boolean` (default `true`) for a styre den nye bunnlinjen. |
+| `src/types/display/card.ts` | Legg til alle 7 nye felter i `CardSettings` interface og `defaultCardSettings` |
+| `src/pages/display/SharedDisplay.tsx` | I kundekort-renderingen: når `progress === 100` og `card_show_completed_text` er aktivert, bytt kortets `backgroundColor` til `card_completed_bg_color`, vis logo-ikon (`src/assets/logo-icon.png`) som absolutt posisjonert watermark med konfigurerbar opacity, og vis teksten sentrert over. Kundenavn-headeren beholdes, men produkttabellen erstattes. |
+| `src/pages/DisplaySettings.tsx` | Ny seksjon "Ferdig pakket-visning" under kort-innstillingene (kun synlig når `selectedDisplayType === 'shared'`). Inneholder: toggle av/på, tekstfelt for tekst, fontstørrelse-dropdown, to fargevelgere (bakgrunn og tekst), toggle for logo, og slider for logo-opacity. |
 
-Ingen nye avhengigheter. Ingen databaseendringer.
+Ingen databaseendringer. Ingen nye avhengigheter. Logoen importeres fra eksisterende `src/assets/logo-icon.png`.
+
