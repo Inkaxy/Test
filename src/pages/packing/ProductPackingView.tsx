@@ -192,8 +192,8 @@ export default function ProductPackingView() {
   
   const { data: products = [], isLoading: productsLoading } = useProductsForDate(dateStr, categoryId, activeTripId, !tripsReady);
   
-  // Get display settings (use 'shared' type for product-based packing)
-  const { data: displaySettings } = useDisplaySettings(bakeryId || null, categoryId, 'shared');
+  // Get display settings (use 'product_packing' type for product-based packing)
+  const { data: displaySettings } = useDisplaySettings(bakeryId || null, categoryId, 'product_packing');
   const settings: DisplaySettings = displaySettings || getDefaultDisplaySettings();
   
   // Get category info for header
