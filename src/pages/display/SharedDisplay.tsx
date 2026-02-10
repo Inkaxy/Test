@@ -497,61 +497,57 @@ export default function SharedDisplay() {
                 }
 
                 return (
-                  <div className="space-y-1">
-                    {filteredOrders.map((order) => {
-                      const isPacked =
-                        order.packing_status?.status === 'packed' ||
-                        order.packing_status?.status === 'deviation';
+                  <table className="w-full border-collapse">
+                    <tbody>
+                      {filteredOrders.map((order) => {
+                        const isPacked =
+                          order.packing_status?.status === 'packed' ||
+                          order.packing_status?.status === 'deviation';
 
-                      return (
-                        <div
-                          key={order.id}
-                          className="flex items-center gap-3 py-2 px-3 rounded-lg"
-                          style={{
-                            backgroundColor: isPacked
-                              ? `${displaySettings.completed_color}20`
-                              : `${displaySettings.pending_color}10`,
-                          }}
-                        >
-                          <div className="flex-1 min-w-0">
-                            <span 
-                              className={cn("block truncate", isPacked && "line-through opacity-60")}
+                        return (
+                          <tr
+                            key={order.id}
+                            className="border-b last:border-b-0"
+                            style={{
+                              borderColor: `${displaySettings.text_color}15`,
+                            }}
+                          >
+                            {/* Product name - wraps naturally */}
+                            <td
+                              className={cn("py-2 pr-3", isPacked && "line-through opacity-60")}
                               style={{ fontSize: displaySettings.card_product_font_size || displaySettings.product_font_size }}
                             >
                               {displaySettings.card_show_product_numbers && (
                                 <span className="opacity-60 mr-2">#{order.product.product_number}</span>
                               )}
                               {order.product.name}
-                            </span>
-                          </div>
+                            </td>
 
-                          <div className="flex items-center gap-3 shrink-0">
-                            <div className="text-right">
+                            {/* Quantity */}
+                            <td className="py-2 px-2 text-right whitespace-nowrap">
                               <span 
-                                className="font-bold block"
+                                className="font-bold"
                                 style={{ fontSize: displaySettings.card_quantity_font_size || '1.25rem' }}
                               >
                                 {order.quantity}
                               </span>
-                              <span className="text-xs opacity-60">stk</span>
-                            </div>
+                              <span className="text-xs opacity-60 ml-0.5">stk</span>
+                            </td>
 
-                            <Badge
-                              variant={isPacked ? 'default' : 'outline'}
-                              className="min-w-[60px] justify-center"
-                              style={{
-                                backgroundColor: isPacked ? displaySettings.completed_color : 'transparent',
-                                borderColor: isPacked ? displaySettings.completed_color : displaySettings.pending_color,
-                                color: isPacked ? '#fff' : displaySettings.pending_color,
-                              }}
-                            >
-                              {isPacked ? 'Ferdig' : 'Venter'}
-                            </Badge>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+                            {/* Status circle */}
+                            <td className="py-2 pl-2 w-8">
+                              <span
+                                className="block w-4 h-4 rounded-full shrink-0"
+                                style={{
+                                  backgroundColor: isPacked ? displaySettings.completed_color : displaySettings.pending_color,
+                                }}
+                              />
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 );
               })()}
 
