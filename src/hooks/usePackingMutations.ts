@@ -245,11 +245,11 @@ export function usePackingMutations(options: PackingMutationsOptions = {}) {
         if (error) throw error;
       }
       
-      // Broadcast for realtime updates (only for authenticated mode)
+      // Broadcast for realtime updates (all modes including kiosk)
       const bakeryId = effectiveBakeryId;
       const deliveryDate = params.deliveryDate || options.deliveryDate;
       
-      if (bakeryId && deliveryDate && !isKiosk) {
+      if (bakeryId && deliveryDate) {
         broadcastPackingUpdate(
           bakeryId,
           deliveryDate,
