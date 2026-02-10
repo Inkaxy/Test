@@ -2,7 +2,6 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import { useEffect, useState, useRef } from 'react';
 import { format } from 'date-fns';
 import { nb } from 'date-fns/locale';
-import { motion, AnimatePresence } from 'framer-motion';
 import { Wifi, WifiOff, Clock, Maximize, RefreshCw } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
