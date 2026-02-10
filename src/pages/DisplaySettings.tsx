@@ -955,6 +955,7 @@ export default function DisplaySettingsPage() {
                     </div>
                   </div>
                   
+                  {selectedDisplayType !== 'shared' && (
                   <div className="border-t pt-4 space-y-4">
                     <div className="space-y-2">
                       <Label>Hjørneafrunding</Label>
@@ -992,6 +993,7 @@ export default function DisplaySettingsPage() {
                       </Select>
                     </div>
                   </div>
+                  )}
                 </AccordionContent>
               </AccordionItem>
               
