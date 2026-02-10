@@ -424,18 +424,29 @@ export default function SharedDisplay() {
             return `${order.quantity} stk`;
           };
 
+          const isCompleted = progress === 100;
+          const showCompletedState = isCompleted && (displaySettings.card_show_completed_text ?? true);
+
           return (
             <div
               key={customerData.customer.id}
               className="rounded-xl overflow-hidden transition-colors"
               style={{
-                backgroundColor: displaySettings.card_background_color,
+                backgroundColor: showCompletedState
+                  ? (displaySettings.card_completed_bg_color || '#22c55e')
+                  : displaySettings.card_background_color,
                 borderRadius: displaySettings.border_radius,
                 border: `1px solid ${displaySettings.text_color}15`,
               }}
             >
               {/* Centered customer name header */}
-              <div className="text-center py-3 px-4" style={{ borderBottom: `1px solid ${displaySettings.text_color}15` }}>
+              <div
+                className="text-center py-3 px-4"
+                style={{
+                  borderBottom: `1px solid ${showCompletedState ? (displaySettings.card_completed_text_color || '#ffffff') + '30' : displaySettings.text_color + '15'}`,
+                  color: showCompletedState ? (displaySettings.card_completed_text_color || '#ffffff') : undefined,
+                }}
+              >
                 <h2
                   className="font-bold"
                   style={{ fontSize: displaySettings.card_customer_name_font_size || displaySettings.customer_name_font_size }}
@@ -447,66 +458,90 @@ export default function SharedDisplay() {
                 )}
               </div>
 
-              {/* Product table */}
+              {/* Product table OR completed state */}
               <div className="px-3 py-2">
-                {displaySettings.card_show_product_list && (!selectedIds || filteredOrders.length === 0) && (
-                  <div className="flex items-center justify-center py-4 opacity-40">
-                    <Clock className="h-4 w-4 mr-2" />
-                    <span style={{ fontSize: displaySettings.card_product_font_size || displaySettings.product_font_size }}>
-                      Venter på valg...
+                {showCompletedState ? (
+                  <div
+                    className="relative flex flex-col items-center justify-center py-8 overflow-hidden"
+                    style={{ color: displaySettings.card_completed_text_color || '#ffffff' }}
+                  >
+                    {(displaySettings.card_completed_show_logo ?? true) && (
+                      <img
+                        src={logoIcon}
+                        alt=""
+                        className="absolute inset-0 m-auto w-24 h-24 object-contain pointer-events-none select-none"
+                        style={{ opacity: displaySettings.card_completed_logo_opacity ?? 0.15 }}
+                      />
+                    )}
+                    <span
+                      className="relative font-bold tracking-wider z-10"
+                      style={{ fontSize: displaySettings.card_completed_text_font_size || '1.5rem' }}
+                    >
+                      {displaySettings.card_completed_text || 'FERDIG PAKKET'}
                     </span>
                   </div>
-                )}
+                ) : (
+                  <>
+                    {displaySettings.card_show_product_list && (!selectedIds || filteredOrders.length === 0) && (
+                      <div className="flex items-center justify-center py-4 opacity-40">
+                        <Clock className="h-4 w-4 mr-2" />
+                        <span style={{ fontSize: displaySettings.card_product_font_size || displaySettings.product_font_size }}>
+                          Venter på valg...
+                        </span>
+                      </div>
+                    )}
 
-                {displaySettings.card_show_product_list && selectedIds && filteredOrders.length > 0 && (
-                  <table className="w-full border-collapse">
-                    <tbody>
-                      {filteredOrders.map((order) => {
-                        const isPacked = order.packing_status?.status === 'packed' || order.packing_status?.status === 'deviation';
-                        return (
-                          <tr
-                            key={order.id}
-                            className="border-b last:border-b-0"
-                            style={{ borderColor: `${displaySettings.text_color}15` }}
-                          >
-                            <td
-                              className={cn("py-2 pr-3", isPacked && "line-through opacity-60")}
-                              style={{ fontSize: displaySettings.card_product_font_size || displaySettings.product_font_size }}
-                            >
-                              {displaySettings.card_show_product_numbers && (
-                                <span className="opacity-60 mr-2">#{order.product.product_number}</span>
-                              )}
-                              {order.product.name}
-                            </td>
-                            <td className="py-2 px-2 text-right whitespace-nowrap">
-                              <span
-                                className="font-bold"
-                                style={{ fontSize: displaySettings.card_quantity_font_size || '1.25rem' }}
+                    {displaySettings.card_show_product_list && selectedIds && filteredOrders.length > 0 && (
+                      <table className="w-full border-collapse">
+                        <tbody>
+                          {filteredOrders.map((order) => {
+                            const isPacked = order.packing_status?.status === 'packed' || order.packing_status?.status === 'deviation';
+                            return (
+                              <tr
+                                key={order.id}
+                                className="border-b last:border-b-0"
+                                style={{ borderColor: `${displaySettings.text_color}15` }}
                               >
-                                {formatQuantity(order)}
-                              </span>
-                            </td>
-                            <td className="py-2 pl-2 w-8">
-                              <span
-                                className="block w-4 h-4 rounded-full shrink-0"
-                                style={{
-                                  backgroundColor: isPacked ? displaySettings.completed_color : displaySettings.pending_color,
-                                }}
-                              />
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                )}
+                                <td
+                                  className={cn("py-2 pr-3", isPacked && "line-through opacity-60")}
+                                  style={{ fontSize: displaySettings.card_product_font_size || displaySettings.product_font_size }}
+                                >
+                                  {displaySettings.card_show_product_numbers && (
+                                    <span className="opacity-60 mr-2">#{order.product.product_number}</span>
+                                  )}
+                                  {order.product.name}
+                                </td>
+                                <td className="py-2 px-2 text-right whitespace-nowrap">
+                                  <span
+                                    className="font-bold"
+                                    style={{ fontSize: displaySettings.card_quantity_font_size || '1.25rem' }}
+                                  >
+                                    {formatQuantity(order)}
+                                  </span>
+                                </td>
+                                <td className="py-2 pl-2 w-8">
+                                  <span
+                                    className="block w-4 h-4 rounded-full shrink-0"
+                                    style={{
+                                      backgroundColor: isPacked ? displaySettings.completed_color : displaySettings.pending_color,
+                                    }}
+                                  />
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    )}
 
-                {displaySettings.card_compact_mode && !displaySettings.card_show_product_list && (
-                  <div className="text-center py-4">
-                    <p className="font-bold" style={{ fontSize: displaySettings.stats_value_font_size }}>
-                      {customerData.packedCount}/{customerData.totalCount}
-                    </p>
-                  </div>
+                    {displaySettings.card_compact_mode && !displaySettings.card_show_product_list && (
+                      <div className="text-center py-4">
+                        <p className="font-bold" style={{ fontSize: displaySettings.stats_value_font_size }}>
+                          {customerData.packedCount}/{customerData.totalCount}
+                        </p>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
 
@@ -515,7 +550,9 @@ export default function SharedDisplay() {
                 <div
                   className="h-2 w-full transition-all"
                   style={{
-                    backgroundColor: `${displaySettings.pending_color}30`,
+                    backgroundColor: showCompletedState
+                      ? (displaySettings.card_completed_text_color || '#ffffff') + '30'
+                      : `${displaySettings.pending_color}30`,
                   }}
                 >
                   <div
