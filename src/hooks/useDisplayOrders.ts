@@ -228,7 +228,7 @@ export function useLatestOrderDate(
   });
 }
 
-export type DisplayType = 'shared' | 'customer' | 'packing';
+export type DisplayType = 'shared' | 'customer' | 'packing' | 'product_packing' | 'customer_packing';
 
 export const DISPLAY_TYPES: Record<DisplayType, { label: string; description: string }> = {
   shared: {
@@ -242,6 +242,14 @@ export const DISPLAY_TYPES: Record<DisplayType, { label: string; description: st
   packing: {
     label: 'Pakkedisplay',
     description: 'Touch-optimalisert visning for pakkere som jobber med ordrer',
+  },
+  product_packing: {
+    label: 'Produktbasert Pakking',
+    description: 'Visning for produktbasert pakking med produkt-først tilnærming',
+  },
+  customer_packing: {
+    label: 'Kundebasert Pakking',
+    description: 'Visning for kundebasert pakking med kunde-først tilnærming',
   },
 };
 

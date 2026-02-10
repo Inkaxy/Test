@@ -245,11 +245,11 @@ export function usePackingMutations(options: PackingMutationsOptions = {}) {
         if (error) throw error;
       }
       
-      // Broadcast for realtime updates (only for authenticated mode)
+      // Broadcast for realtime updates (all modes including kiosk)
       const bakeryId = effectiveBakeryId;
       const deliveryDate = params.deliveryDate || options.deliveryDate;
       
-      if (bakeryId && deliveryDate && !isKiosk) {
+      if (bakeryId && deliveryDate) {
         broadcastPackingUpdate(
           bakeryId,
           deliveryDate,
@@ -327,11 +327,13 @@ export function usePackingMutations(options: PackingMutationsOptions = {}) {
       
       if (isKiosk) {
         queryClient.refetchQueries({ queryKey: ['kiosk-customers-for-date', bakeryId, deliveryDate, categoryId] });
+        queryClient.refetchQueries({ queryKey: ['kiosk-products-for-date', bakeryId, deliveryDate, categoryId] });
       } else {
         queryClient.refetchQueries({ queryKey: ['customers-for-date', deliveryDate, bakeryId, categoryId] });
         queryClient.invalidateQueries({ queryKey: ['orders'] });
         queryClient.invalidateQueries({ queryKey: ['orders-by-product'] });
         queryClient.invalidateQueries({ queryKey: ['display-orders'] });
+        queryClient.invalidateQueries({ queryKey: ['products-for-date', bakeryId, deliveryDate, categoryId] });
       }
     },
   });
@@ -384,7 +386,7 @@ export function usePackingMutations(options: PackingMutationsOptions = {}) {
       const bakeryId = effectiveBakeryId;
       const deliveryDate = params.deliveryDate || options.deliveryDate;
       
-      if (bakeryId && deliveryDate && !isKiosk) {
+      if (bakeryId && deliveryDate) {
         broadcastPackingUpdate(
           bakeryId,
           deliveryDate,
@@ -558,6 +560,7 @@ export function usePackingMutations(options: PackingMutationsOptions = {}) {
       
       if (isKiosk) {
         queryClient.refetchQueries({ queryKey: ['kiosk-customers-for-date', bakeryId, deliveryDate, categoryId] });
+        queryClient.refetchQueries({ queryKey: ['kiosk-products-for-date', bakeryId, deliveryDate, categoryId] });
       } else {
         if (deliveryDate) {
           queryClient.refetchQueries({ queryKey: ['customers-for-date', deliveryDate, bakeryId, categoryId] });
@@ -565,6 +568,7 @@ export function usePackingMutations(options: PackingMutationsOptions = {}) {
         queryClient.invalidateQueries({ queryKey: ['orders'] });
         queryClient.invalidateQueries({ queryKey: ['orders-by-product'] });
         queryClient.invalidateQueries({ queryKey: ['display-orders'] });
+        queryClient.invalidateQueries({ queryKey: ['products-for-date', bakeryId, deliveryDate, categoryId] });
       }
     },
   });

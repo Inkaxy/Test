@@ -248,11 +248,19 @@ function ProductKioskPackingViewInner() {
     isKiosk: true,
   });
   
-  // Real-time subscription for packing status updates
+  // Real-time subscription for packing status updates (postgres_changes + broadcast)
   useEffect(() => {
     if (!bakery?.id) return;
     
-    const channel = supabase
+    const invalidateProducts = () => {
+      queryClient.invalidateQueries({ 
+        queryKey: ['kiosk-products-for-date', bakery.id, dateStr, categoryId, activeTripId] 
+      });
+      queryClient.invalidateQueries({ queryKey: ['trip-order-stats', bakery.id, dateStr, categoryId] });
+    };
+    
+    // Postgres changes channel (backup ~100-300ms)
+    const pgChannel = supabase
       .channel('kiosk-product-packing-status')
       .on(
         'postgres_changes',
@@ -261,18 +269,27 @@ function ProductKioskPackingViewInner() {
           schema: 'public',
           table: 'packing_status',
         },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ['kiosk-products-for-date'] });
-        }
+        invalidateProducts
       )
       .subscribe((status) => {
         setIsConnected(status === 'SUBSCRIBED');
       });
     
+    // Broadcast channel for fast updates (~10-30ms)
+    const broadcastChannelName = categoryId
+      ? `packing:${bakery.id}:${categoryId}:${dateStr}`
+      : `packing:${bakery.id}:${dateStr}`;
+    
+    const broadcastChannel = supabase
+      .channel(broadcastChannelName, { config: { broadcast: { self: false } } })
+      .on('broadcast', { event: 'packing_update' }, invalidateProducts)
+      .subscribe();
+    
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(pgChannel);
+      supabase.removeChannel(broadcastChannel);
     };
-  }, [bakery?.id, queryClient]);
+  }, [bakery?.id, dateStr, categoryId, activeTripId, queryClient]);
   
   // Update clock every second
   useEffect(() => {

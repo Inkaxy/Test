@@ -192,8 +192,8 @@ export default function ProductPackingView() {
   
   const { data: products = [], isLoading: productsLoading } = useProductsForDate(dateStr, categoryId, activeTripId, !tripsReady);
   
-  // Get display settings (use 'shared' type for product-based packing)
-  const { data: displaySettings } = useDisplaySettings(bakeryId || null, categoryId, 'shared');
+  // Get display settings (use 'product_packing' type for product-based packing)
+  const { data: displaySettings } = useDisplaySettings(bakeryId || null, categoryId, 'product_packing');
   const settings: DisplaySettings = displaySettings || getDefaultDisplaySettings();
   
   // Get category info for header
@@ -223,7 +223,7 @@ export default function ProductPackingView() {
         },
         () => {
           queryClient.invalidateQueries({ 
-            queryKey: ['products-for-date', bakeryId, dateStr] 
+            queryKey: ['products-for-date', bakeryId, dateStr, categoryId, activeTripId] 
           });
         }
       )
@@ -234,7 +234,7 @@ export default function ProductPackingView() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [bakeryId, dateStr, categoryId, queryClient]);
+  }, [bakeryId, dateStr, categoryId, activeTripId, queryClient]);
   
   // Use unified packing mutations hook
   const { markAsPacked, batchMarkAsPacked, reportDeviation, undoPacking } = usePackingMutations({
