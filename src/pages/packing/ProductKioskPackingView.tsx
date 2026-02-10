@@ -195,7 +195,10 @@ export default function ProductKioskPackingView() {
   const { data: category } = useCategoryById(categoryId || null);
   
   // Trips support
-  const { data: trips = [], isLoading: tripsLoading } = useTripsForBakery(bakery?.id || null, categoryId);
+  const tripsQuery = useTripsForBakery(bakery?.id || null, categoryId);
+  const trips = tripsQuery.data || [];
+  const tripsQueryEnabled = !!bakery?.id && !!categoryId;
+  const tripsReady = !tripsQueryEnabled || tripsQuery.data !== undefined;
   const hasTrips = trips.length > 0;
   
   // Per-trip order stats
@@ -233,7 +236,7 @@ export default function ProductKioskPackingView() {
     dateStr, 
     categoryId,
     activeTripId,
-    tripsLoading
+    !tripsReady
   );
   
   // Use unified packing mutations hook in kiosk mode
