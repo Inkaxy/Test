@@ -247,7 +247,7 @@ export default function KioskPackingView() {
   const { data: category } = useCategoryById(categoryId || null);
   
   // Trips support
-  const { data: trips = [] } = useTripsForBakery(bakery?.id || null, categoryId);
+  const { data: trips = [], isLoading: tripsLoading } = useTripsForBakery(bakery?.id || null, categoryId);
   const hasTrips = trips.length > 0;
   
   // Per-trip order stats
