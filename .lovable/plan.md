@@ -1,97 +1,89 @@
 
+# Refaktorering av kundebasert pakking
 
-# Fiks produktbasert pakking -- sanntid og arkitekturproblemer
+Ren refaktorering og bugfiks -- ingen funksjonelle eller UI-endringer.
 
-## Oppsummering av funn
+## Oppgave 1: Fjern duplikat updateOrderStatusInCustomersCache fra useOrders.ts
 
-Etter grundig gjennomgang av kodebasen og det vedlagte dokumentet har jeg identifisert flere konkrete problemer som forhindrer produktbasert pakking fra a fungere korrekt:
+Fjern funksjonen (linje 37-103) og den ubrukte importen av `CustomerWithOrders` (linje 4). Behold `Order`-typen, `useOrders` og `useOrdersByProduct`.
 
-## Problem 1: Kiosk sender aldri broadcast til displays
+## Oppgave 7: Opprett getFirstPackingStatus-hjelpefunksjon
 
-I `usePackingMutations.ts` (linje 252) er det en eksplisitt sjekk:
-```
-if (bakeryId && deliveryDate && !isKiosk) { broadcastPackingUpdate(...) }
-```
+Legg til en generisk hjelpefunksjon i `src/lib/utils.ts`:
 
-Nar en pakker bruker kiosk-visningen (som bruker `isKiosk: true`), sendes **ingen broadcast**. Displays (SharedDisplay, CustomerDisplay) lytter pa broadcast-kanalen for raske oppdateringer (~30ms), men far aldri meldingen. De ma vente pa enten `postgres_changes` eller 60-sekunders polling.
-
-**Losning:** Fjern `!isKiosk`-sjekken slik at broadcast sendes uansett modus. Kiosk kjenner `bakeryId` (fra URL) og `deliveryDate`, sa all nodvendig data er tilgjengelig.
-
-## Problem 2: Kiosk-modus invaliderer feil query keys for produktbasert pakking
-
-Nar kiosk-modus markerer en vare som pakket, bruker `onMutate` og `onSettled` query key `kiosk-customers-for-date` -- men produktbasert kiosk bruker `kiosk-products-for-date`. Dette betyr:
-- Optimistisk oppdatering treffer feil cache (ingen visuell endring)
-- Refetch etter mutasjon oppdaterer kundebasert cache, ikke produktbasert
-
-**Losning:** Legge til stotte for produktbasert cache-oppdatering i `usePackingMutations`, enten via en ny parameter (`mode: 'product' | 'customer'`) eller ved a alltid invalidere begge query keys.
-
-## Problem 3: Feil display settings type i ProductPackingView
-
-`ProductPackingView` (linje 196) bruker:
-```
-useDisplaySettings(bakeryId, categoryId, 'shared')
+```text
+export function getFirstPackingStatus<T>(ps: T | T[] | null | undefined): T | null {
+  if (!ps) return null;
+  return Array.isArray(ps) ? ps[0] || null : ps;
+}
 ```
 
-Men produktbasert pakking har egne innstillinger under `'product_packing'`. Dette betyr at visuelle tilpasninger gjort i admin for produktpakking ikke tas i bruk.
+Bruk den i:
+- `src/hooks/useCustomersForDate.ts` -- erstatt inline array-sjekk (linje ~80)
+- `src/hooks/useOrders.ts` -- erstatt `order.packing_status?.[0] || null` (linje 131, 163)
+- Den nye `useKioskCustomersForDate.ts`-filen (oppgave 5)
 
-**Losning:** Endre til `'product_packing'` i bade `ProductPackingView` og `ProductKioskPackingView`.
+## Oppgave 5: Flytt inline-hooks fra KioskPackingView.tsx til egne filer
 
-## Problem 4: Sanntidslytting i produktvisninger invaliderer med ufullstendig query key
+Opprett to nye filer:
 
-I `ProductPackingView` (linje 225-227):
-```
-queryClient.invalidateQueries({ 
-  queryKey: ['products-for-date', bakeryId, dateStr] 
+**`src/hooks/useKioskCustomersForDate.ts`** -- flytt `useKioskCustomersForDate` (linje 115-192), `OrderWithProduct` og `CustomerWithOrders` interfaces (linje 52-76). Bruk `getFirstPackingStatus` for konsistent array-handtering av `order.packing_status`.
+
+**`src/hooks/useRealtimePackingStatus.ts`** -- flytt `useRealtimePackingStatus` (linje 195-223).
+
+Oppdater `KioskPackingView.tsx` til a importere fra de nye filene. Fjern de to inline-hooks-definisjonene og interfaces.
+
+## Oppgave 3: Fiks channel-lekkasje i broadcastPackingUpdate
+
+I `src/hooks/usePackingMutations.ts`: legg til cleanup i `broadcastPackingUpdate` (linje 174-205). Etter sending, bruk `setTimeout(() => supabase.removeChannel(channel), 500)` for bade `generalChannel` og `categoryChannel`.
+
+I `src/hooks/useRealtimeDisplay.ts`: fiks `usePackingBroadcast` (linje 92-113) til a subscribe for sending og deretter rydde opp:
+
+```text
+const channel = supabase.channel(channelName);
+channel.subscribe((status) => {
+  if (status === 'SUBSCRIBED') {
+    channel.send({ type: 'broadcast', event: 'packing_update', payload: update });
+    setTimeout(() => supabase.removeChannel(channel), 500);
+  }
 });
 ```
 
-Men selve queryen bruker key `['products-for-date', bakeryId, dateStr, categoryId, tripId]`. Invalidering uten `categoryId` og `tripId` kan fungere (partial match), men det er unodvendig upresist.
+## Oppgave 6: Fiks Realtime-kanalnavn i CustomerPackingView.tsx
 
-I `ProductKioskPackingView` (linje 265):
+Endre linje 163 fra:
+```text
+.channel('customer-packing-status')
 ```
-queryClient.invalidateQueries({ queryKey: ['kiosk-products-for-date'] });
+til:
+```text
+.channel(`customer-packing-status:${bakeryId}:${dateStr}`)
 ```
 
-Denne treffer alle produkt-queries uansett bakeri/dato, noe som er for bredt.
+Legg til `dateStr` i useEffect dependency-arrayet (linje 182).
 
-**Losning:** Gjore invaliderings-keys mer presise i begge visningene.
+## Oppgave 4: Automatisk lost
 
-## Plan for implementering
+Loses av oppgave 2 (CustomerPacking.tsx slettes).
 
-### Steg 1: Aktiver broadcast fra kiosk-modus
-**Fil:** `src/hooks/usePackingMutations.ts`
-- Fjern `!isKiosk` fra broadcast-betingelsen i `markAsPacked`, `batchMarkAsPacked`, `reportDeviation` og `undoPacking`
-- Kiosk bruker `effectiveBakeryId` som allerede settes korrekt fra `options.bakeryId`
+## Oppgave 2: Fjern CustomerPacking.tsx
 
-### Steg 2: Fiks cache-oppdatering for produktbasert modus
-**Fil:** `src/hooks/usePackingMutations.ts`
-- I `onSettled` for alle mutasjoner: legg til invalidering av `kiosk-products-for-date` og `products-for-date`
-- I `onMutate` for kiosk-modus: forsok oppdatering av bade `kiosk-customers-for-date` og `kiosk-products-for-date` cacher
+- Fjern `import CustomerPacking` fra `src/App.tsx` (linje 16)
+- Fjern ruten `<Route path="/packing/customer" element={<CustomerPacking />} />` (linje 92)
+- Slett filen `src/pages/CustomerPacking.tsx`
 
-### Steg 3: Bruk riktig display settings type
-**Filer:** `src/pages/packing/ProductPackingView.tsx`, `src/pages/packing/ProductKioskPackingView.tsx`
-- Endre `'shared'` til `'product_packing'` i `useDisplaySettings`-kallet i ProductPackingView
-- Legg til `useDisplaySettings` i ProductKioskPackingView (bruker i dag standard-styling)
-
-### Steg 4: Presiser invaliderings-keys
-**Filer:** `src/pages/packing/ProductPackingView.tsx`, `src/pages/packing/ProductKioskPackingView.tsx`
-- Oppdater sanntids-handlerne til a bruke fulle query keys med bakeryId, dateStr, categoryId
-
-### Steg 5: Legg til broadcast-lytting i ProductKioskPackingView
-**Fil:** `src/pages/packing/ProductKioskPackingView.tsx`
-- Legg til lytting pa broadcast-kanalen (lik `useRealtimeDisplay`) for a fa oppdateringer fra andre enheter raskt
-
-### Oppsummering av filendringer
+## Filendringer (oppsummert)
 
 | Fil | Endring |
 |-----|---------|
-| `src/hooks/usePackingMutations.ts` | Fjern !isKiosk fra broadcast, legg til produkt-cache invalidering |
-| `src/pages/packing/ProductPackingView.tsx` | Bruk 'product_packing' display type, presiser invalidering |
-| `src/pages/packing/ProductKioskPackingView.tsx` | Legg til broadcast-lytting, presiser invalidering, bruk display settings |
-
-Disse endringene sikrer at:
-- Alle pakkehandlinger (bade web og kiosk) broadcaster til displays i sanntid
-- Produktbasert cache oppdateres korrekt ved pakking
-- Display-innstillinger for produktpakking respekteres
-- Sanntidsoppdateringer er presise og effektive
-
+| `src/hooks/useOrders.ts` | Fjern duplikat funksjon og ubrukt import |
+| `src/lib/utils.ts` | Legg til `getFirstPackingStatus` |
+| `src/hooks/useCustomersForDate.ts` | Bruk `getFirstPackingStatus` |
+| `src/hooks/useKioskCustomersForDate.ts` | Ny fil (flyttet fra KioskPackingView) |
+| `src/hooks/useRealtimePackingStatus.ts` | Ny fil (flyttet fra KioskPackingView) |
+| `src/pages/packing/KioskPackingView.tsx` | Fjern inline-hooks, importer fra nye filer |
+| `src/hooks/usePackingMutations.ts` | Legg til channel cleanup |
+| `src/hooks/useRealtimeDisplay.ts` | Fiks usePackingBroadcast med subscribe+cleanup |
+| `src/pages/packing/CustomerPackingView.tsx` | Scoped kanalnavn |
+| `src/App.tsx` | Fjern CustomerPacking-rute og import |
+| `src/pages/CustomerPacking.tsx` | Slett filen |
