@@ -13,7 +13,6 @@ import Index from './pages/Index';
 import Auth from './pages/Auth';
 import Dashboard from './pages/Dashboard';
 import Packing from './pages/Packing';
-import CustomerPacking from './pages/CustomerPacking';
 import CategoryCalendarView from './pages/packing/CategoryCalendarView';
 import CustomerPackingView from './pages/packing/CustomerPackingView';
 import ProductPackingView from './pages/packing/ProductPackingView';
