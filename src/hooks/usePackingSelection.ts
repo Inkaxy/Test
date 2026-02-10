@@ -146,7 +146,7 @@ export function useReceiveAllPackingSelections(
   useEffect(() => {
     if (!bakeryId) return;
 
-    const channel = supabase.channel(`packing-selection-shared-${bakeryId}`, {
+    const channel = supabase.channel(`packing-selection-${bakeryId}`, {
       config: {
         broadcast: {
           self: false,
