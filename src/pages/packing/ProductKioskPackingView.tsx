@@ -177,7 +177,7 @@ function useKioskProductsForDate(bakeryId: string | null, date: string, category
 
 // Inline kiosk mutations removed - now using usePackingMutations hook
 
-export default function ProductKioskPackingView() {
+function ProductKioskPackingViewInner() {
   const { t, i18n } = useTranslation();
   const { bakeryShortId, categoryId } = useParams<{ bakeryShortId: string; categoryId?: string }>();
   const [searchParams] = useSearchParams();
