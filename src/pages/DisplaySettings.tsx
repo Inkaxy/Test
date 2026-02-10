@@ -515,6 +515,7 @@ export default function DisplaySettingsPage() {
                     />
                   </div>
                   
+                  {selectedDisplayType !== 'shared' && (
                   <div className="border-t pt-4 space-y-4">
                     <h4 className="text-sm font-medium">Fontstørrelser</h4>
                     
@@ -590,10 +591,12 @@ export default function DisplaySettingsPage() {
                       </Select>
                     </div>
                   </div>
+                  )}
                 </AccordionContent>
               </AccordionItem>
               
-              {/* Statistikk-kort */}
+              {/* Statistikk-kort - skjules for shared display */}
+              {selectedDisplayType !== 'shared' && (
               <AccordionItem value="stats" className="border rounded-lg px-4">
                 <AccordionTrigger className="hover:no-underline">
                   <div className="flex items-center gap-3">
@@ -721,6 +724,7 @@ export default function DisplaySettingsPage() {
                   </div>
                 </AccordionContent>
               </AccordionItem>
+              )}
               
               {/* Kundekort */}
               <AccordionItem value="cards" className="border rounded-lg px-4">
@@ -775,6 +779,8 @@ export default function DisplaySettingsPage() {
                     />
                   </div>
                   
+                  {selectedDisplayType !== 'shared' && (
+                  <>
                   <div className="flex items-center justify-between">
                     <div>
                       <Label>Vis individuell fremdrift</Label>
@@ -872,6 +878,8 @@ export default function DisplaySettingsPage() {
                       </Select>
                     </div>
                   </div>
+                  </>
+                  )}
                 </AccordionContent>
               </AccordionItem>
               
@@ -951,6 +959,7 @@ export default function DisplaySettingsPage() {
                     </div>
                   </div>
                   
+                  {selectedDisplayType !== 'shared' && (
                   <div className="border-t pt-4 space-y-4">
                     <div className="space-y-2">
                       <Label>Hjørneafrunding</Label>
@@ -988,6 +997,7 @@ export default function DisplaySettingsPage() {
                       </Select>
                     </div>
                   </div>
+                  )}
                 </AccordionContent>
               </AccordionItem>
               
@@ -1013,6 +1023,8 @@ export default function DisplaySettingsPage() {
                     </div>
                   )}
                   
+                  {selectedDisplayType !== 'shared' && (
+                  <>
                   <div className="space-y-2">
                     <Label>Kundenavn fontstørrelse</Label>
                     <Select 
@@ -1066,6 +1078,8 @@ export default function DisplaySettingsPage() {
                       </SelectContent>
                     </Select>
                   </div>
+                  </>
+                  )}
                   
                   {/* Auto-scroll - kun for shared display */}
                   {selectedDisplayType === 'shared' && (
@@ -1418,7 +1432,8 @@ export default function DisplaySettingsPage() {
                     </div>
                   )}
                   
-                  {/* Oppdateringsknapp */}
+                  {/* Oppdateringsknapp - skjules for shared display */}
+                  {selectedDisplayType !== 'shared' && (
                   <div className="border-t pt-4 space-y-4">
                     <h4 className="text-sm font-medium">Oppdateringsknapp</h4>
                     
@@ -1521,6 +1536,7 @@ export default function DisplaySettingsPage() {
                       </>
                     )}
                   </div>
+                  )}
                   
                   {/* Kundelåsing - kun for packing display */}
                   {selectedDisplayType === 'packing' && (
@@ -1655,6 +1671,7 @@ export default function DisplaySettingsPage() {
                   <div className="border-t pt-4 space-y-4">
                     <h4 className="text-sm font-medium">Skjermkontroll</h4>
                     
+                    {selectedDisplayType !== 'shared' && (
                     <div className="flex items-center justify-between">
                       <div>
                         <Label>Vis fullskjerm-knapp</Label>
@@ -1665,6 +1682,7 @@ export default function DisplaySettingsPage() {
                         onCheckedChange={(v) => updateSetting('fullscreen_button_visible', v)}
                       />
                     </div>
+                    )}
                     
                     <div className="flex items-center justify-between">
                       <div>
@@ -1719,6 +1737,8 @@ export default function DisplaySettingsPage() {
                         </Select>
                       </div>
                       
+                      {selectedDisplayType !== 'shared' && (
+                      <>
                       <div className="flex items-center justify-between">
                         <div>
                           <Label>Animasjon ved statusendring</Label>
@@ -1752,6 +1772,8 @@ export default function DisplaySettingsPage() {
                             step={1000}
                           />
                         </div>
+                      )}
+                      </>
                       )}
                     </>
                   )}
@@ -1789,6 +1811,8 @@ export default function DisplaySettingsPage() {
                     />
                   </div>
                   
+                  {selectedDisplayType !== 'shared' && (
+                  <>
                   <div className="space-y-2">
                     <Label>Auto-oppdatering: hvert {settings.realtime_auto_refresh_interval}s</Label>
                     <Slider
@@ -1844,6 +1868,8 @@ export default function DisplaySettingsPage() {
                       </Select>
                     </div>
                   </div>
+                  </>
+                  )}
                 </AccordionContent>
               </AccordionItem>
               
