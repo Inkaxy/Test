@@ -1,45 +1,46 @@
 
-
-# Fiks: Filtrer ut kunder med dedikert skjerm fra felles display
+# Fiks: Vis kun valgte produkter pa felles display
 
 ## Problem
 
-`useDisplayOrders` i `src/hooks/useDisplayOrders.ts` henter alle ordrer for et bakeri og en dato, uten å sjekke om kunden har `has_dedicated_display = true`. Dette betyr at kunder som har aktivert dedikert skjerm fortsatt vises på fellesskjermen -- de vises altsa pa begge steder.
+Felles displayet viser alle produkter for alle kunder, uavhengig av om de er valgt for pakking i pakkevisningen. Dedikert kundedisplay har allerede denne filtreringen (via `useReceivePackingSelection`), men felles displayet mangler den.
+
+## Krav
+
+1. **Kunder skal alltid vises** pa felles displayet dersom de har ordrer for pakkedagen
+2. **Produkter skal kun vises** dersom de er valgt for pakking (via broadcast fra pakkevisningen)
+3. Nar ingen produkter er valgt for en kunde, vises kunden fortsatt men uten produktliste (venter-tilstand)
 
 ## Losning
 
-Legg til et filter i Supabase-queryen slik at kunder med `has_dedicated_display = true` ekskluderes fra felles-displayet.
+Bruk den eksisterende broadcast-mekanismen (`useReceivePackingSelection`) i SharedDisplay. Siden felles displayet viser flere kunder samtidig, trengs en ny variant av hooket som samler opp valg per kunde.
 
-## Teknisk endring
+## Tekniske endringer
 
-**Fil:** `src/hooks/useDisplayOrders.ts`
+### 1. Ny hook: `useReceiveAllPackingSelections` (i `src/hooks/usePackingSelection.ts`)
 
-I `useDisplayOrders`-funksjonen (linje 52-68), legg til et filter pa `customer`-relasjonen:
+Legg til en ny hook som lytter pa samme broadcast-kanal men samler opp valg i en Map per kunde-ID:
 
-```text
-// Navaerende (linje 57):
-customer:customers!inner(id, name, customer_number),
+- Lytter pa `packing_selection` og `clear_selection` events
+- Lagrer en `Map<string, string[]>` med `customerId -> productIds[]`
+- Ved `clear_selection` fjernes den aktuelle kunden fra mappet
+- Eksponerer en hjelpefunksjon `getSelectedProductIds(customerId)` som returnerer valgte produkt-IDer for en gitt kunde
 
-// Etter endring - legg til filter etter queryen:
-.eq('customer.has_dedicated_display', false)
-```
+### 2. Oppdater `src/pages/display/SharedDisplay.tsx`
 
-Alternativt (og mer robust) -- bruk `.or()` for a ogsa inkludere kunder der feltet er `null` (for bakoverkompatibilitet):
+- Importer og bruk `useReceiveAllPackingSelections` med bakeryId og deliveryDate
+- For hver kundes produktliste, filtrer ordrer basert pa valgte produkter
+- Dersom ingen produkter er valgt for en kunde, vis en "venter pa valg"-indikator i stedet for produktlisten
+- Oppdater fremdriftsberegning (`packedCount`/`totalCount`) til a reflektere filtrerte produkter
+- Behold kunden synlig uansett -- kun produktene inne i kortet filtreres
 
-```text
-.or('has_dedicated_display.eq.false,has_dedicated_display.is.null', { referencedTable: 'customers' })
-```
+### 3. Oppdater `src/hooks/useDisplayOrders.ts`
 
-Dette sikrer at:
-- Kunder med `has_dedicated_display = true` filtreres ut fra felles-displayet
-- Kunder med `has_dedicated_display = false` vises som for
-- Kunder der feltet er `null` (eldre data) vises ogsa pa felles-displayet
-
-Ingen andre filer trenger endring. Dedikert display (`CustomerDisplay`) bruker en helt annen hook (`useCustomerByToken` + `useCustomerDisplayOrders`) som ikke pavirkes.
+- I `useCustomerDisplayData`: Eksporter radata (`orders`) slik at SharedDisplay kan filtrere selv, eller behold eksisterende logikk og la filtreringen skje i renderingen
 
 ## Filendringer
 
 | Fil | Endring |
 |-----|---------|
-| `src/hooks/useDisplayOrders.ts` | Legg til `.or()` filter i `useDisplayOrders` for a ekskludere dedikerte kunder |
-
+| `src/hooks/usePackingSelection.ts` | Ny hook `useReceiveAllPackingSelections` som samler valg per kunde |
+| `src/pages/display/SharedDisplay.tsx` | Bruk ny hook, filtrer produkter per kundekort basert pa valgte produkter |
