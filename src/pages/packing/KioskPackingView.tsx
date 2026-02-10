@@ -224,7 +224,7 @@ function useRealtimePackingStatus(bakeryId: string | null, date: string, categor
 
 // Inline kiosk mutations removed - now using usePackingMutations hook
 
-export default function KioskPackingView() {
+function KioskPackingViewInner() {
   const { t, i18n } = useTranslation();
   const { toast } = useToast();
   const { bakeryShortId, categoryId } = useParams<{ bakeryShortId: string; categoryId?: string }>();
