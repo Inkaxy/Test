@@ -284,7 +284,8 @@ export default function KioskPackingView() {
     bakery?.id || null, 
     dateStr, 
     categoryId,
-    activeTripId
+    activeTripId,
+    tripsLoading
   );
   const { data: displaySettings } = useDisplaySettings(bakery?.id || null, categoryId, 'packing');
   const settings: DisplaySettings = displaySettings || getDefaultDisplaySettings();

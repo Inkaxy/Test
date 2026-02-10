@@ -554,6 +554,8 @@ export function usePackingMutations(options: PackingMutationsOptions = {}) {
       const deliveryDate = params.deliveryDate || options.deliveryDate;
       const categoryId = params.categoryId || options.categoryId;
       
+      queryClient.invalidateQueries({ queryKey: ['trip-order-stats'] });
+      
       if (isKiosk) {
         queryClient.refetchQueries({ queryKey: ['kiosk-customers-for-date', bakeryId, deliveryDate, categoryId] });
       } else {

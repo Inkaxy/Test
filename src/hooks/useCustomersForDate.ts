@@ -161,6 +161,6 @@ export function useCustomersForDate(deliveryDate: string, categoryId?: string, s
       
       return customers;
     },
-    enabled: !!deliveryDate,
+    enabled: !!deliveryDate && !tripsLoading,
   });
 }

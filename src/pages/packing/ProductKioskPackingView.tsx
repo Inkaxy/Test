@@ -232,7 +232,8 @@ export default function ProductKioskPackingView() {
     bakery?.id || null, 
     dateStr, 
     categoryId,
-    activeTripId
+    activeTripId,
+    tripsLoading
   );
   
   // Use unified packing mutations hook in kiosk mode
