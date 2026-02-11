@@ -1,3 +1,4 @@
+// SharedDisplay - TV-optimized display with auto-columns
 import { useParams, useSearchParams } from 'react-router-dom';
 import { useEffect, useState, useRef } from 'react';
 import { format } from 'date-fns';
@@ -275,6 +276,8 @@ export default function SharedDisplay() {
     else optimal = 5;
     return Math.min(optimal, maxColumns);
   })();
+
+  return (
     <div
       ref={containerRef}
       className="min-h-screen max-h-screen overflow-auto scrollbar-hide"
