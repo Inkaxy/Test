@@ -1,86 +1,97 @@
 
-# Forbedring av Felles Display for TV-visning
+# Produktbasert Pakking-fane i Display-innstillinger
 
-## Problemene som skal fikses
+## Oversikt
 
-1. **Skjermen blinker** - Hver gang sanntidsdata oppdateres, invalideres queries som trigger full re-render av alle kort
-2. **Kundekort tilpasses ikke bredden** - Grid bruker faste kolonner uten at kortene fyller tilgjengelig plass optimalt
-3. **Mangler produktfarger** - SharedDisplay bruker ikke `product_line_colors_palette` som CustomerDisplay gjor - produkter har ingen fargemarkering
-4. **Dårlig layout på kort** - Produkttabellen inne i kortene er enkel og uleselig på TV
-5. **Ikke optimalisert for TV/kiosk** - Fonter er for små, spacing er for tett for avstandslesing
+Legge til en 4. fane "Produktbasert Pakking" i Display-innstillinger med komplett konfigurasjon for produktbasert pakkevisning, inkludert en smart "Match felles display"-innstilling som automatisk synkroniserer fargevalg.
 
----
+## Endringer
 
-## Løsning
+### 1. Ny fane i DisplaySettings (src/pages/DisplaySettings.tsx)
 
-### 1. Fiks blinking (Stabiliser re-rendering)
+**Vis `product_packing` i tab-listen:**
+- Fjerne `product_packing` fra `visibleDisplayTypes`-filteret (linje 77)
+- Oppdatere grid fra `grid-cols-3` til `grid-cols-4` for tabs
+- Legge til ikon for product_packing (Package-ikon)
+- Filtrere kategorier til `product_based` for denne fanen
 
-**Fil:** `src/hooks/useRealtimeDisplay.ts`
+**Innhold i fanen - organisert i Accordion-seksjoner:**
 
-- Bruk optimistisk cache-oppdatering istedenfor full query-invalidering ved broadcast-meldinger
-- Sett `staleTime` på display-queries til lengre varighet for å unnga unodvendige refetches
-- Fjern inngangs/utgangsanimasjoner (AnimatePresence) fra kortene som allerede er nevnt i memory
+**a) Tema og farger (med "Match felles display"-toggle)**
+- Ny innstilling `match_shared_display_theme: boolean` - Når aktivert, arver tema/statusfarger fra Felles Display automatisk istedenfor a sette egne
+- ThemePresetMenu (gjenbruk eksisterende komponent)
+- Statusfarger (venter, pakker, ferdig) med egne color pickers
+- Hjorneafrunding og kantlinje
 
-**Fil:** `src/hooks/useDisplayOrders.ts`
+**b) Produktlinje-farger**
+- Gjenbruk eksisterende produktlinje-farger seksjon (palette editor)
+- Forhåndsvisning med fargede produktrader
 
-- Ok `staleTime` fra standard (2 min) til `Infinity` for display-queries siden data oppdateres via realtime
+**c) Tabell-utseende**
+- Radhøyde (compact/normal/touch)
+- Fontstorrelser (generell, kundenavn)
+- Zebra-striping (alternerende radfarger) med fargevelger
+- Kantstil (none/subtle/full)
+- Kolonnebredder
 
-### 2. Produktfarger på Felles Display
+**d) Touch og interaksjon**
+- Klikkbare rader for pakking (table_row_click_to_pack)
+- Touch tap-feedback
+- Rad hover-effekt
+- Mengdevisning (storrelse, stil, farge)
+- Vis brett-format (kv + stk)
 
-**Fil:** `src/pages/display/SharedDisplay.tsx`
+**e) Ferdig pakket-visning**
+- Vis ferdig-tilstand toggle
+- Tekst, farger, logo watermark, animasjon
+- Forhåndsvisning (gjenbruk monsteret fra shared display)
 
-- Implementer samme `getProductLineColor()` funksjon som CustomerDisplay bruker (hash-basert konsistent fargelegging)
-- Bruk `product_line_colors_palette` fra display-innstillinger for å fargelegge produkt-rader i tabellen
-- Sett bakgrunn pa hver produktrad basert pa produkt-ID, slik at samme produkt far lik farge pa alle skjermer
+### 2. Ny type-property (src/types/display/general.ts)
 
-### 3. Bedre kortlayout for TV
+Legge til:
+```typescript
+match_shared_display_theme: boolean;
+```
+Default: `true` - slik at nye oppsett automatisk matcher felles display.
 
-**Fil:** `src/pages/display/SharedDisplay.tsx`
+### 3. Oppdatere DisplaySettings-filen
 
-Redesigne kundekortene for TV-lesbarhet:
+**Tab-selektor:**
+- Vise 4 faner: Felles Display, Kunde Display, Pakkedisplay, Produktbasert Pakking
+- `getDisplayTypeIcon` utvides med case for `product_packing`
 
-- **Kundenavn**: Storre font, venstreorientert med fargekode-stripe pa venstre side
-- **Produkttabell**: Legge til fargede bakgrunner per rad (fra paletten), storre fonter, bedre padding
-- **Mengde-kolonne**: Gjore tydeligere med monospace-font og fremhevet farge
-- **Status-indikator**: Storre prikker/ikoner for pakket/ikke-pakket
-- **Fremdriftsbar**: Tykkere og mer synlig i bunnen av kortet
-- **Auto-tilpasse kolonner**: Bruke `minmax()` i grid for at kort fyller bredden bedre, med en minimumsbredde som sikrer lesbarhet
+**Kategori-filter:**
+- For `product_packing`: filter til `product_based` kategorier (samme som shared/customer)
 
-### 4. TV-optimalisering
+**Innstillings-seksjonene:**
+- Accordion-basert layout med 5 seksjoner
+- "Match felles display" er en fremtredende toggle oVerst i tema-seksjonen
+- Nar aktivert: viser en melding "Farger synkroniseres automatisk med Felles Display" og skjuler tema-picker
+- Nar deaktivert: viser full tema-picker med ThemePresetMenu
 
-**Fil:** `src/pages/display/SharedDisplay.tsx`
+**Forhåndsvisning (hoyre panel):**
+- Enkel produkttabell-preview med fargede rader, mengdevisning og status-badges
+- Viser 3-4 eksempler med produktnavn og kundeliste
 
-- Gjore grid responsivt: `repeat(auto-fit, minmax(400px, 1fr))` som fallback nar kolonnetall er lav
-- Okere standard padding og fontstorrelser
-- Legge til `min-height` pa kort slik at de er mer uniform
-- Sikre at kortet strekker seg til full bredde i sin grid-celle (fjerne eventuell max-width)
+### 4. Logikk for "Match felles display"
 
----
+Nar `match_shared_display_theme` er `true`, vil ProductPackingView hente felles display-innstillinger og bruke tema/statusfarger derfra. Dette implementeres i selve view-komponenten ved a hente shared-settings som fallback. Denne logikken bygges som en enkel fallback i `useDisplaySettings`-kallet i ProductPackingView.
 
-## Teknisk detaljer
+## Teknisk implementering
 
-### Endringer per fil
+Filen `src/pages/DisplaySettings.tsx` er stor (3656 linjer). For a holde endringene handterbare:
+
+1. Fjerne `product_packing` fra filter-listen (1 linje)
+2. Oppdatere grid-cols (1 linje)  
+3. Legge til `product_packing` i `getDisplayTypeIcon` (1 linje)
+4. Legge til kategori-filter for `product_packing` (1 linje i filteredCategories)
+5. Legge til ny accordion-blokk etter eksisterende seksjoner (~300 linjer ny kode for alle 5 seksjonene)
+6. Legge til forhåndsvisning i preview-panelet (~80 linjer)
+
+### Filer som endres
 
 | Fil | Endring |
 |-----|---------|
-| `src/pages/display/SharedDisplay.tsx` | Legge til `getProductLineColor()`, redesigne produkttabell med fargede rader, forbedre grid med auto-fit, okere fontstorrelser, fjerne animasjoner som blinker |
-| `src/hooks/useRealtimeDisplay.ts` | Erstatte full query-invalidering med mer presis cache-oppdatering for a redusere blinking |
-| `src/hooks/useDisplayOrders.ts` | Sette `staleTime: Infinity` pa display-queries |
-| `src/types/display/card.ts` | Legge til `card_min_height` innstilling for minimum korthøyde |
-
-### Produktfarge-logikk (delt mellom SharedDisplay og CustomerDisplay)
-
-Begge skjermene vil bruke identisk hash-funksjon basert pa `product.id` for a beregne fargeindeks i paletten. Dette sikrer at samme produkt alltid far samme farge uansett hvilken skjerm man ser pa.
-
-```text
-Produkt-ID --> hash --> palett-indeks --> farge
-  "abc123"  -->  42  -->      2       --> #FEF3C7 (Lys gul)
-```
-
-### Ny grid-strategi
-
-```text
-Navaerende:  repeat(3, minmax(0, 1fr))     -- Faste kolonner, kort kan bli smale
-Ny:          repeat(auto-fit, minmax(380px, 1fr))  -- Auto-tilpasset, aldri for smale
-             (med fallback til innstilt kolonneverdi)
-```
+| `src/types/display/general.ts` | Legge til `match_shared_display_theme` property |
+| `src/pages/DisplaySettings.tsx` | Vise product_packing-fane, legge til innstillinger og preview |
+| `src/pages/packing/ProductPackingView.tsx` | Implementere fallback til shared-tema nar match er aktivert |
