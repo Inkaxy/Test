@@ -1,6 +1,6 @@
 // SharedDisplay - TV-optimized display with auto-columns
 import { useParams, useSearchParams } from 'react-router-dom';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import { format } from 'date-fns';
 import { nb } from 'date-fns/locale';
 import { Wifi, WifiOff, Clock, Maximize, RefreshCw } from 'lucide-react';
@@ -238,33 +238,33 @@ export default function SharedDisplay() {
   const showProgressBar = displaySettings.stats_show_total_progress ?? displaySettings.show_progress_bar;
   const clockFormat = displaySettings.header_clock_format || '24h';
 
-  // Sort customers based on settings
-  const sortedCustomers = [...customers].sort((a, b) => {
-    // Handle completed customers first if enabled
-    const completedLast = displaySettings.customer_sort_completed_last ?? true;
-    if (completedLast) {
-      if (a.progress === 100 && b.progress !== 100) return 1;
-      if (a.progress !== 100 && b.progress === 100) return -1;
-    }
-    
-    // Then sort by selected mode
-    const sortMode = displaySettings.customer_sort_mode || 'name';
-    const sortDirection = displaySettings.customer_sort_direction || 'asc';
-    const multiplier = sortDirection === 'desc' ? -1 : 1;
-    
-    switch (sortMode) {
-      case 'progress':
-        return (a.progress - b.progress) * multiplier;
-      case 'customer_number':
-        return a.customer.customer_number.localeCompare(b.customer.customer_number, 'nb', { numeric: true }) * multiplier;
-      case 'name':
-      default:
-        return a.customer.name.localeCompare(b.customer.name, 'nb') * multiplier;
-    }
-  });
+  // Sort customers based on settings (memoized to prevent unnecessary re-renders)
+  const sortedCustomers = useMemo(() => {
+    return [...customers].sort((a, b) => {
+      const completedLast = displaySettings.customer_sort_completed_last ?? true;
+      if (completedLast) {
+        if (a.progress === 100 && b.progress !== 100) return 1;
+        if (a.progress !== 100 && b.progress === 100) return -1;
+      }
+      
+      const sortMode = displaySettings.customer_sort_mode || 'name';
+      const sortDirection = displaySettings.customer_sort_direction || 'asc';
+      const multiplier = sortDirection === 'desc' ? -1 : 1;
+      
+      switch (sortMode) {
+        case 'progress':
+          return (a.progress - b.progress) * multiplier;
+        case 'customer_number':
+          return a.customer.customer_number.localeCompare(b.customer.customer_number, 'nb', { numeric: true }) * multiplier;
+        case 'name':
+        default:
+          return a.customer.name.localeCompare(b.customer.name, 'nb') * multiplier;
+      }
+    });
+  }, [customers, displaySettings.customer_sort_completed_last, displaySettings.customer_sort_mode, displaySettings.customer_sort_direction]);
 
-  // Auto-columns: calculate optimal column count based on customer count
-  const columns = (() => {
+  // Auto-columns: calculate optimal column count based on customer count (memoized)
+  const columns = useMemo(() => {
     if (!displaySettings.auto_columns) return maxColumns;
     const count = sortedCustomers.length;
     let optimal: number;
@@ -275,7 +275,7 @@ export default function SharedDisplay() {
     else if (count <= 15) optimal = 4;
     else optimal = 5;
     return Math.min(optimal, maxColumns);
-  })();
+  }, [displaySettings.auto_columns, sortedCustomers.length, maxColumns]);
 
   return (
     <div
