@@ -41,6 +41,8 @@ export interface CardSettings {
   card_completed_logo_opacity: number;
   /** Animation type for completed state: 'none' | 'fade' | 'pulse' | 'scale' */
   card_completed_animation: string;
+  /** Minimum height for cards to ensure uniform sizing */
+  card_min_height: string;
 }
 
 export const defaultCardSettings: CardSettings = {
@@ -63,4 +65,5 @@ export const defaultCardSettings: CardSettings = {
   card_completed_show_logo: true,
   card_completed_logo_opacity: 0.15,
   card_completed_animation: 'fade',
+  card_min_height: '0',
 };

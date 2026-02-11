@@ -161,6 +161,21 @@ export default function SharedDisplay() {
     return displaySettings.pending_color;
   };
 
+  // Hash-based product color (same logic as CustomerDisplay for consistency)
+  const getProductLineColor = (productId: string): string | undefined => {
+    if (!displaySettings.product_line_colors_enabled || !displaySettings.product_line_colors_palette?.length) {
+      return undefined;
+    }
+    let hash = 0;
+    for (let i = 0; i < productId.length; i++) {
+      const char = productId.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash;
+    }
+    const colorIndex = Math.abs(hash) % displaySettings.product_line_colors_palette.length;
+    return displaySettings.product_line_colors_palette[colorIndex];
+  };
+
   const columns = displaySettings.columns || 3;
   const remainingOrders = totalOrders - packedOrders;
   
@@ -401,7 +416,9 @@ export default function SharedDisplay() {
       <div
         className="grid"
         style={{
-          gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
+          gridTemplateColumns: columns <= 3
+            ? `repeat(auto-fit, minmax(380px, 1fr))`
+            : `repeat(${columns}, minmax(0, 1fr))`,
           gap: displaySettings.gap_size || '1rem',
         }}
       >
@@ -445,6 +462,7 @@ export default function SharedDisplay() {
                   : displaySettings.card_background_color,
                 borderRadius: displaySettings.border_radius,
                 border: `1px solid ${displaySettings.text_color}15`,
+                minHeight: displaySettings.card_min_height || undefined,
               }}
             >
               {/* Centered customer name header */}
@@ -504,32 +522,41 @@ export default function SharedDisplay() {
                         <tbody>
                           {filteredOrders.map((order) => {
                             const isPacked = order.packing_status?.status === 'packed' || order.packing_status?.status === 'deviation';
+                            const productColor = getProductLineColor(order.product.id);
                             return (
                               <tr
                                 key={order.id}
-                                className="border-b last:border-b-0"
-                                style={{ borderColor: `${displaySettings.text_color}15` }}
+                                style={{
+                                  borderBottom: `1px solid ${displaySettings.text_color}10`,
+                                  backgroundColor: productColor ? `${productColor}40` : undefined,
+                                }}
                               >
                                 <td
-                                  className={cn("py-2 pr-3", isPacked && "line-through opacity-60")}
-                                  style={{ fontSize: displaySettings.card_product_font_size || displaySettings.product_font_size }}
+                                  className={cn("py-3 px-3", isPacked && "line-through opacity-50")}
+                                  style={{ fontSize: displaySettings.card_product_font_size || '1.1rem' }}
                                 >
+                                  {productColor && (
+                                    <span
+                                      className="inline-block w-3 h-3 rounded-full mr-2 align-middle"
+                                      style={{ backgroundColor: productColor }}
+                                    />
+                                  )}
                                   {displaySettings.card_show_product_numbers && (
-                                    <span className="opacity-60 mr-2">#{order.product.product_number}</span>
+                                    <span className="opacity-50 mr-2">#{order.product.product_number}</span>
                                   )}
                                   {order.product.name}
                                 </td>
-                                <td className="py-2 px-2 text-right whitespace-nowrap">
+                                <td className="py-3 px-3 text-right whitespace-nowrap">
                                   <span
-                                    className="font-bold"
+                                    className="font-bold font-mono"
                                     style={{ fontSize: displaySettings.card_quantity_font_size || '1.25rem' }}
                                   >
                                     {formatQuantity(order)}
                                   </span>
                                 </td>
-                                <td className="py-2 pl-2 w-8">
+                                <td className="py-3 px-2 w-10">
                                   <span
-                                    className="block w-4 h-4 rounded-full shrink-0"
+                                    className="block w-5 h-5 rounded-full shrink-0"
                                     style={{
                                       backgroundColor: isPacked ? displaySettings.completed_color : displaySettings.pending_color,
                                     }}
@@ -556,7 +583,7 @@ export default function SharedDisplay() {
               {/* Bottom progress bar */}
               {(displaySettings.card_show_bottom_progress_bar ?? true) && (
                 <div
-                  className="h-2 w-full transition-all"
+                  className="h-3 w-full transition-all"
                   style={{
                     backgroundColor: showCompletedState
                       ? (displaySettings.card_completed_text_color || '#ffffff') + '30'

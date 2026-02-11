@@ -49,13 +49,12 @@ export function useRealtimeDisplay({
       channel.on('broadcast', { event: 'packing_update' }, (payload) => {
         setLastUpdate(new Date());
 
-        // Invalidate all relevant queries to refetch fresh data
-        queryClient.invalidateQueries({ queryKey: ['display-orders'] });
-        queryClient.invalidateQueries({ queryKey: ['customer-display-orders'] });
+        // Refetch silently without marking as stale to avoid full re-render flicker
+        queryClient.refetchQueries({ queryKey: ['display-orders'], type: 'active' });
+        queryClient.refetchQueries({ queryKey: ['customer-display-orders'], type: 'active' });
       });
 
       // Listen for postgres_changes (backup - ~100-300ms)
-      // Note: This requires RLS to allow read access
       channel.on(
         'postgres_changes',
         {
@@ -65,9 +64,8 @@ export function useRealtimeDisplay({
         },
         (payload) => {
           setLastUpdate(new Date());
-          // Invalidate queries to refetch with new data
-          queryClient.invalidateQueries({ queryKey: ['display-orders'] });
-          queryClient.invalidateQueries({ queryKey: ['customer-display-orders'] });
+          queryClient.refetchQueries({ queryKey: ['display-orders'], type: 'active' });
+          queryClient.refetchQueries({ queryKey: ['customer-display-orders'], type: 'active' });
         }
       );
 
