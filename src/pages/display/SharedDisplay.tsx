@@ -61,13 +61,12 @@ export default function SharedDisplay() {
     deliveryDate
   );
 
-  // Refetch data when packing status changes via broadcast
+  // Track last update time (refetch is already handled silently by useRealtimeDisplay)
   useEffect(() => {
     if (lastUpdate) {
-      queryClient.invalidateQueries({ queryKey: ['customer-display-data'] });
       setLastRefresh(new Date());
     }
-  }, [lastUpdate, queryClient]);
+  }, [lastUpdate]);
 
   // Update clock every second
   useEffect(() => {
@@ -176,7 +175,7 @@ export default function SharedDisplay() {
   };
 
   const handleManualRefresh = () => {
-    queryClient.invalidateQueries({ queryKey: ['customer-display-data'] });
+    queryClient.refetchQueries({ queryKey: ['display-orders'], type: 'active' });
     setLastRefresh(new Date());
   };
 
