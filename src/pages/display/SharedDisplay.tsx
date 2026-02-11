@@ -43,7 +43,8 @@ export default function SharedDisplay() {
   const { customers, totalProgress, totalOrders, packedOrders, isLoading } = useCustomerDisplayData(
     bakery?.id || null,
     categoryId || null,
-    deliveryDate
+    deliveryDate,
+    displaySettings.realtime_auto_refresh_interval * 1000
   );
 
   // Subscribe to realtime updates

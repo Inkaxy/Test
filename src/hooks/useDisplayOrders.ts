@@ -43,7 +43,8 @@ export interface CustomerDisplayData {
 export function useDisplayOrders(
   bakeryId: string | null,
   categoryId: string | null,
-  deliveryDate: string
+  deliveryDate: string,
+  refetchIntervalMs?: number
 ) {
   return useQuery({
     queryKey: ['display-orders', bakeryId, categoryId, deliveryDate],
@@ -78,7 +79,7 @@ export function useDisplayOrders(
     },
     enabled: !!bakeryId && !!deliveryDate,
     staleTime: Infinity, // Data is updated via realtime, no need for automatic refetches
-    refetchInterval: 60000, // Fallback refetch every 60s
+    refetchInterval: refetchIntervalMs ?? 60000, // Fallback refetch, configurable via display settings
   });
 }
 
@@ -86,9 +87,10 @@ export function useDisplayOrders(
 export function useCustomerDisplayData(
   bakeryId: string | null,
   categoryId: string | null,
-  deliveryDate: string
+  deliveryDate: string,
+  refetchIntervalMs?: number
 ) {
-  const { data: orders = [], ...rest } = useDisplayOrders(bakeryId, categoryId, deliveryDate);
+  const { data: orders = [], ...rest } = useDisplayOrders(bakeryId, categoryId, deliveryDate, refetchIntervalMs);
 
   // Group orders by customer
   const customerMap = new Map<string, CustomerDisplayData>();
@@ -173,7 +175,8 @@ export function useCustomerByToken(displayToken: string | null) {
 export function useCustomerDisplayOrders(
   customerId: string | null,
   bakeryId: string | null,
-  deliveryDate: string
+  deliveryDate: string,
+  refetchIntervalMs?: number
 ) {
   return useQuery({
     queryKey: ['customer-display-orders', customerId, deliveryDate],
@@ -202,7 +205,7 @@ export function useCustomerDisplayOrders(
     },
     enabled: !!customerId && !!bakeryId && !!deliveryDate,
     staleTime: Infinity,
-    refetchInterval: 60000,
+    refetchInterval: refetchIntervalMs ?? 60000,
   });
 }
 

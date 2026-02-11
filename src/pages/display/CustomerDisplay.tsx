@@ -51,7 +51,8 @@ export default function CustomerDisplay() {
   const { data: allOrders = [], isLoading: ordersLoading } = useCustomerDisplayOrders(
     customer?.id || null,
     customer?.bakery_id || null,
-    deliveryDate
+    deliveryDate,
+    displaySettings.realtime_auto_refresh_interval * 1000
   );
 
   // Subscribe to realtime packing selection
