@@ -13,6 +13,7 @@ Loaf & Load is a Progressive Web Application (PWA) for bakery order management a
 - **Backend:** Supabase (PostgreSQL, Auth, Realtime, Edge Functions)
 - **i18n:** i18next — Norwegian (`nb`) and English (`en`)
 - **PWA:** vite-plugin-pwa with service worker and offline queue
+- **Native Mobile:** Capacitor 8 (iOS + Android wrapper)
 
 ## Commands
 
@@ -24,6 +25,10 @@ npm run lint         # Run ESLint
 npm run test         # Run tests once (vitest run)
 npm run test:watch   # Run tests in watch mode (vitest)
 npm run preview      # Preview production build
+npm run mobile:build # Build web + sync to native projects
+npm run cap:sync     # Sync web assets to iOS/Android
+npm run cap:android  # Open Android project in Android Studio
+npm run cap:ios      # Open iOS project in Xcode
 ```
 
 ## Project Structure
@@ -63,6 +68,9 @@ supabase/
 ├── config.toml          # Supabase project configuration
 ├── functions/           # Edge Functions (sync-onedrive, send-packing-report, etc.)
 └── migrations/          # Database migrations
+android/                 # Capacitor Android project (open with Android Studio)
+ios/                     # Capacitor iOS project (open with Xcode)
+capacitor.config.ts      # Capacitor configuration (app ID, plugins, server settings)
 ```
 
 ## Architecture & Patterns
@@ -156,3 +164,25 @@ Relaxed strictness — be aware of these settings:
 8. **New features** should follow the existing pattern: page in `pages/`, components in `components/<feature>/`, hooks in `hooks/`, types in `types/`.
 9. **Error handling:** Wrap route-level components with `<ErrorBoundary>`. Use toast notifications (sonner) for user feedback.
 10. **PWA considerations:** Changes to caching strategies are in `vite.config.ts` under the VitePWA plugin config.
+
+## Native Mobile App (Capacitor)
+
+The app is wrapped as a native iOS/Android app using Capacitor 8.
+
+### Workflow
+
+1. Make changes to the web app as normal
+2. Run `npm run mobile:build` to build and sync to native projects
+3. Open in IDE: `npm run cap:android` (Android Studio) or `npm run cap:ios` (Xcode)
+4. Build and run from the native IDE
+
+### Configuration (`capacitor.config.ts`)
+
+- **App ID:** `com.loafandload.app`
+- **Web Dir:** `dist` (Vite build output)
+- To point the app at a hosted URL instead of bundled assets, uncomment the `server.url` block in `capacitor.config.ts`
+
+### Requirements
+
+- **Android:** Android Studio + Android SDK
+- **iOS:** Xcode (macOS only) + CocoaPods
