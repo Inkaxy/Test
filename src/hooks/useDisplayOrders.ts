@@ -1,4 +1,5 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 function normalizePackingStatus<T>(value: T | T[] | null | undefined): T | null {
@@ -280,6 +281,34 @@ export function useDisplaySettings(
   categoryId?: string | null,
   displayType: DisplayType = 'shared'
 ) {
+  const queryClient = useQueryClient();
+
+  // Subscribe to realtime changes on display_settings
+  useEffect(() => {
+    if (!bakeryId) return;
+
+    const channel = supabase
+      .channel(`display-settings-sync:${bakeryId}:${displayType}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'display_settings',
+          filter: `bakery_id=eq.${bakeryId}`,
+        },
+        () => {
+          // Refetch all display-settings queries for this bakery to keep all screens in sync
+          queryClient.refetchQueries({ queryKey: ['display-settings', bakeryId], type: 'active' });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [bakeryId, displayType, queryClient]);
+
   return useQuery({
     queryKey: ['display-settings', bakeryId, categoryId, displayType],
     queryFn: async (): Promise<DisplaySettings> => {
