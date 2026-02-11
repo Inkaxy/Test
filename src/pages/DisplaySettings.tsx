@@ -977,6 +977,26 @@ export default function DisplaySettingsPage() {
                           />
                         </div>
                       )}
+
+                      {/* Animasjon */}
+                      <div className="space-y-2">
+                        <Label>Animasjon</Label>
+                        <p className="text-xs text-muted-foreground">Effekt når kortet skifter til ferdig-tilstand</p>
+                        <Select
+                          value={settings.card_completed_animation || 'fade'}
+                          onValueChange={(v) => updateSetting('card_completed_animation', v)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Ingen</SelectItem>
+                            <SelectItem value="fade">Fade inn</SelectItem>
+                            <SelectItem value="scale">Skalering</SelectItem>
+                            <SelectItem value="pulse">Pulsering (kontinuerlig)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                       
                       {/* Preview */}
                       <div className="border-t pt-4">

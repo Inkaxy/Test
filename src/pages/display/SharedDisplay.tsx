@@ -427,10 +427,18 @@ export default function SharedDisplay() {
           const isCompleted = progress === 100;
           const showCompletedState = isCompleted && (displaySettings.card_show_completed_text ?? true);
 
+          const completedAnimation = displaySettings.card_completed_animation || 'fade';
+          const animationClass = showCompletedState
+            ? completedAnimation === 'pulse' ? 'animate-[pulse_3s_ease-in-out_infinite]'
+            : completedAnimation === 'fade' ? 'animate-fade-in'
+            : completedAnimation === 'scale' ? 'animate-scale-in'
+            : ''
+            : '';
+
           return (
             <div
               key={customerData.customer.id}
-              className="rounded-xl overflow-hidden transition-colors"
+              className={cn("rounded-xl overflow-hidden transition-colors", animationClass)}
               style={{
                 backgroundColor: showCompletedState
                   ? (displaySettings.card_completed_bg_color || '#22c55e')
