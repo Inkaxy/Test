@@ -1,45 +1,32 @@
 
+# Automatisk kolonne-tilpasning for TV-visning
 
-# Koble `realtime_auto_refresh_interval` til faktisk refetch-intervall
+## Hva endres
+Felles display vil automatisk beregne optimalt antall kolonner basert på hvor mange kunder som vises, slik at TV-skjermen alltid fylles best mulig -- uten at brukeren må endre innstillinger manuelt.
 
-## Bakgrunn
-Display-skjermene har allerede sanntidsoppdatering via Supabase Realtime (broadcast + postgres_changes). I tillegg finnes et fallback-intervall (`refetchInterval`) som henter data periodisk dersom sanntidskanalen feiler. Dette intervallet er hardkodet til 60 sekunder, selv om brukeren kan konfigurere det via innstillingen `realtime_auto_refresh_interval`.
+## Hvordan det fungerer
+- Hvis admin har satt et fast kolonnetall i innstillingene, brukes dette som maks-grense
+- Systemet beregner automatisk det beste antallet kolonner basert på antall kunder:
+  - 1-2 kunder: 1-2 kolonner (store kort)
+  - 3-4 kunder: 2 kolonner
+  - 5-9 kunder: 3 kolonner
+  - 10-15 kunder: 4 kolonner
+  - 16+ kunder: 5 kolonner (eller admin-maks)
+- Antallet begrenses alltid av admin-innstillingen, slik at det aldri blir flere kolonner enn det som er konfigurert
 
-## Endringer
+## Ny innstilling
+En ny toggle `auto_columns` legges til i `LayoutSettings` (standard: `true`). Når den er aktivert, beregnes kolonner automatisk. Når den er av, brukes det faste tallet fra innstillingene som i dag.
 
-### 1. `src/hooks/useDisplayOrders.ts`
-Legg til valgfri `refetchIntervalMs`-parameter i tre hooks:
+## Tekniske detaljer
 
-| Hook | Linje | Endring |
-|------|-------|---------|
-| `useDisplayOrders` | 43-82 | Ny parameter `refetchIntervalMs?: number`, bruk i stedet for `60000` |
-| `useCustomerDisplayData` | 86 | Videresend ny parameter til `useDisplayOrders` |
-| `useCustomerDisplayOrders` | 173-206 | Ny parameter `refetchIntervalMs?: number`, bruk i stedet for `60000` |
+### 1. Oppdater `LayoutSettings` type (`src/types/display/layout.ts`)
+- Legg til `auto_columns: boolean` med default `true`
 
-Standardverdi forblir 60000 ms for bakoverkompatibilitet.
+### 2. Oppdater `SharedDisplay.tsx`
+- Legg til en `useMemo`-beregning som tar `sortedCustomers.length` og `displaySettings.columns` og returnerer optimalt kolonnetall
+- Brukes kun når `displaySettings.auto_columns` er `true`
+- Erstatt den eksisterende `columns`-variabelen med den beregnede verdien
 
-### 2. `src/pages/display/SharedDisplay.tsx`
-Send innstillingen videre til `useCustomerDisplayData`:
-```
-useCustomerDisplayData(
-  bakery?.id || null,
-  categoryId || null,
-  deliveryDate,
-  displaySettings.realtime_auto_refresh_interval * 1000
-)
-```
-
-### 3. `src/pages/display/CustomerDisplay.tsx`
-Send innstillingen videre til `useCustomerDisplayOrders`:
-```
-useCustomerDisplayOrders(
-  customer?.id || null,
-  customer?.bakery_id || null,
-  deliveryDate,
-  displaySettings.realtime_auto_refresh_interval * 1000
-)
-```
-
-## Resultat
-Brukeren kan styre fallback-oppdateringsintervallet fra 15s til 300s via Display-innstillingene, og verdien reflekteres umiddelbart i live-visningene.
-
+### 3. Oppdater innstillingspanelet (om det finnes for felles display)
+- Legg til en toggle for "Automatisk kolonne-tilpasning" i layout-seksjonen
+- Vis kolonne-slideren som "Maks kolonner" når auto er aktivert
