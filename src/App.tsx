@@ -34,6 +34,12 @@ import SharedDisplay from './pages/display/SharedDisplay';
 import CustomerDisplay from './pages/display/CustomerDisplay';
 import PackingDisplay from './pages/display/PackingDisplay';
 
+// FleetDeck pages (KioskOS)
+import FleetDeck from './pages/fleet/FleetDeck';
+import DeviceDetail from './pages/fleet/DeviceDetail';
+import AddDevice from './pages/fleet/AddDevice';
+import FleetBilling from './pages/fleet/Billing';
+
 // Components
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
@@ -158,6 +164,12 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
+
+        {/* FleetDeck routes (KioskOS device management) */}
+        <Route path="/fleet" element={<FleetDeck />} />
+        <Route path="/fleet/device/:deviceId" element={<DeviceDetail />} />
+        <Route path="/fleet/add-device" element={<AddDevice />} />
+        <Route path="/fleet/billing" element={<FleetBilling />} />
       </Route>
       
       {/* Catch all */}
