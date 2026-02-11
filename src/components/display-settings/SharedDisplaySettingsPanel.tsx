@@ -312,8 +312,16 @@ export function SharedDisplaySettingsPanel({ settings, updateSetting }: Props) {
           </div>
         </AccordionTrigger>
         <AccordionContent className="space-y-4 pt-2">
+          <div className="flex items-center justify-between">
+            <div>
+              <Label>Automatisk kolonne-tilpasning</Label>
+              <p className="text-xs text-muted-foreground">Beregn antall kolonner basert på antall kunder</p>
+            </div>
+            <Switch checked={settings.auto_columns ?? true} onCheckedChange={(v) => updateSetting('auto_columns', v)} />
+          </div>
+
           <div className="space-y-2">
-            <Label>Antall kolonner: {settings.columns}</Label>
+            <Label>{settings.auto_columns !== false ? `Maks kolonner: ${settings.columns}` : `Antall kolonner: ${settings.columns}`}</Label>
             <Slider
               value={[settings.columns]}
               onValueChange={([v]) => updateSetting('columns', v)}

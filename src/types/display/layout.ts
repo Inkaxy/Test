@@ -5,6 +5,8 @@
 export interface LayoutSettings {
   /** Number of columns */
   columns: number;
+  /** Automatically calculate optimal column count based on number of customers */
+  auto_columns: boolean;
   /** Gap size between cards */
   gap_size: string;
   /** Padding around content */
@@ -23,6 +25,7 @@ export interface LayoutSettings {
 
 export const defaultLayoutSettings: LayoutSettings = {
   columns: 3,
+  auto_columns: true,
   gap_size: '1rem',
   padding: '1.5rem',
   customer_name_font_size: '2rem',
