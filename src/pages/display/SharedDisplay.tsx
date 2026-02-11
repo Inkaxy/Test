@@ -555,22 +555,49 @@ export default function SharedDisplay() {
                       </div>
                     )}
 
-                    {displaySettings.card_show_product_list && selectedIds && filteredOrders.length > 0 && (
+                    {displaySettings.card_show_product_list && selectedIds && filteredOrders.length > 0 && (() => {
+                      // Aggregate orders by product to avoid duplicate rows
+                      const productMap = new Map<string, {
+                        product: typeof filteredOrders[0]['product'];
+                        totalQuantity: number;
+                        packedCount: number;
+                        totalCount: number;
+                      }>();
+                      filteredOrders.forEach((order) => {
+                        const existing = productMap.get(order.product.id);
+                        const isPacked = order.packing_status?.status === 'packed' || order.packing_status?.status === 'deviation';
+                        if (existing) {
+                          existing.totalQuantity += order.quantity;
+                          existing.totalCount++;
+                          if (isPacked) existing.packedCount++;
+                        } else {
+                          productMap.set(order.product.id, {
+                            product: order.product,
+                            totalQuantity: order.quantity,
+                            packedCount: isPacked ? 1 : 0,
+                            totalCount: 1,
+                          });
+                        }
+                      });
+                      const aggregatedProducts = Array.from(productMap.values());
+
+                      return (
                       <table className="w-full border-collapse">
                         <tbody>
-                          {filteredOrders.map((order) => {
-                            const isPacked = order.packing_status?.status === 'packed' || order.packing_status?.status === 'deviation';
-                            const productColor = getProductLineColor(order.product.id);
+                          {aggregatedProducts.map((agg) => {
+                            const allPacked = agg.packedCount === agg.totalCount;
+                            const productColor = getProductLineColor(agg.product.id);
+                            const fakeOrder = { quantity: agg.totalQuantity, product: agg.product } as typeof filteredOrders[0];
                             return (
                               <tr
-                                key={order.id}
+                                key={agg.product.id}
                                 style={{
                                   borderBottom: `1px solid ${displaySettings.text_color}10`,
                                   backgroundColor: productColor ? `${productColor}40` : undefined,
                                 }}
                               >
                                 <td
-                                  className={cn("py-2 px-2", isPacked && "line-through opacity-50")}
+                                  className={cn("py-2 px-2", allPacked && "line-through opacity-50")}
                                   style={{ fontSize: displaySettings.card_product_font_size || '1.1rem' }}
                                 >
                                   {productColor && (
@@ -580,23 +607,23 @@ export default function SharedDisplay() {
                                     />
                                   )}
                                   {displaySettings.card_show_product_numbers && (
-                                    <span className="opacity-50 mr-2">#{order.product.product_number}</span>
+                                    <span className="opacity-50 mr-2">#{agg.product.product_number}</span>
                                   )}
-                                  {order.product.name}
+                                  {agg.product.name}
                                 </td>
                                 <td className="py-2 px-2 text-right whitespace-nowrap">
                                   <span
                                     className="font-bold font-mono"
                                     style={{ fontSize: displaySettings.card_quantity_font_size || '1.25rem' }}
                                   >
-                                    {formatQuantity(order)}
+                                    {formatQuantity(fakeOrder)}
                                   </span>
                                 </td>
                                 <td className="py-2 px-1.5 w-8">
                                   <span
                                     className="block w-4 h-4 rounded-full shrink-0"
                                     style={{
-                                      backgroundColor: isPacked ? displaySettings.completed_color : displaySettings.pending_color,
+                                      backgroundColor: allPacked ? displaySettings.completed_color : displaySettings.pending_color,
                                     }}
                                   />
                                 </td>
@@ -605,7 +632,8 @@ export default function SharedDisplay() {
                           })}
                         </tbody>
                       </table>
-                    )}
+                      );
+                    })()}
 
                     {displaySettings.card_compact_mode && !displaySettings.card_show_product_list && (
                       <div className="text-center py-3">
