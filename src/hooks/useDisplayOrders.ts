@@ -237,23 +237,23 @@ export type DisplayType = 'shared' | 'customer' | 'packing' | 'product_packing' 
 export const DISPLAY_TYPES: Record<DisplayType, { label: string; description: string }> = {
   shared: {
     label: 'Felles Display',
-    description: 'Storskjerm i produksjonen som viser kunder uten dedikert skjerm og deres pakkestatus',
+    description: 'Innstillinger for storskjerm i produksjonen (TV/kiosk) – viser kunder uten dedikert skjerm',
   },
   customer: {
     label: 'Kunde Display',
-    description: 'Dedikert skjerm for enkelt kunde som viser deres produkter og status',
+    description: 'Innstillinger for dedikerte kundeskjermer – hvordan enkeltkunde-visninger ser ut',
   },
   packing: {
     label: 'Pakkedisplay',
-    description: 'Touch-optimalisert visning for pakkere som jobber med ordrer',
+    description: 'Innstillinger for nettbrett-pakking – brukes til både produkt- og kundebasert pakking',
   },
   product_packing: {
     label: 'Produktbasert Pakking',
-    description: 'Visning for produktbasert pakking med produkt-først tilnærming',
+    description: 'Innstillinger for produktbasert pakkeflyt – kalender, produktliste og pakkevisning',
   },
   customer_packing: {
     label: 'Kundebasert Pakking',
-    description: 'Visning for kundebasert pakking med kunde-først tilnærming',
+    description: 'Innstillinger for kundebasert pakking med kunde-først tilnærming',
   },
 };
 
