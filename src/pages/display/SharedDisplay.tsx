@@ -266,19 +266,19 @@ export default function SharedDisplay() {
   return (
     <div
       ref={containerRef}
-      className="min-h-screen max-h-screen overflow-auto"
+      className="min-h-screen max-h-screen overflow-auto scrollbar-hide"
       style={{ 
         backgroundColor: displaySettings.background_color, 
         color: displaySettings.text_color,
         padding: displaySettings.padding || '1.5rem',
       }}
     >
-      {/* Header */}
-      <header className="flex flex-wrap items-center justify-between gap-4 mb-6">
-        <div>
+      {/* Header - optimized for TV: all elements always visible */}
+      <header className="flex flex-wrap items-center justify-between gap-2 mb-4">
+        <div className="min-w-0">
           {showBakeryName && (
             <h1 
-              className="font-bold"
+              className="font-bold truncate"
               style={{ fontSize: displaySettings.header_bakery_font_size || '1.875rem' }}
             >
               {bakery.name}
@@ -286,7 +286,7 @@ export default function SharedDisplay() {
           )}
           {showCategoryName && category && (
             <p 
-              className="opacity-80"
+              className="opacity-80 truncate"
               style={{ fontSize: displaySettings.header_category_font_size || '1.25rem' }}
             >
               {category.name}
@@ -294,17 +294,17 @@ export default function SharedDisplay() {
           )}
         </div>
 
-        <div className="flex items-center gap-4 md:gap-6">
+        <div className="flex items-center gap-3 shrink-0">
           {/* Connection status */}
           {displaySettings.realtime_show_connection_status && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               {isConnected ? (
                 <Wifi className="h-5 w-5" style={{ color: displaySettings.completed_color }} />
               ) : (
                 <WifiOff className="h-5 w-5" style={{ color: '#ef4444' }} />
               )}
               <span 
-                className="text-sm opacity-70 hidden md:inline"
+                className="text-sm opacity-70"
                 style={{ fontSize: displaySettings.realtime_status_font_size }}
               >
                 {isConnected ? 'Tilkoblet' : 'Frakoblet'}
@@ -315,61 +315,49 @@ export default function SharedDisplay() {
           {/* Clock */}
           {showClock && (
             <div 
-              className="flex items-center gap-2 font-mono"
+              className="flex items-center gap-1.5 font-mono"
               style={{ fontSize: displaySettings.header_clock_font_size || '1.5rem' }}
             >
-              <Clock className="h-5 w-5 md:h-6 md:w-6" />
+              <Clock className="h-5 w-5" />
               {format(currentTime, clockFormat === '12h' ? 'hh:mm:ss a' : 'HH:mm:ss')}
             </div>
           )}
 
-          {/* Date */}
+          {/* Date - always visible on TV */}
           {showDate && (
             <div 
-              className="hidden md:block"
               style={{ fontSize: displaySettings.header_date_font_size || '1.25rem' }}
             >
               {format(new Date(deliveryDate), 'EEEE d. MMMM', { locale: nb })}
             </div>
           )}
 
-          {/* Action buttons */}
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleManualRefresh}
-              className="h-8 w-8"
-              style={{ color: displaySettings.text_color }}
-            >
-              <RefreshCw className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleFullscreen}
-              className="h-8 w-8"
-              style={{ color: displaySettings.text_color }}
-            >
-              <Maximize className="h-4 w-4" />
-            </Button>
-          </div>
+          {/* Refresh button only - fullscreen handled by Fully Kiosk */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleManualRefresh}
+            className="h-8 w-8 opacity-40 hover:opacity-100 transition-opacity"
+            style={{ color: displaySettings.text_color }}
+          >
+            <RefreshCw className="h-4 w-4" />
+          </Button>
         </div>
       </header>
 
-      {/* Stats section */}
+      {/* Stats section - compact for TV */}
       {(displaySettings.stats_show_total_progress || displaySettings.stats_show_packed_count || displaySettings.stats_show_remaining_count) && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-3 gap-3 mb-4">
           {displaySettings.stats_show_total_progress && (
             <div 
-              className="rounded-xl p-4"
+              className="rounded-lg p-3"
               style={{ 
                 backgroundColor: displaySettings.card_background_color,
                 borderRadius: displaySettings.border_radius,
               }}
             >
               <p 
-                className="opacity-70 mb-1"
+                className="opacity-70 mb-0.5"
                 style={{ fontSize: displaySettings.stats_label_font_size }}
               >
                 Total fremdrift
@@ -383,7 +371,7 @@ export default function SharedDisplay() {
               {displaySettings.stats_show_progress_bar && displaySettings.stats_progress_bar_style !== 'none' && (
                 <Progress
                   value={totalProgress}
-                  className="mt-2"
+                  className="mt-1.5"
                   style={{
                     height: displaySettings.stats_progress_bar_height,
                     backgroundColor: `${displaySettings.pending_color}40`,
@@ -395,14 +383,14 @@ export default function SharedDisplay() {
 
           {displaySettings.stats_show_packed_count && (
             <div 
-              className="rounded-xl p-4"
+              className="rounded-lg p-3"
               style={{ 
                 backgroundColor: displaySettings.card_background_color,
                 borderRadius: displaySettings.border_radius,
               }}
             >
               <p 
-                className="opacity-70 mb-1"
+                className="opacity-70 mb-0.5"
                 style={{ fontSize: displaySettings.stats_label_font_size }}
               >
                 Pakket
@@ -418,14 +406,14 @@ export default function SharedDisplay() {
 
           {displaySettings.stats_show_remaining_count && (
             <div 
-              className="rounded-xl p-4"
+              className="rounded-lg p-3"
               style={{ 
                 backgroundColor: displaySettings.card_background_color,
                 borderRadius: displaySettings.border_radius,
               }}
             >
               <p 
-                className="opacity-70 mb-1"
+                className="opacity-70 mb-0.5"
                 style={{ fontSize: displaySettings.stats_label_font_size }}
               >
                 Gjenstår
@@ -446,8 +434,8 @@ export default function SharedDisplay() {
 
       {/* Legacy progress bar (fallback) */}
       {showProgressBar && !displaySettings.stats_show_total_progress && (
-        <div className="mb-6">
-          <div className="flex items-center justify-between mb-2">
+        <div className="mb-4">
+          <div className="flex items-center justify-between mb-1.5">
             <span className="text-lg">Total fremdrift</span>
             <span className="text-2xl font-bold">
               {packedOrders} / {totalOrders} ({totalProgress}%)
@@ -463,14 +451,14 @@ export default function SharedDisplay() {
         </div>
       )}
 
-      {/* Customer grid */}
+      {/* Customer grid - optimized for TV with lower minmax for better fill */}
       <div
         className="grid"
         style={{
           gridTemplateColumns: columns <= 3
-            ? `repeat(auto-fit, minmax(380px, 1fr))`
+            ? `repeat(auto-fill, minmax(min(100%, 340px), 1fr))`
             : `repeat(${columns}, minmax(0, 1fr))`,
-          gap: displaySettings.gap_size || '1rem',
+          gap: displaySettings.gap_size || '0.75rem',
         }}
       >
         {sortedCustomers.map((customerData) => {
@@ -518,14 +506,14 @@ export default function SharedDisplay() {
             >
               {/* Centered customer name header */}
               <div
-                className="text-center py-3 px-4"
+                className="text-center py-2.5 px-3"
                 style={{
                   borderBottom: `1px solid ${showCompletedState ? (displaySettings.card_completed_text_color || '#ffffff') + '30' : displaySettings.text_color + '15'}`,
                   color: showCompletedState ? (displaySettings.card_completed_text_color || '#ffffff') : undefined,
                 }}
               >
                 <h2
-                  className="font-bold"
+                  className="font-bold truncate"
                   style={{ fontSize: displaySettings.card_customer_name_font_size || displaySettings.customer_name_font_size }}
                 >
                   {customerData.customer.name}
@@ -536,17 +524,17 @@ export default function SharedDisplay() {
               </div>
 
               {/* Product table OR completed state */}
-              <div className="px-3 py-2">
+              <div className="px-2 py-1.5">
                 {showCompletedState ? (
                   <div
-                    className="relative flex flex-col items-center justify-center py-8 overflow-hidden"
+                    className="relative flex flex-col items-center justify-center py-6 overflow-hidden"
                     style={{ color: displaySettings.card_completed_text_color || '#ffffff' }}
                   >
                     {(displaySettings.card_completed_show_logo ?? true) && (
                       <img
                         src={logoIcon}
                         alt=""
-                        className="absolute inset-0 m-auto w-24 h-24 object-contain pointer-events-none select-none"
+                        className="absolute inset-0 m-auto w-20 h-20 object-contain pointer-events-none select-none"
                         style={{ opacity: displaySettings.card_completed_logo_opacity ?? 0.15 }}
                       />
                     )}
@@ -560,7 +548,7 @@ export default function SharedDisplay() {
                 ) : (
                   <>
                     {displaySettings.card_show_product_list && (!selectedIds || filteredOrders.length === 0) && (
-                      <div className="flex items-center justify-center py-4 opacity-40">
+                      <div className="flex items-center justify-center py-3 opacity-40">
                         <Clock className="h-4 w-4 mr-2" />
                         <span style={{ fontSize: displaySettings.card_product_font_size || displaySettings.product_font_size }}>
                           Venter på valg...
@@ -583,7 +571,7 @@ export default function SharedDisplay() {
                                 }}
                               >
                                 <td
-                                  className={cn("py-3 px-3", isPacked && "line-through opacity-50")}
+                                  className={cn("py-2 px-2", isPacked && "line-through opacity-50")}
                                   style={{ fontSize: displaySettings.card_product_font_size || '1.1rem' }}
                                 >
                                   {productColor && (
@@ -597,7 +585,7 @@ export default function SharedDisplay() {
                                   )}
                                   {order.product.name}
                                 </td>
-                                <td className="py-3 px-3 text-right whitespace-nowrap">
+                                <td className="py-2 px-2 text-right whitespace-nowrap">
                                   <span
                                     className="font-bold font-mono"
                                     style={{ fontSize: displaySettings.card_quantity_font_size || '1.25rem' }}
@@ -605,9 +593,9 @@ export default function SharedDisplay() {
                                     {formatQuantity(order)}
                                   </span>
                                 </td>
-                                <td className="py-3 px-2 w-10">
+                                <td className="py-2 px-1.5 w-8">
                                   <span
-                                    className="block w-5 h-5 rounded-full shrink-0"
+                                    className="block w-4 h-4 rounded-full shrink-0"
                                     style={{
                                       backgroundColor: isPacked ? displaySettings.completed_color : displaySettings.pending_color,
                                     }}
@@ -621,7 +609,7 @@ export default function SharedDisplay() {
                     )}
 
                     {displaySettings.card_compact_mode && !displaySettings.card_show_product_list && (
-                      <div className="text-center py-4">
+                      <div className="text-center py-3">
                         <p className="font-bold" style={{ fontSize: displaySettings.stats_value_font_size }}>
                           {customerData.packedCount}/{customerData.totalCount}
                         </p>
@@ -634,7 +622,7 @@ export default function SharedDisplay() {
               {/* Bottom progress bar */}
               {(displaySettings.card_show_bottom_progress_bar ?? true) && (
                 <div
-                  className="h-3 w-full transition-all"
+                  className="h-2.5 w-full transition-all"
                   style={{
                     backgroundColor: showCompletedState
                       ? (displaySettings.card_completed_text_color || '#ffffff') + '30'
@@ -661,27 +649,20 @@ export default function SharedDisplay() {
         </div>
       )}
 
-      {/* Footer with status info */}
-      <footer className="mt-6 flex items-center justify-center gap-4 text-sm opacity-60">
-        <Badge 
-          variant="outline" 
-          className="gap-1"
-          style={{ borderColor: displaySettings.text_color + '40', color: displaySettings.text_color }}
-        >
+      {/* Minimal footer - low-key for TV */}
+      <footer className="mt-3 flex items-center justify-center gap-3 text-xs opacity-40">
+        <span className="flex items-center gap-1">
           <span className={cn(
-            'w-2 h-2 rounded-full',
-            wakeLockActive ? 'bg-green-500 animate-pulse' : 'bg-amber-500'
+            'w-1.5 h-1.5 rounded-full',
+            wakeLockActive ? 'bg-green-500' : 'bg-amber-500'
           )} />
-          {wakeLockActive ? 'Skjermen holdes våken' : 'Wake Lock inaktiv'}
-        </Badge>
+          {wakeLockActive ? 'Aktiv' : 'Inaktiv'}
+        </span>
         
         {displaySettings.realtime_show_last_update && lastRefresh && (
-          <Badge 
-            variant="outline"
-            style={{ borderColor: displaySettings.text_color + '40', color: displaySettings.text_color }}
-          >
-            Sist oppdatert: {format(lastRefresh, 'HH:mm:ss')}
-          </Badge>
+          <span>
+            Oppdatert {format(lastRefresh, 'HH:mm:ss')}
+          </span>
         )}
       </footer>
     </div>
