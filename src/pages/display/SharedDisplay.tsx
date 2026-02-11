@@ -80,8 +80,10 @@ export default function SharedDisplay() {
     return () => clearInterval(interval);
   }, [displaySettings.header_show_clock, displaySettings.show_clock]);
 
-  // Keep screen awake using Wake Lock API
+  // Keep screen awake using Wake Lock API (if enabled)
   useEffect(() => {
+    if (!(displaySettings.wake_lock_enabled ?? true)) return;
+    
     let wakeLock: WakeLockSentinel | null = null;
     
     const requestWakeLock = async () => {
@@ -112,7 +114,55 @@ export default function SharedDisplay() {
       }
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, []);
+  }, [displaySettings.wake_lock_enabled]);
+
+  // Auto-scroll implementation
+  useEffect(() => {
+    if (!displaySettings.auto_scroll_enabled || !containerRef.current) return;
+
+    const speed = displaySettings.auto_scroll_speed === 'fast' ? 2 
+                : displaySettings.auto_scroll_speed === 'slow' ? 0.5 
+                : 1;
+
+    let animationId: number;
+    let paused = false;
+
+    const scroll = () => {
+      if (!containerRef.current || paused) {
+        animationId = requestAnimationFrame(scroll);
+        return;
+      }
+
+      const el = containerRef.current;
+      el.scrollTop += speed;
+
+      // Reset to top when reaching bottom
+      if (el.scrollTop + el.clientHeight >= el.scrollHeight - 2) {
+        setTimeout(() => {
+          if (el) el.scrollTop = 0;
+        }, 2000);
+      }
+
+      animationId = requestAnimationFrame(scroll);
+    };
+
+    animationId = requestAnimationFrame(scroll);
+
+    const handleMouseEnter = () => {
+      if (displaySettings.auto_scroll_pause_on_hover) paused = true;
+    };
+    const handleMouseLeave = () => { paused = false; };
+
+    const el = containerRef.current;
+    el.addEventListener('mouseenter', handleMouseEnter);
+    el.addEventListener('mouseleave', handleMouseLeave);
+
+    return () => {
+      cancelAnimationFrame(animationId);
+      el?.removeEventListener('mouseenter', handleMouseEnter);
+      el?.removeEventListener('mouseleave', handleMouseLeave);
+    };
+  }, [displaySettings.auto_scroll_enabled, displaySettings.auto_scroll_speed, displaySettings.auto_scroll_pause_on_hover]);
 
   const handleFullscreen = () => {
     if (containerRef.current) {
@@ -215,7 +265,7 @@ export default function SharedDisplay() {
   return (
     <div
       ref={containerRef}
-      className="min-h-screen"
+      className="min-h-screen max-h-screen overflow-auto"
       style={{ 
         backgroundColor: displaySettings.background_color, 
         color: displaySettings.text_color,

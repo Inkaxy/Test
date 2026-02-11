@@ -182,6 +182,14 @@ export function SharedDisplaySettingsPanel({ settings, updateSetting }: Props) {
             </div>
             <Switch checked={settings.card_show_quantity_as_trays} onCheckedChange={(v) => updateSetting('card_show_quantity_as_trays', v)} />
           </div>
+
+          <div className="flex items-center justify-between">
+            <div>
+              <Label>Vis fremdriftsbar under kort</Label>
+              <p className="text-xs text-muted-foreground">Fargekoded bar i bunnen av hvert kundekort</p>
+            </div>
+            <Switch checked={settings.card_show_bottom_progress_bar ?? true} onCheckedChange={(v) => updateSetting('card_show_bottom_progress_bar', v)} />
+          </div>
         </AccordionContent>
       </AccordionItem>
 
