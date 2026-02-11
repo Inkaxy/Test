@@ -76,6 +76,7 @@ export function useDisplayOrders(
        })) as DisplayOrder[];
     },
     enabled: !!bakeryId && !!deliveryDate,
+    staleTime: Infinity, // Data is updated via realtime, no need for automatic refetches
     refetchInterval: 60000, // Fallback refetch every 60s
   });
 }
@@ -199,6 +200,7 @@ export function useCustomerDisplayOrders(
        })) as DisplayOrder[];
     },
     enabled: !!customerId && !!bakeryId && !!deliveryDate,
+    staleTime: Infinity,
     refetchInterval: 60000,
   });
 }
