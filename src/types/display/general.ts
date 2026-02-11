@@ -11,6 +11,8 @@ export interface GeneralSettings {
   packing_view_mode: 'cards' | 'table';
   /** Display language */
   packing_language: 'nb' | 'en';
+  /** Match shared display theme for product packing */
+  match_shared_display_theme: boolean;
 }
 
 export const defaultGeneralSettings: GeneralSettings = {
@@ -18,6 +20,7 @@ export const defaultGeneralSettings: GeneralSettings = {
   wake_lock_enabled: true,
   packing_view_mode: 'cards',
   packing_language: 'nb',
+  match_shared_display_theme: true,
 };
 
 /**

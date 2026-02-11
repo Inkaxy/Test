@@ -194,7 +194,23 @@ export default function ProductPackingView() {
   
   // Get display settings (use 'product_packing' type for product-based packing)
   const { data: displaySettings } = useDisplaySettings(bakeryId || null, categoryId, 'product_packing');
-  const settings: DisplaySettings = displaySettings || getDefaultDisplaySettings();
+  // Fetch shared display settings as fallback when match_shared_display_theme is enabled
+  const { data: sharedDisplaySettings } = useDisplaySettings(bakeryId || null, categoryId, 'shared');
+  
+  const rawSettings: DisplaySettings = displaySettings || getDefaultDisplaySettings();
+  // Apply shared theme fallback when match_shared_display_theme is enabled
+  const settings: DisplaySettings = (rawSettings.match_shared_display_theme && sharedDisplaySettings) 
+    ? {
+        ...rawSettings,
+        background_color: sharedDisplaySettings.background_color,
+        card_background_color: sharedDisplaySettings.card_background_color,
+        text_color: sharedDisplaySettings.text_color,
+        pending_color: sharedDisplaySettings.pending_color,
+        packing_color: sharedDisplaySettings.packing_color,
+        completed_color: sharedDisplaySettings.completed_color,
+        theme_preset: sharedDisplaySettings.theme_preset,
+      }
+    : rawSettings;
   
   // Get category info for header
   const { data: categories = [] } = useCategories();
