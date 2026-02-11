@@ -1,51 +1,86 @@
 
+# Forbedring av Felles Display for TV-visning
 
-# "Ferdig pakket"-visning med grønn bakgrunn og logo-watermark
+## Problemene som skal fikses
 
-## Hva endres
+1. **Skjermen blinker** - Hver gang sanntidsdata oppdateres, invalideres queries som trigger full re-render av alle kort
+2. **Kundekort tilpasses ikke bredden** - Grid bruker faste kolonner uten at kortene fyller tilgjengelig plass optimalt
+3. **Mangler produktfarger** - SharedDisplay bruker ikke `product_line_colors_palette` som CustomerDisplay gjor - produkter har ingen fargemarkering
+4. **Dårlig layout på kort** - Produkttabellen inne i kortene er enkel og uleselig på TV
+5. **Ikke optimalisert for TV/kiosk** - Fonter er for små, spacing er for tett for avstandslesing
 
-Når en kunde på felles display er 100% ferdig pakket, erstattes produktlisten med en visuelt tydelig "ferdig"-tilstand:
-- Kortets bakgrunn skifter til grønn (konfigurerbar farge)
-- Loaf and Load-logoen vises svakt som watermark i bakgrunnen
-- Teksten "FERDIG PAKKET" (eller egendefinert tekst) vises sentrert over logoen
-- Alt dette kan slås av/på og tilpasses i Display Settings under felles display
+---
 
-## Visuell oppførsel
+## Løsning
 
-```text
-Kunde under pakking:              Kunde 100% ferdig:
-+---------------------------+     +---------------------------+
-|        Borgheim           |     |        Borgheim           |
-|---------------------------|     |---------------------------|
-| Kneipp       10stk   (R) |     |                           |
-| Hvasser    1 kv+5stk (R) |     |    [svak logo-ikon]       |
-|==========================='     |    FERDIG PAKKET          |
-| [====          ]          |     |                           |
-+---------------------------+     |==========================='
-                                  | [====================]    |
-                                  +---------------------------+
-                                  (hele kortet har grønn bakgrunn)
-```
+### 1. Fiks blinking (Stabiliser re-rendering)
 
-## Nye innstillinger (kun synlig for felles display)
+**Fil:** `src/hooks/useRealtimeDisplay.ts`
 
-| Innstilling | Type | Default | Beskrivelse |
-|---|---|---|---|
-| `card_show_completed_text` | boolean | `true` | Vis ferdig-tilstand når kunde er 100% |
-| `card_completed_text` | string | `"FERDIG PAKKET"` | Teksten som vises |
-| `card_completed_text_font_size` | string | `"1.5rem"` | Fontstørrelse på teksten |
-| `card_completed_bg_color` | string | `"#22c55e"` | Bakgrunnsfarge på kortet ved 100% |
-| `card_completed_text_color` | string | `"#ffffff"` | Tekstfarge ved 100% |
-| `card_completed_show_logo` | boolean | `true` | Vis logo som watermark |
-| `card_completed_logo_opacity` | number | `0.15` | Opacity på logoen (0.05-0.4) |
+- Bruk optimistisk cache-oppdatering istedenfor full query-invalidering ved broadcast-meldinger
+- Sett `staleTime` på display-queries til lengre varighet for å unnga unodvendige refetches
+- Fjern inngangs/utgangsanimasjoner (AnimatePresence) fra kortene som allerede er nevnt i memory
 
-## Teknisk
+**Fil:** `src/hooks/useDisplayOrders.ts`
+
+- Ok `staleTime` fra standard (2 min) til `Infinity` for display-queries siden data oppdateres via realtime
+
+### 2. Produktfarger på Felles Display
+
+**Fil:** `src/pages/display/SharedDisplay.tsx`
+
+- Implementer samme `getProductLineColor()` funksjon som CustomerDisplay bruker (hash-basert konsistent fargelegging)
+- Bruk `product_line_colors_palette` fra display-innstillinger for å fargelegge produkt-rader i tabellen
+- Sett bakgrunn pa hver produktrad basert pa produkt-ID, slik at samme produkt far lik farge pa alle skjermer
+
+### 3. Bedre kortlayout for TV
+
+**Fil:** `src/pages/display/SharedDisplay.tsx`
+
+Redesigne kundekortene for TV-lesbarhet:
+
+- **Kundenavn**: Storre font, venstreorientert med fargekode-stripe pa venstre side
+- **Produkttabell**: Legge til fargede bakgrunner per rad (fra paletten), storre fonter, bedre padding
+- **Mengde-kolonne**: Gjore tydeligere med monospace-font og fremhevet farge
+- **Status-indikator**: Storre prikker/ikoner for pakket/ikke-pakket
+- **Fremdriftsbar**: Tykkere og mer synlig i bunnen av kortet
+- **Auto-tilpasse kolonner**: Bruke `minmax()` i grid for at kort fyller bredden bedre, med en minimumsbredde som sikrer lesbarhet
+
+### 4. TV-optimalisering
+
+**Fil:** `src/pages/display/SharedDisplay.tsx`
+
+- Gjore grid responsivt: `repeat(auto-fit, minmax(400px, 1fr))` som fallback nar kolonnetall er lav
+- Okere standard padding og fontstorrelser
+- Legge til `min-height` pa kort slik at de er mer uniform
+- Sikre at kortet strekker seg til full bredde i sin grid-celle (fjerne eventuell max-width)
+
+---
+
+## Teknisk detaljer
+
+### Endringer per fil
 
 | Fil | Endring |
 |-----|---------|
-| `src/types/display/card.ts` | Legg til alle 7 nye felter i `CardSettings` interface og `defaultCardSettings` |
-| `src/pages/display/SharedDisplay.tsx` | I kundekort-renderingen: når `progress === 100` og `card_show_completed_text` er aktivert, bytt kortets `backgroundColor` til `card_completed_bg_color`, vis logo-ikon (`src/assets/logo-icon.png`) som absolutt posisjonert watermark med konfigurerbar opacity, og vis teksten sentrert over. Kundenavn-headeren beholdes, men produkttabellen erstattes. |
-| `src/pages/DisplaySettings.tsx` | Ny seksjon "Ferdig pakket-visning" under kort-innstillingene (kun synlig når `selectedDisplayType === 'shared'`). Inneholder: toggle av/på, tekstfelt for tekst, fontstørrelse-dropdown, to fargevelgere (bakgrunn og tekst), toggle for logo, og slider for logo-opacity. |
+| `src/pages/display/SharedDisplay.tsx` | Legge til `getProductLineColor()`, redesigne produkttabell med fargede rader, forbedre grid med auto-fit, okere fontstorrelser, fjerne animasjoner som blinker |
+| `src/hooks/useRealtimeDisplay.ts` | Erstatte full query-invalidering med mer presis cache-oppdatering for a redusere blinking |
+| `src/hooks/useDisplayOrders.ts` | Sette `staleTime: Infinity` pa display-queries |
+| `src/types/display/card.ts` | Legge til `card_min_height` innstilling for minimum korthøyde |
 
-Ingen databaseendringer. Ingen nye avhengigheter. Logoen importeres fra eksisterende `src/assets/logo-icon.png`.
+### Produktfarge-logikk (delt mellom SharedDisplay og CustomerDisplay)
 
+Begge skjermene vil bruke identisk hash-funksjon basert pa `product.id` for a beregne fargeindeks i paletten. Dette sikrer at samme produkt alltid far samme farge uansett hvilken skjerm man ser pa.
+
+```text
+Produkt-ID --> hash --> palett-indeks --> farge
+  "abc123"  -->  42  -->      2       --> #FEF3C7 (Lys gul)
+```
+
+### Ny grid-strategi
+
+```text
+Navaerende:  repeat(3, minmax(0, 1fr))     -- Faste kolonner, kort kan bli smale
+Ny:          repeat(auto-fit, minmax(380px, 1fr))  -- Auto-tilpasset, aldri for smale
+             (med fallback til innstilt kolonneverdi)
+```
