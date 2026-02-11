@@ -237,7 +237,7 @@ export type DisplayType = 'shared' | 'customer' | 'packing' | 'product_packing' 
 export const DISPLAY_TYPES: Record<DisplayType, { label: string; description: string }> = {
   shared: {
     label: 'Felles Display',
-    description: 'Storskjerm i produksjonen som viser alle kunder og deres pakkestatus',
+    description: 'Storskjerm i produksjonen som viser kunder uten dedikert skjerm og deres pakkestatus',
   },
   customer: {
     label: 'Kunde Display',
