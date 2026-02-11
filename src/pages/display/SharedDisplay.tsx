@@ -450,13 +450,11 @@ export default function SharedDisplay() {
         </div>
       )}
 
-      {/* Customer grid - optimized for TV with lower minmax for better fill */}
+      {/* Customer grid - uses exact column count for predictable TV layout */}
       <div
         className="grid"
         style={{
-          gridTemplateColumns: columns <= 3
-            ? `repeat(auto-fill, minmax(min(100%, 340px), 1fr))`
-            : `repeat(${columns}, minmax(0, 1fr))`,
+          gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
           gap: displaySettings.gap_size || '0.75rem',
         }}
       >
