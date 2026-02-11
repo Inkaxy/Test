@@ -325,17 +325,19 @@ export function usePackingMutations(options: PackingMutationsOptions = {}) {
       const deliveryDate = params.deliveryDate || options.deliveryDate;
       const categoryId = params.categoryId || options.categoryId;
       
-      queryClient.invalidateQueries({ queryKey: ['trip-order-stats'] });
+      // Use refetchQueries (silent) instead of invalidateQueries to avoid UI flicker
+      queryClient.refetchQueries({ queryKey: ['trip-order-stats'], type: 'active' });
       
       if (isKiosk) {
-        queryClient.refetchQueries({ queryKey: ['kiosk-customers-for-date', bakeryId, deliveryDate, categoryId] });
-        queryClient.refetchQueries({ queryKey: ['kiosk-products-for-date', bakeryId, deliveryDate, categoryId] });
+        queryClient.refetchQueries({ queryKey: ['kiosk-customers-for-date', bakeryId, deliveryDate, categoryId], type: 'active' });
+        queryClient.refetchQueries({ queryKey: ['kiosk-products-for-date', bakeryId, deliveryDate, categoryId], type: 'active' });
       } else {
-        queryClient.refetchQueries({ queryKey: ['customers-for-date', deliveryDate, bakeryId, categoryId] });
+        queryClient.refetchQueries({ queryKey: ['customers-for-date', deliveryDate, bakeryId, categoryId], type: 'active' });
+        queryClient.refetchQueries({ queryKey: ['display-orders'], type: 'active' });
+        queryClient.refetchQueries({ queryKey: ['products-for-date', bakeryId, deliveryDate, categoryId], type: 'active' });
+        // These are not visible during packing, invalidate lazily
         queryClient.invalidateQueries({ queryKey: ['orders'] });
         queryClient.invalidateQueries({ queryKey: ['orders-by-product'] });
-        queryClient.invalidateQueries({ queryKey: ['display-orders'] });
-        queryClient.invalidateQueries({ queryKey: ['products-for-date', bakeryId, deliveryDate, categoryId] });
       }
     },
   });
@@ -406,14 +408,16 @@ export function usePackingMutations(options: PackingMutationsOptions = {}) {
       return { count: params.orders.length };
     },
     onSuccess: () => {
+      // Use refetchQueries for active queries to avoid UI flicker
+      queryClient.refetchQueries({ queryKey: ['customers-for-date'], type: 'active' });
+      queryClient.refetchQueries({ queryKey: ['products-for-date'], type: 'active' });
+      queryClient.refetchQueries({ queryKey: ['kiosk-customers-for-date'], type: 'active' });
+      queryClient.refetchQueries({ queryKey: ['kiosk-products-for-date'], type: 'active' });
+      queryClient.refetchQueries({ queryKey: ['display-orders'], type: 'active' });
+      queryClient.refetchQueries({ queryKey: ['trip-order-stats'], type: 'active' });
+      // Lazy invalidation for background queries
       queryClient.invalidateQueries({ queryKey: ['orders'] });
       queryClient.invalidateQueries({ queryKey: ['orders-by-product'] });
-      queryClient.invalidateQueries({ queryKey: ['display-orders'] });
-      queryClient.invalidateQueries({ queryKey: ['customers-for-date'] });
-      queryClient.invalidateQueries({ queryKey: ['products-for-date'] });
-      queryClient.invalidateQueries({ queryKey: ['kiosk-customers-for-date'] });
-      queryClient.invalidateQueries({ queryKey: ['kiosk-products-for-date'] });
-      queryClient.invalidateQueries({ queryKey: ['trip-order-stats'] });
     },
   });
 
@@ -476,11 +480,11 @@ export function usePackingMutations(options: PackingMutationsOptions = {}) {
       }
     },
     onSettled: () => {
+      queryClient.refetchQueries({ queryKey: ['kiosk-customers-for-date'], type: 'active' });
+      queryClient.refetchQueries({ queryKey: ['kiosk-products-for-date'], type: 'active' });
+      queryClient.refetchQueries({ queryKey: ['trip-order-stats'], type: 'active' });
       queryClient.invalidateQueries({ queryKey: ['orders'] });
       queryClient.invalidateQueries({ queryKey: ['orders-by-product'] });
-      queryClient.invalidateQueries({ queryKey: ['kiosk-customers-for-date'] });
-      queryClient.invalidateQueries({ queryKey: ['kiosk-products-for-date'] });
-      queryClient.invalidateQueries({ queryKey: ['trip-order-stats'] });
     },
   });
 
@@ -558,19 +562,19 @@ export function usePackingMutations(options: PackingMutationsOptions = {}) {
       const deliveryDate = params.deliveryDate || options.deliveryDate;
       const categoryId = params.categoryId || options.categoryId;
       
-      queryClient.invalidateQueries({ queryKey: ['trip-order-stats'] });
+      queryClient.refetchQueries({ queryKey: ['trip-order-stats'], type: 'active' });
       
       if (isKiosk) {
-        queryClient.refetchQueries({ queryKey: ['kiosk-customers-for-date', bakeryId, deliveryDate, categoryId] });
-        queryClient.refetchQueries({ queryKey: ['kiosk-products-for-date', bakeryId, deliveryDate, categoryId] });
+        queryClient.refetchQueries({ queryKey: ['kiosk-customers-for-date', bakeryId, deliveryDate, categoryId], type: 'active' });
+        queryClient.refetchQueries({ queryKey: ['kiosk-products-for-date', bakeryId, deliveryDate, categoryId], type: 'active' });
       } else {
         if (deliveryDate) {
-          queryClient.refetchQueries({ queryKey: ['customers-for-date', deliveryDate, bakeryId, categoryId] });
+          queryClient.refetchQueries({ queryKey: ['customers-for-date', deliveryDate, bakeryId, categoryId], type: 'active' });
         }
+        queryClient.refetchQueries({ queryKey: ['display-orders'], type: 'active' });
+        queryClient.refetchQueries({ queryKey: ['products-for-date', bakeryId, deliveryDate, categoryId], type: 'active' });
         queryClient.invalidateQueries({ queryKey: ['orders'] });
         queryClient.invalidateQueries({ queryKey: ['orders-by-product'] });
-        queryClient.invalidateQueries({ queryKey: ['display-orders'] });
-        queryClient.invalidateQueries({ queryKey: ['products-for-date', bakeryId, deliveryDate, categoryId] });
       }
     },
   });
