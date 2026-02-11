@@ -226,7 +226,7 @@ export default function SharedDisplay() {
     return displaySettings.product_line_colors_palette[colorIndex];
   };
 
-  const columns = displaySettings.columns || 3;
+  const maxColumns = displaySettings.columns || 3;
   const remainingOrders = totalOrders - packedOrders;
   
   // Use new settings with fallback to legacy
@@ -262,7 +262,19 @@ export default function SharedDisplay() {
     }
   });
 
-  return (
+  // Auto-columns: calculate optimal column count based on customer count
+  const columns = (() => {
+    if (!displaySettings.auto_columns) return maxColumns;
+    const count = sortedCustomers.length;
+    let optimal: number;
+    if (count <= 1) optimal = 1;
+    else if (count <= 2) optimal = 2;
+    else if (count <= 4) optimal = 2;
+    else if (count <= 9) optimal = 3;
+    else if (count <= 15) optimal = 4;
+    else optimal = 5;
+    return Math.min(optimal, maxColumns);
+  })();
     <div
       ref={containerRef}
       className="min-h-screen max-h-screen overflow-auto scrollbar-hide"
