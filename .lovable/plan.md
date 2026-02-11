@@ -1,19 +1,45 @@
 
 
-# Oppdater beskrivelse for Felles Display
+# Koble `realtime_auto_refresh_interval` til faktisk refetch-intervall
 
-## Problem
-Beskrivelsen for Felles Display sier "viser alle kunder og deres pakkestatus", men skjermen viser kun kunder som IKKE har en dedikert skjerm (kunder der `has_dedicated_display` er `false` eller `null`). Beskrivelsen er misvisende.
+## Bakgrunn
+Display-skjermene har allerede sanntidsoppdatering via Supabase Realtime (broadcast + postgres_changes). I tillegg finnes et fallback-intervall (`refetchInterval`) som henter data periodisk dersom sanntidskanalen feiler. Dette intervallet er hardkodet til 60 sekunder, selv om brukeren kan konfigurere det via innstillingen `realtime_auto_refresh_interval`.
 
-## Endring
+## Endringer
 
-**Fil:** `src/hooks/useDisplayOrders.ts` (linje 240)
+### 1. `src/hooks/useDisplayOrders.ts`
+Legg til valgfri `refetchIntervalMs`-parameter i tre hooks:
 
-Endre beskrivelsen fra:
-> Storskjerm i produksjonen som viser alle kunder og deres pakkestatus
+| Hook | Linje | Endring |
+|------|-------|---------|
+| `useDisplayOrders` | 43-82 | Ny parameter `refetchIntervalMs?: number`, bruk i stedet for `60000` |
+| `useCustomerDisplayData` | 86 | Videresend ny parameter til `useDisplayOrders` |
+| `useCustomerDisplayOrders` | 173-206 | Ny parameter `refetchIntervalMs?: number`, bruk i stedet for `60000` |
 
-til:
-> Storskjerm i produksjonen som viser kunder uten dedikert skjerm og deres pakkestatus
+Standardverdi forblir 60000 ms for bakoverkompatibilitet.
 
-Dette er en ren tekstendring - filtreringslogikken er allerede korrekt implementert (linje 64 filtrerer bort kunder med `has_dedicated_display = true`).
+### 2. `src/pages/display/SharedDisplay.tsx`
+Send innstillingen videre til `useCustomerDisplayData`:
+```
+useCustomerDisplayData(
+  bakery?.id || null,
+  categoryId || null,
+  deliveryDate,
+  displaySettings.realtime_auto_refresh_interval * 1000
+)
+```
+
+### 3. `src/pages/display/CustomerDisplay.tsx`
+Send innstillingen videre til `useCustomerDisplayOrders`:
+```
+useCustomerDisplayOrders(
+  customer?.id || null,
+  customer?.bakery_id || null,
+  deliveryDate,
+  displaySettings.realtime_auto_refresh_interval * 1000
+)
+```
+
+## Resultat
+Brukeren kan styre fallback-oppdateringsintervallet fra 15s til 300s via Display-innstillingene, og verdien reflekteres umiddelbart i live-visningene.
 
